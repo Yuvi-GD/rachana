@@ -110,6 +110,7 @@ export interface LayoutNodeStyle {
   boxShadow?: string;
   opacity: string;
   color: string;
+  fontFamily?: string;
   fontSize: string;
   fontWeight: string;
   lineHeight?: string;

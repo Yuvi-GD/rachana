@@ -45,7 +45,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
   {
     id: 'cloud-ops-dashboard',
     title: 'Cloud Operations & Telemetry Hub',
-    category: 'Complex Dashboard',
+    category: 'Complex UI',
     description: 'Professional high-density SaaS dashboard featuring KPI metric cards, system health bars, real-time log feed, and status chips.',
     expectedBehaviorNotes: [
       'Root container organizes header, KPI cards, and dual-column telemetry workspace.',
@@ -781,7 +781,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
   {
     id: 'sci-fi-game-hud',
     title: 'Sci-Fi Tactical Combat HUD',
-    category: 'Game UI',
+    category: 'Complex UI',
     description: 'Immersive sci-fi game interface featuring top navigation bar, combat reticle, dual vitals meter, and action ability hotbar.',
     expectedBehaviorNotes: [
       'Outer HUD spans 840×540 with column flow and space-between vertical distribution.',
@@ -1173,7 +1173,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
   {
     id: 'studio-inspector-tool',
     title: 'Studio Level Inspector & Scene Tree',
-    category: 'Developer Tools',
+    category: 'Complex UI',
     description: 'Multi-pane game engine editor layout with top command menu, scene hierarchy tree, central 3D stage, and transform properties inspector.',
     expectedBehaviorNotes: [
       'Top toolbar coordinates mode switches and scene operations.',
@@ -1504,7 +1504,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
   {
     id: 'settings-modal-dialog',
     title: 'Account & Security Modal Dialog',
-    category: 'Modal & Forms',
+    category: 'Complex UI',
     description: 'Centered modal overlay dialog with card surface, category tabs, text fields, and primary/secondary action buttons.',
     expectedBehaviorNotes: [
       'Outer overlay centers the modal card perfectly in both horizontal and vertical axes.',
