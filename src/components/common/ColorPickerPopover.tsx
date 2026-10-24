@@ -8,7 +8,7 @@ interface ColorPickerPopoverProps {
   label?: string;
 }
 
-// Convert Hex string to RGBA object
+// Convert Hex or RGBA string to RGBA object
 function parseColorToRgba(str: string): { r: number; g: number; b: number; a: number } {
   const s = (str || '').trim().toLowerCase();
   if (s === 'transparent') {
@@ -132,7 +132,7 @@ function hsvToRgb(h: number, s: number, v: number): { r: number; g: number; b: n
   };
 }
 
-// Convert RGBA to HEX string (#rrggbb or #rrggbbaa)
+// Convert RGBA to HEX string
 function rgbaToHex(r: number, g: number, b: number, a: number): string {
   const toHex = (n: number) => {
     const hex = Math.max(0, Math.min(255, Math.round(n))).toString(16);
@@ -189,7 +189,7 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
     return rgba.a;
   });
 
-  // Color mode for direct input values: 'rgb' | 'hsv'
+  // Color mode: 'rgb' | 'hsv'
   const [colorMode, setColorMode] = useState<'rgb' | 'hsv'>('rgb');
 
   const satValBoxRef = useRef<HTMLDivElement>(null);
@@ -245,6 +245,14 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
     window.addEventListener('mouseup', onMouseUp);
   };
 
+  // Direct RGB component updates (from sliders or inputs)
+  const updateRgbChannel = (channel: 'r' | 'g' | 'b', val: number) => {
+    const nextRgb = { ...currentRgb, [channel]: Math.max(0, Math.min(255, Math.round(val))) };
+    const nextHsv = rgbToHsv(nextRgb.r, nextRgb.g, nextRgb.b);
+    setHsv(nextHsv);
+    notifyChange(nextHsv, alpha);
+  };
+
   // EyeDropper API (Chromium native)
   const handlePickScreenColor = async () => {
     if ('EyeDropper' in window) {
@@ -259,7 +267,7 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
           notifyChange(nextHsv, 1);
         }
       } catch {
-        // User cancelled picker
+        // Cancelled
       }
     }
   };
@@ -291,9 +299,9 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
   const baseHueRgb = hsvToRgb(hsv.h, 100, 100);
 
   return (
-    <div className="w-64 bg-[#18181c] border border-[#373742] rounded-lg shadow-2xl p-3 select-none text-zinc-300 font-sans z-50 text-xs">
+    <div className="w-[268px] bg-[#1a1a1e] border border-[#373742] rounded-lg shadow-2xl p-3 select-none text-zinc-300 font-sans z-50 text-xs">
       {/* Header */}
-      <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#292930]">
+      <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#282830]">
         <span className="font-bold text-[11px] text-zinc-200 uppercase tracking-wider">{label}</span>
         <div className="flex items-center gap-1">
           {/* Native EyeDropper Tool */}
@@ -302,7 +310,7 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
               type="button"
               onClick={handlePickScreenColor}
               title="Pick color from screen"
-              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-[#2b2b34] transition-colors"
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-[#282832] transition-colors"
             >
               <Pipette className="w-3.5 h-3.5 text-cyan-400" />
             </button>
@@ -312,7 +320,7 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
               type="button"
               onClick={onClose}
               title="Close"
-              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-[#2b2b34] transition-colors"
+              className="p-1 rounded text-zinc-400 hover:text-white hover:bg-[#282832] transition-colors"
             >
               <X className="w-3.5 h-3.5" />
             </button>
@@ -327,7 +335,7 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
         style={{
           backgroundColor: `rgb(${baseHueRgb.r}, ${baseHueRgb.g}, ${baseHueRgb.b})`,
         }}
-        className="relative w-full h-32 rounded cursor-crosshair overflow-hidden shadow-inner mb-3"
+        className="relative w-full h-28 rounded cursor-crosshair overflow-hidden shadow-inner mb-2.5"
       >
         {/* Saturation Gradient (white to transparent) */}
         <div className="absolute inset-0 bg-gradient-to-r from-white to-transparent pointer-events-none" />
@@ -340,73 +348,71 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
             left: `${hsv.s}%`,
             top: `${100 - hsv.v}%`,
           }}
-          className="absolute w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md pointer-events-none"
+          className="absolute w-3 h-3 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-white shadow-md pointer-events-none"
         />
       </div>
 
-      {/* Sliders: Hue & Alpha */}
-      <div className="space-y-2 mb-3">
-        {/* Hue Rainbow Slider */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-zinc-400 font-mono w-4">H</span>
+      {/* Hue Rainbow Slider */}
+      <div className="flex items-center gap-2 mb-2">
+        <span className="text-[10px] text-zinc-400 font-mono w-3.5">H</span>
+        <input
+          type="range"
+          min="0"
+          max="360"
+          value={hsv.h}
+          onChange={(e) => {
+            const h = parseInt(e.target.value, 10);
+            const next = { ...hsv, h };
+            setHsv(next);
+            notifyChange(next, alpha);
+          }}
+          style={{
+            background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+          }}
+          className="flex-1 h-2.5 rounded appearance-none cursor-pointer outline-none"
+        />
+        <span className="text-[10px] font-mono text-zinc-400 w-8 text-right">{hsv.h}°</span>
+      </div>
+
+      {/* Alpha / Opacity Slider */}
+      <div className="flex items-center gap-2 mb-2.5">
+        <span className="text-[10px] text-zinc-400 font-mono w-3.5">A</span>
+        <div
+          className="flex-1 h-2.5 rounded relative overflow-hidden"
+          style={{
+            backgroundImage: 'linear-gradient(45deg, #2b2b33 25%, transparent 25%), linear-gradient(-45deg, #2b2b33 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2b2b33 75%), linear-gradient(-45deg, transparent 75%, #2b2b33 75%)',
+            backgroundSize: '8px 8px',
+            backgroundColor: '#1a1a20',
+          }}
+        >
           <input
             type="range"
             min="0"
-            max="360"
-            value={hsv.h}
+            max="1"
+            step="0.01"
+            value={alpha}
             onChange={(e) => {
-              const h = parseInt(e.target.value, 10);
-              const next = { ...hsv, h };
-              setHsv(next);
-              notifyChange(next, alpha);
+              const a = parseFloat(e.target.value);
+              setAlpha(a);
+              notifyChange(hsv, a);
             }}
             style={{
-              background: 'linear-gradient(to right, #ff0000 0%, #ffff00 17%, #00ff00 33%, #00ffff 50%, #0000ff 67%, #ff00ff 83%, #ff0000 100%)',
+              background: `linear-gradient(to right, transparent, rgb(${currentRgb.r}, ${currentRgb.g}, ${currentRgb.b}))`,
             }}
-            className="flex-1 h-3 rounded appearance-none cursor-pointer outline-none"
+            className="absolute inset-0 w-full h-full appearance-none cursor-pointer outline-none bg-transparent"
           />
         </div>
-
-        {/* Alpha / Opacity Slider */}
-        <div className="flex items-center gap-2">
-          <span className="text-[10px] text-zinc-400 font-mono w-4">A</span>
-          <div
-            className="flex-1 h-3 rounded relative overflow-hidden"
-            style={{
-              backgroundImage: 'linear-gradient(45deg, #2b2b33 25%, transparent 25%), linear-gradient(-45deg, #2b2b33 25%, transparent 25%), linear-gradient(45deg, transparent 75%, #2b2b33 75%), linear-gradient(-45deg, transparent 75%, #2b2b33 75%)',
-              backgroundSize: '8px 8px',
-              backgroundColor: '#1a1a20',
-            }}
-          >
-            <input
-              type="range"
-              min="0"
-              max="1"
-              step="0.01"
-              value={alpha}
-              onChange={(e) => {
-                const a = parseFloat(e.target.value);
-                setAlpha(a);
-                notifyChange(hsv, a);
-              }}
-              style={{
-                background: `linear-gradient(to right, transparent, rgb(${currentRgb.r}, ${currentRgb.g}, ${currentRgb.b}))`,
-              }}
-              className="absolute inset-0 w-full h-full appearance-none cursor-pointer outline-none bg-transparent"
-            />
-          </div>
-          <span className="text-[10px] font-mono text-zinc-400 w-7 text-right">
-            {Math.round(alpha * 100)}%
-          </span>
-        </div>
+        <span className="text-[10px] font-mono text-zinc-400 w-8 text-right">
+          {Math.round(alpha * 100)}%
+        </span>
       </div>
 
       {/* Comparison: Previous (Initial) vs Current (New) Color */}
-      <div className="flex items-center justify-between p-1.5 bg-[#121215] rounded border border-[#2b2b32] mb-3">
+      <div className="flex items-center justify-between p-1.5 bg-[#121215] rounded border border-[#2b2b32] mb-2.5">
         <div className="flex items-center gap-2">
-          {/* Previous Color Swatch (Click to Revert) */}
+          {/* Previous Color Swatch */}
           <div className="flex flex-col items-center">
-            <span className="text-[9px] text-zinc-500 uppercase font-semibold mb-0.5">Original</span>
+            <span className="text-[8px] text-zinc-500 uppercase font-semibold mb-0.5">Original</span>
             <button
               type="button"
               onClick={handleRevert}
@@ -414,7 +420,7 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
               style={{
                 backgroundColor: initialColorStr === 'transparent' ? 'transparent' : initialColorStr,
               }}
-              className="w-8 h-6 rounded border border-[#444] relative hover:scale-105 transition-transform"
+              className="w-7 h-5 rounded border border-[#444] relative hover:scale-105 transition-transform"
             >
               {initialColorStr === 'transparent' && (
                 <span className="absolute inset-0 text-[10px] text-red-500 flex items-center justify-center font-bold">
@@ -426,33 +432,32 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
 
           {/* Current New Color Swatch */}
           <div className="flex flex-col items-center">
-            <span className="text-[9px] text-zinc-400 uppercase font-semibold mb-0.5">New</span>
+            <span className="text-[8px] text-zinc-400 uppercase font-semibold mb-0.5">New</span>
             <div
               style={{
                 backgroundColor: currentHex,
               }}
-              className="w-8 h-6 rounded border border-blue-500 shadow-sm"
+              className="w-7 h-5 rounded border border-blue-500 shadow-sm"
             />
           </div>
         </div>
 
-        {/* Revert Icon Button */}
+        {/* Reset Button */}
         <button
           type="button"
           onClick={handleRevert}
           title="Reset to initial color"
-          className="flex items-center gap-1 px-2 py-1 rounded bg-[#202026] hover:bg-[#282830] text-zinc-400 hover:text-white border border-[#33333d] text-[10px] font-semibold transition-colors"
+          className="flex items-center gap-1 px-1.5 py-0.5 rounded bg-[#202026] hover:bg-[#282830] text-zinc-400 hover:text-white border border-[#33333d] text-[10px] font-semibold transition-colors"
         >
-          <RotateCcw className="w-3 h-3" />
+          <RotateCcw className="w-2.5 h-2.5" />
           <span>Reset</span>
         </button>
       </div>
 
-      {/* Mode Switch & Inputs (Hex / RGB / HSV) */}
-      <div className="space-y-2 mb-3">
-        {/* Hex Input */}
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] font-mono text-zinc-400 w-10 uppercase">HEX:</span>
+      {/* Hex & Mode Switch */}
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-1 flex-1">
+          <span className="text-[10px] font-mono text-zinc-500 uppercase">HEX:</span>
           <input
             type="text"
             value={currentHex}
@@ -466,143 +471,201 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
                 notifyChange(next, rgba.a);
               }
             }}
-            className="flex-1 bg-[#121215] border border-[#2e2e38] rounded px-2 py-0.5 font-mono text-[11px] text-white outline-none focus:border-blue-500"
+            className="w-full bg-[#121215] border border-[#2e2e38] rounded px-1.5 py-0.5 font-mono text-[10px] text-white outline-none focus:border-blue-500"
           />
         </div>
 
-        {/* RGB / HSV Mode Toggle */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center bg-[#121215] rounded p-0.5 border border-[#2e2e38]">
-            <button
-              type="button"
-              onClick={() => setColorMode('rgb')}
-              className={`px-2 py-0.5 rounded text-[9px] font-semibold transition-colors ${
-                colorMode === 'rgb' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              RGB
-            </button>
-            <button
-              type="button"
-              onClick={() => setColorMode('hsv')}
-              className={`px-2 py-0.5 rounded text-[9px] font-semibold transition-colors ${
-                colorMode === 'hsv' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
-              }`}
-            >
-              HSV
-            </button>
+        <div className="flex items-center bg-[#121215] rounded p-0.5 border border-[#2e2e38] flex-shrink-0">
+          <button
+            type="button"
+            onClick={() => setColorMode('rgb')}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-semibold transition-colors ${
+              colorMode === 'rgb' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            RGB
+          </button>
+          <button
+            type="button"
+            onClick={() => setColorMode('hsv')}
+            className={`px-1.5 py-0.5 rounded text-[9px] font-semibold transition-colors ${
+              colorMode === 'hsv' ? 'bg-blue-600 text-white' : 'text-zinc-400 hover:text-zinc-200'
+            }`}
+          >
+            HSV
+          </button>
+        </div>
+      </div>
+
+      {/* RGB Sliders & Numbers (0 to 255 with color gradients) */}
+      {colorMode === 'rgb' ? (
+        <div className="space-y-1.5 mb-2.5 bg-[#141417] p-2 rounded border border-[#272730]">
+          {/* Red Slider */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono font-bold text-red-400 w-3">R</span>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value={currentRgb.r}
+              onChange={(e) => updateRgbChannel('r', parseInt(e.target.value, 10))}
+              style={{
+                background: `linear-gradient(to right, rgb(0, ${currentRgb.g}, ${currentRgb.b}), rgb(255, ${currentRgb.g}, ${currentRgb.b}))`,
+              }}
+              className="flex-1 h-2 rounded appearance-none cursor-pointer outline-none"
+            />
+            <input
+              type="number"
+              min="0"
+              max="255"
+              value={currentRgb.r}
+              onChange={(e) => updateRgbChannel('r', parseInt(e.target.value, 10) || 0)}
+              className="w-10 bg-[#121215] border border-[#2e2e38] rounded px-1 py-0.5 font-mono text-[10px] text-zinc-200 outline-none text-center"
+            />
+          </div>
+
+          {/* Green Slider */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono font-bold text-emerald-400 w-3">G</span>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value={currentRgb.g}
+              onChange={(e) => updateRgbChannel('g', parseInt(e.target.value, 10))}
+              style={{
+                background: `linear-gradient(to right, rgb(${currentRgb.r}, 0, ${currentRgb.b}), rgb(${currentRgb.r}, 255, ${currentRgb.b}))`,
+              }}
+              className="flex-1 h-2 rounded appearance-none cursor-pointer outline-none"
+            />
+            <input
+              type="number"
+              min="0"
+              max="255"
+              value={currentRgb.g}
+              onChange={(e) => updateRgbChannel('g', parseInt(e.target.value, 10) || 0)}
+              className="w-10 bg-[#121215] border border-[#2e2e38] rounded px-1 py-0.5 font-mono text-[10px] text-zinc-200 outline-none text-center"
+            />
+          </div>
+
+          {/* Blue Slider */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono font-bold text-blue-400 w-3">B</span>
+            <input
+              type="range"
+              min="0"
+              max="255"
+              value={currentRgb.b}
+              onChange={(e) => updateRgbChannel('b', parseInt(e.target.value, 10))}
+              style={{
+                background: `linear-gradient(to right, rgb(${currentRgb.r}, ${currentRgb.g}, 0), rgb(${currentRgb.r}, ${currentRgb.g}, 255))`,
+              }}
+              className="flex-1 h-2 rounded appearance-none cursor-pointer outline-none"
+            />
+            <input
+              type="number"
+              min="0"
+              max="255"
+              value={currentRgb.b}
+              onChange={(e) => updateRgbChannel('b', parseInt(e.target.value, 10) || 0)}
+              className="w-10 bg-[#121215] border border-[#2e2e38] rounded px-1 py-0.5 font-mono text-[10px] text-zinc-200 outline-none text-center"
+            />
           </div>
         </div>
+      ) : (
+        <div className="space-y-1.5 mb-2.5 bg-[#141417] p-2 rounded border border-[#272730]">
+          {/* Hue Numeric & Slider */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-zinc-400 w-3">H</span>
+            <input
+              type="range"
+              min="0"
+              max="360"
+              value={hsv.h}
+              onChange={(e) => {
+                const next = { ...hsv, h: parseInt(e.target.value, 10) };
+                setHsv(next);
+                notifyChange(next, alpha);
+              }}
+              className="flex-1 h-2 rounded appearance-none cursor-pointer outline-none bg-zinc-700"
+            />
+            <input
+              type="number"
+              min="0"
+              max="360"
+              value={hsv.h}
+              onChange={(e) => {
+                const next = { ...hsv, h: parseInt(e.target.value, 10) || 0 };
+                setHsv(next);
+                notifyChange(next, alpha);
+              }}
+              className="w-10 bg-[#121215] border border-[#2e2e38] rounded px-1 py-0.5 font-mono text-[10px] text-zinc-200 outline-none text-center"
+            />
+          </div>
 
-        {/* Numerical Values (RGB or HSV) */}
-        {colorMode === 'rgb' ? (
-          <div className="grid grid-cols-3 gap-1.5">
-            <div>
-              <label className="text-[9px] text-zinc-500 block mb-0.5 font-mono">R</label>
-              <input
-                type="number"
-                min="0"
-                max="255"
-                value={currentRgb.r}
-                onChange={(e) => {
-                  const r = Math.max(0, Math.min(255, parseInt(e.target.value, 10) || 0));
-                  const nextHsv = rgbToHsv(r, currentRgb.g, currentRgb.b);
-                  setHsv(nextHsv);
-                  notifyChange(nextHsv, alpha);
-                }}
-                className="w-full bg-[#121215] border border-[#2e2e38] rounded px-1.5 py-0.5 font-mono text-[11px] text-zinc-200 outline-none text-center"
-              />
-            </div>
-            <div>
-              <label className="text-[9px] text-zinc-500 block mb-0.5 font-mono">G</label>
-              <input
-                type="number"
-                min="0"
-                max="255"
-                value={currentRgb.g}
-                onChange={(e) => {
-                  const g = Math.max(0, Math.min(255, parseInt(e.target.value, 10) || 0));
-                  const nextHsv = rgbToHsv(currentRgb.r, g, currentRgb.b);
-                  setHsv(nextHsv);
-                  notifyChange(nextHsv, alpha);
-                }}
-                className="w-full bg-[#121215] border border-[#2e2e38] rounded px-1.5 py-0.5 font-mono text-[11px] text-zinc-200 outline-none text-center"
-              />
-            </div>
-            <div>
-              <label className="text-[9px] text-zinc-500 block mb-0.5 font-mono">B</label>
-              <input
-                type="number"
-                min="0"
-                max="255"
-                value={currentRgb.b}
-                onChange={(e) => {
-                  const b = Math.max(0, Math.min(255, parseInt(e.target.value, 10) || 0));
-                  const nextHsv = rgbToHsv(currentRgb.r, currentRgb.g, b);
-                  setHsv(nextHsv);
-                  notifyChange(nextHsv, alpha);
-                }}
-                className="w-full bg-[#121215] border border-[#2e2e38] rounded px-1.5 py-0.5 font-mono text-[11px] text-zinc-200 outline-none text-center"
-              />
-            </div>
+          {/* Saturation */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-zinc-400 w-3">S</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={hsv.s}
+              onChange={(e) => {
+                const next = { ...hsv, s: parseInt(e.target.value, 10) };
+                setHsv(next);
+                notifyChange(next, alpha);
+              }}
+              className="flex-1 h-2 rounded appearance-none cursor-pointer outline-none bg-zinc-700"
+            />
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={hsv.s}
+              onChange={(e) => {
+                const next = { ...hsv, s: parseInt(e.target.value, 10) || 0 };
+                setHsv(next);
+                notifyChange(next, alpha);
+              }}
+              className="w-10 bg-[#121215] border border-[#2e2e38] rounded px-1 py-0.5 font-mono text-[10px] text-zinc-200 outline-none text-center"
+            />
           </div>
-        ) : (
-          <div className="grid grid-cols-3 gap-1.5">
-            <div>
-              <label className="text-[9px] text-zinc-500 block mb-0.5 font-mono">H°</label>
-              <input
-                type="number"
-                min="0"
-                max="360"
-                value={hsv.h}
-                onChange={(e) => {
-                  const h = Math.max(0, Math.min(360, parseInt(e.target.value, 10) || 0));
-                  const next = { ...hsv, h };
-                  setHsv(next);
-                  notifyChange(next, alpha);
-                }}
-                className="w-full bg-[#121215] border border-[#2e2e38] rounded px-1.5 py-0.5 font-mono text-[11px] text-zinc-200 outline-none text-center"
-              />
-            </div>
-            <div>
-              <label className="text-[9px] text-zinc-500 block mb-0.5 font-mono">S%</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={hsv.s}
-                onChange={(e) => {
-                  const s = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
-                  const next = { ...hsv, s };
-                  setHsv(next);
-                  notifyChange(next, alpha);
-                }}
-                className="w-full bg-[#121215] border border-[#2e2e38] rounded px-1.5 py-0.5 font-mono text-[11px] text-zinc-200 outline-none text-center"
-              />
-            </div>
-            <div>
-              <label className="text-[9px] text-zinc-500 block mb-0.5 font-mono">V%</label>
-              <input
-                type="number"
-                min="0"
-                max="100"
-                value={hsv.v}
-                onChange={(e) => {
-                  const v = Math.max(0, Math.min(100, parseInt(e.target.value, 10) || 0));
-                  const next = { ...hsv, v };
-                  setHsv(next);
-                  notifyChange(next, alpha);
-                }}
-                className="w-full bg-[#121215] border border-[#2e2e38] rounded px-1.5 py-0.5 font-mono text-[11px] text-zinc-200 outline-none text-center"
-              />
-            </div>
+
+          {/* Value / Brightness */}
+          <div className="flex items-center gap-2">
+            <span className="text-[10px] font-mono text-zinc-400 w-3">V</span>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={hsv.v}
+              onChange={(e) => {
+                const next = { ...hsv, v: parseInt(e.target.value, 10) };
+                setHsv(next);
+                notifyChange(next, alpha);
+              }}
+              className="flex-1 h-2 rounded appearance-none cursor-pointer outline-none bg-zinc-700"
+            />
+            <input
+              type="number"
+              min="0"
+              max="100"
+              value={hsv.v}
+              onChange={(e) => {
+                const next = { ...hsv, v: parseInt(e.target.value, 10) || 0 };
+                setHsv(next);
+                notifyChange(next, alpha);
+              }}
+              className="w-10 bg-[#121215] border border-[#2e2e38] rounded px-1 py-0.5 font-mono text-[10px] text-zinc-200 outline-none text-center"
+            />
           </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Preset Swatches Palette */}
       <div>
-        <label className="text-[9px] text-zinc-500 uppercase font-semibold block mb-1">
+        <label className="text-[8px] text-zinc-500 uppercase font-semibold block mb-1">
           Preset Swatches
         </label>
         <div className="grid grid-cols-10 gap-1 p-1 bg-[#121215] rounded border border-[#272730]">

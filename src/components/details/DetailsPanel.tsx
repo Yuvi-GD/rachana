@@ -20,25 +20,6 @@ import {
   ChevronRight
 } from 'lucide-react';
 
-const COLOR_SWATCHES = [
-  'transparent',
-  '#09090b',
-  '#18181b',
-  '#27272a',
-  '#3f3f46',
-  '#2563eb',
-  '#38bdf8',
-  '#16a34a',
-  '#10b981',
-  '#f59e0b',
-  '#ea580c',
-  '#dc2626',
-  '#7c3aed',
-  '#a855f7',
-  '#ec4899',
-  '#ffffff',
-];
-
 interface UnrealSectionHeaderProps {
   title: string;
   icon: React.ReactNode;
@@ -82,6 +63,27 @@ export const DetailsPanel: React.FC = () => {
   const [boxModelMode, setBoxModelMode] = useState<'edit' | 'inspect'>('edit');
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [activeColorPicker, setActiveColorPicker] = useState<'background' | 'border' | 'text' | null>(null);
+  const [colorPickerPos, setColorPickerPos] = useState<{ left: number; top: number } | null>(null);
+
+  const handleOpenColorPicker = (e: React.MouseEvent, type: 'background' | 'border' | 'text') => {
+    e.stopPropagation();
+    const rect = e.currentTarget.getBoundingClientRect();
+    const popoverWidth = 270;
+    const popoverHeight = 440;
+
+    let left = rect.left - popoverWidth - 8;
+    if (left < 10) left = rect.right + 8;
+    if (left + popoverWidth > window.innerWidth - 10) left = window.innerWidth - popoverWidth - 10;
+
+    let top = rect.top - 20;
+    if (top + popoverHeight > window.innerHeight - 10) {
+      top = Math.max(10, window.innerHeight - popoverHeight - 10);
+    }
+    if (top < 10) top = 10;
+
+    setColorPickerPos({ left, top });
+    setActiveColorPicker(type);
+  };
 
   if (!selectedNode) {
     return (
@@ -691,13 +693,13 @@ export const DetailsPanel: React.FC = () => {
                     </label>
                     <button
                       type="button"
-                      onClick={() => setActiveColorPicker('background')}
+                      onClick={(e) => handleOpenColorPicker(e, 'background')}
                       className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold uppercase"
                     >
                       Open Palette
                     </button>
                   </div>
-                  <div className="flex items-center gap-2 mb-2">
+                  <div className="flex items-center gap-2">
                     <input
                       type="text"
                       value={style.backgroundColor}
@@ -706,7 +708,7 @@ export const DetailsPanel: React.FC = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => setActiveColorPicker('background')}
+                      onClick={(e) => handleOpenColorPicker(e, 'background')}
                       style={{
                         backgroundColor: style.backgroundColor === 'transparent' ? 'transparent' : style.backgroundColor,
                       }}
@@ -718,28 +720,6 @@ export const DetailsPanel: React.FC = () => {
                       )}
                     </button>
                   </div>
-
-                  {/* Quick Swatch Bar */}
-                  <div className="flex flex-wrap gap-1 p-1 bg-[#17171a] rounded border border-[#2d2d35]">
-                    {COLOR_SWATCHES.map((swatch) => (
-                      <button
-                        type="button"
-                        key={swatch}
-                        onClick={() => handleStyleChange({ backgroundColor: swatch })}
-                        title={swatch}
-                        style={{ backgroundColor: swatch === 'transparent' ? 'transparent' : swatch }}
-                        className={`w-4 h-4 rounded-xs border transition-transform hover:scale-125 relative ${
-                          swatch === 'transparent' ? 'border-dashed border-red-500/60' : 'border-[#444]'
-                        } ${style.backgroundColor === swatch ? 'ring-2 ring-blue-500 scale-110' : ''}`}
-                      >
-                        {swatch === 'transparent' && (
-                          <span className="absolute inset-0 text-[8px] text-red-500 flex items-center justify-center font-bold">
-                            ×
-                          </span>
-                        )}
-                      </button>
-                    ))}
-                  </div>
                 </div>
 
                 {/* Border Color & Style */}
@@ -748,7 +728,7 @@ export const DetailsPanel: React.FC = () => {
                     <label className="text-[10px] text-zinc-400">Border Color & Style</label>
                     <button
                       type="button"
-                      onClick={() => setActiveColorPicker('border')}
+                      onClick={(e) => handleOpenColorPicker(e, 'border')}
                       className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold uppercase"
                     >
                       Open Palette
@@ -763,7 +743,7 @@ export const DetailsPanel: React.FC = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => setActiveColorPicker('border')}
+                      onClick={(e) => handleOpenColorPicker(e, 'border')}
                       style={{
                         backgroundColor: style.borderColor === 'transparent' ? 'transparent' : style.borderColor,
                       }}
@@ -838,7 +818,7 @@ export const DetailsPanel: React.FC = () => {
                     <label className="text-[10px] text-zinc-400">Text Color</label>
                     <button
                       type="button"
-                      onClick={() => setActiveColorPicker('text')}
+                      onClick={(e) => handleOpenColorPicker(e, 'text')}
                       className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold uppercase"
                     >
                       Open Palette
@@ -853,7 +833,7 @@ export const DetailsPanel: React.FC = () => {
                     />
                     <button
                       type="button"
-                      onClick={() => setActiveColorPicker('text')}
+                      onClick={(e) => handleOpenColorPicker(e, 'text')}
                       style={{
                         backgroundColor: style.color === 'transparent' ? 'transparent' : style.color,
                       }}
@@ -974,13 +954,23 @@ export const DetailsPanel: React.FC = () => {
         )}
       </div>
 
-      {/* Floating Modal / Popover for Full RGB/HSV Color Palette Window */}
-      {activeColorPicker && (
-        <div 
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-[2px]"
-          onClick={() => setActiveColorPicker(null)}
-        >
-          <div onClick={(e) => e.stopPropagation()}>
+      {/* Anchored Popover Window for Full RGB/HSV Color Palette (No Background Blur) */}
+      {activeColorPicker && colorPickerPos && (
+        <>
+          {/* Transparent click catcher to close popover */}
+          <div 
+            className="fixed inset-0 z-40 bg-transparent"
+            onClick={() => setActiveColorPicker(null)}
+          />
+          {/* Floating Window positioned near clicked swatch */}
+          <div 
+            style={{ 
+              left: `${colorPickerPos.left}px`, 
+              top: `${colorPickerPos.top}px` 
+            }}
+            className="fixed z-50 shadow-2xl animate-in fade-in zoom-in-95 duration-100"
+            onClick={(e) => e.stopPropagation()}
+          >
             <ColorPickerPopover
               color={
                 activeColorPicker === 'background'
@@ -1004,7 +994,7 @@ export const DetailsPanel: React.FC = () => {
               }
             />
           </div>
-        </div>
+        </>
       )}
     </div>
   );

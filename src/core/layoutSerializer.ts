@@ -353,7 +353,7 @@ export const exportLayoutEngineGoldenTest = (
 
 // ========================================================
 // ========================================================
-// Tether UI Native YAML Generator (Matches UI/*.yaml)
+// Tether UI Native YAML Generator (Lossless Round-Trip)
 // ========================================================
 export const exportLayoutEngineYaml = (
   rootNode: LayoutNode,
@@ -385,63 +385,79 @@ export const exportLayoutEngineYaml = (
       lines.push(`${sp}# ---- ${node.name} ----`);
     }
 
-    // Text Node
-    if (node.type === 'text') {
-      lines.push(`${prefix}Text:`);
-      if (node.id && !node.id.startsWith('node-')) {
-        lines.push(`${bsp}id: "${node.id}"`);
-      }
-      lines.push(`${bsp}string: "${node.textContent || ''}"`);
-      lines.push(`${bsp}font_size: ${(parseNum(s.fontSize) || 16.0).toFixed(1)}`);
-      lines.push(`${bsp}color: [${textRgba.join(', ')}]`);
-      if (s.textAlign && s.textAlign !== 'left') {
-        lines.push(`${bsp}text_align: ${s.textAlign}`);
-      }
-      if (s.fillRatio && s.fillRatio !== '0') {
-        lines.push(`${bsp}fill_ratio: ${parseFloat(s.fillRatio) || 1.0}`);
-      }
-      return;
+    // Determine Tag based on node type
+    let tag = 'Panel';
+    if (node.type === 'text') tag = 'Text';
+    else if (node.type === 'heading') tag = 'Heading';
+    else if (node.type === 'button') tag = 'Button';
+    else if (node.type === 'input') tag = 'Input';
+    else if (node.type === 'badge') tag = 'Badge';
+    else if (node.type === 'card') tag = 'Card';
+    else if (node.type === 'scroll') tag = 'Scroll';
+    else if (node.type === 'image') tag = 'Image';
+    else if (node.type === 'divider') tag = 'Divider';
+    else if (node.type === 'spacer') tag = 'Spacer';
+    else if (node.type === 'grid') tag = 'Grid';
+    else if (node.type === 'flex') tag = 'Flex';
+
+    lines.push(`${prefix}${tag}:`);
+    if (node.id) lines.push(`${bsp}id: "${node.id}"`);
+    if (node.name && node.name !== node.id) lines.push(`${bsp}name: "${node.name}"`);
+    lines.push(`${bsp}type: ${node.type}`);
+
+    // Text & String content
+    if (node.textContent !== undefined && node.textContent !== '') {
+      lines.push(`${bsp}string: "${node.textContent.replace(/"/g, '\\"')}"`);
+    }
+    if (node.placeholder) {
+      lines.push(`${bsp}placeholder: "${node.placeholder.replace(/"/g, '\\"')}"`);
+    }
+    if (node.src) {
+      lines.push(`${bsp}src: "${node.src}"`);
     }
 
-    // Button Node
-    if (node.type === 'button') {
-      lines.push(`${prefix}Button:`);
-      lines.push(`${bsp}id: "${node.id}"`);
-      lines.push(`${bsp}color: [${rgba.join(', ')}]`);
-      lines.push(`${bsp}content:`);
-      lines.push(`${bsp}  - Text:`);
-      lines.push(`${bsp}      string: "${node.textContent || 'Button'}"`);
-      lines.push(`${bsp}      font_size: ${(parseNum(s.fontSize) || 16.0).toFixed(1)}`);
-      lines.push(`${bsp}      color: [${textRgba.join(', ')}]`);
-      if (s.textAlign && s.textAlign !== 'left') {
-        lines.push(`${bsp}      text_align: ${s.textAlign}`);
-      }
-      return;
-    }
-
-    // Panel Node (Container, Flex, Grid, Spacer)
-    lines.push(`${prefix}Panel:`);
-    if (node.id) {
-      lines.push(`${bsp}id: "${node.id}"`);
-    }
-
-    // Color
+    // Colors
     if (s.backgroundColor && s.backgroundColor !== 'transparent') {
       lines.push(`${bsp}color: [${rgba.join(', ')}]`);
     } else {
       lines.push(`${bsp}color: [0, 0, 0, 0]`);
     }
-
-    // Flow
-    const flow = s.flow || (s.flexDirection === 'row' ? 'ROW' : 'COLUMN');
-    lines.push(`${bsp}flow: ${flow}`);
-
-    // Fill ratio (proportional sizing)
-    if (s.fillRatio) {
-      lines.push(`${bsp}fill_ratio: ${parseFloat(s.fillRatio)}`);
-    } else if (s.flexGrow && s.flexGrow !== '0') {
-      lines.push(`${bsp}fill_ratio: ${parseFloat(s.flexGrow)}`);
+    if (s.color && s.color !== 'transparent') {
+      lines.push(`${bsp}text_color: [${textRgba.join(', ')}]`);
     }
+
+    // Layout Flow & Display
+    const flow = s.flow || (s.flexDirection === 'row' ? 'ROW' : (s.flexDirection === 'column' ? 'COLUMN' : 'NONE'));
+    lines.push(`${bsp}flow: ${flow}`);
+    if (s.display && s.display !== 'block') {
+      lines.push(`${bsp}display: ${s.display}`);
+    }
+    if (s.flexDirection && (s.display.includes('flex') || flow === 'ROW' || flow === 'COLUMN')) {
+      lines.push(`${bsp}flex_direction: ${s.flexDirection}`);
+    }
+    if (s.justifyContent && s.justifyContent !== 'flex-start') {
+      lines.push(`${bsp}justify_content: ${s.justifyContent}`);
+    }
+    if (s.alignItems && s.alignItems !== 'stretch') {
+      lines.push(`${bsp}align_items: ${s.alignItems}`);
+    }
+    if (s.flexWrap && s.flexWrap !== 'nowrap') {
+      lines.push(`${bsp}flex_wrap: ${s.flexWrap}`);
+    }
+
+    // Fill ratio / flex grow
+    const fr = s.fillRatio || s.flexGrow;
+    if (fr && fr !== '0') {
+      lines.push(`${bsp}fill_ratio: ${parseFloat(fr)}`);
+    }
+
+    // Width & Height (CRITICAL for lossless roundtrip!)
+    if (s.width && s.width !== 'auto') lines.push(`${bsp}width: "${s.width}"`);
+    if (s.height && s.height !== 'auto') lines.push(`${bsp}height: "${s.height}"`);
+    if (s.minWidth && s.minWidth !== 'auto') lines.push(`${bsp}min_width: "${s.minWidth}"`);
+    if (s.minHeight && s.minHeight !== 'auto') lines.push(`${bsp}min_height: "${s.minHeight}"`);
+    if (s.maxWidth && s.maxWidth !== 'none') lines.push(`${bsp}max_width: "${s.maxWidth}"`);
+    if (s.maxHeight && s.maxHeight !== 'none') lines.push(`${bsp}max_height: "${s.maxHeight}"`);
 
     // Gap [x, y]
     const gapX = parseNum(s.columnGap || s.gap);
@@ -450,7 +466,7 @@ export const exportLayoutEngineYaml = (
       lines.push(`${bsp}gap: [${gapX}, ${gapY}]`);
     }
 
-    // Padding (single number if all match, or top/right/bottom/left)
+    // Padding
     const pTop = parseNum(s.padding.top);
     const pRight = parseNum(s.padding.right);
     const pBottom = parseNum(s.padding.bottom);
@@ -461,7 +477,7 @@ export const exportLayoutEngineYaml = (
       lines.push(`${bsp}padding: [${pTop}, ${pRight}, ${pBottom}, ${pLeft}]`);
     }
 
-    // Margin (Tether UI Margin support: scalar or array)
+    // Margin
     const mTop = parseNum(s.margin.top);
     const mRight = parseNum(s.margin.right);
     const mBottom = parseNum(s.margin.bottom);
@@ -475,20 +491,23 @@ export const exportLayoutEngineYaml = (
     // Border
     const bWidth = parseNum(s.borderWidth.top);
     if (bWidth > 0) {
-      lines.push(`${bsp}border_width: ${bWidth.toFixed(1)}`);
+      lines.push(`${bsp}border_width: ${bWidth}`);
       lines.push(`${bsp}border_color: [${borderRgba.join(', ')}]`);
     }
-
     const bRadius = parseNum(s.borderRadius);
     if (bRadius > 0) {
-      lines.push(`${bsp}border_radius: ${bRadius.toFixed(1)}`);
+      lines.push(`${bsp}border_radius: ${bRadius}`);
     }
 
-    // Interactivity
-    if (s.interactable) {
-      lines.push(`${bsp}interactable: true`);
-      lines.push(`${bsp}hover_color: AUTO`);
-      lines.push(`${bsp}press_color: AUTO`);
+    // Typography
+    if (s.fontSize && s.fontSize !== '14px') {
+      lines.push(`${bsp}font_size: "${s.fontSize}"`);
+    }
+    if (s.fontWeight && s.fontWeight !== '400') {
+      lines.push(`${bsp}font_weight: "${s.fontWeight}"`);
+    }
+    if (s.textAlign && s.textAlign !== 'left') {
+      lines.push(`${bsp}text_align: ${s.textAlign}`);
     }
 
     // Opacity
@@ -496,12 +515,8 @@ export const exportLayoutEngineYaml = (
       lines.push(`${bsp}opacity: ${parseFloat(s.opacity)}`);
     }
 
-    // Content alignment
-    if (s.contentAlign && s.contentAlign !== 'START') {
-      lines.push(`${bsp}content_align: ${s.contentAlign}`);
-    }
-
-    // Anchors
+    // Content alignment & Anchors
+    if (s.contentAlign && s.contentAlign !== 'START') lines.push(`${bsp}content_align: ${s.contentAlign}`);
     if (s.anchorMin && s.anchorMin !== '0.0') lines.push(`${bsp}anchor_min: ${s.anchorMin}`);
     if (s.anchorMax && s.anchorMax !== '1.0') lines.push(`${bsp}anchor_max: ${s.anchorMax}`);
 
@@ -513,12 +528,11 @@ export const exportLayoutEngineYaml = (
   };
 
   serializeTetherNode(rootNode, 0, false);
-
   return lines.join('\n');
 };
 
 // ========================================================
-// Tether UI Native YAML Importer / Parser
+// Tether UI Native YAML Importer / Parser (Lossless Round-Trip)
 // ========================================================
 export const parseTetherYaml = (yamlText: string): LayoutNode => {
   const lines = yamlText.split('\n');
@@ -557,6 +571,9 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
   const parseSpacingVal = (val: any) => {
     if (typeof val === 'number') {
       return defaultSpacing(`${val}px`);
+    }
+    if (typeof val === 'string') {
+      return defaultSpacing(val);
     }
     if (Array.isArray(val)) {
       if (val.length === 4) {
@@ -601,11 +618,11 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
     const indent = indentMatch ? indentMatch[1].length : 0;
     const trimmed = lineWithoutComment.trim();
 
-    // Check if new node definition: e.g. "- Panel:", "Panel:", "- Text:", "- Button:", "- StatCard:"
+    // Check if new node definition: e.g. "- Panel:", "Panel:", "- Text:", "- Button:", "- Card:"
     const nodeMatch = trimmed.match(/^(?:-\s*)?([A-Za-z0-9_-]+):$/);
-    const isTag = nodeMatch && ['Panel', 'Text', 'Button', 'StatCard', 'Widget', 'Slot', 'Scene'].includes(nodeMatch[1]);
+    const isTag = Boolean(nodeMatch && nodeMatch[1] && nodeMatch[1][0] === nodeMatch[1][0].toUpperCase());
 
-    if (isTag) {
+    if (isTag && nodeMatch) {
       const tag = nodeMatch[1];
       const newNode: RawNodeItem = {
         indent,
@@ -647,32 +664,58 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
   let idCounter = 1;
   const buildLayoutNode = (raw: RawNodeItem): LayoutNode => {
     const p = raw.props;
-    const nodeId = p.id || `node_${idCounter++}_${raw.tag.toLowerCase()}`;
-    const name = p.name || p.id || raw.tag;
+    const tag = raw.tag;
+    const tagLower = tag.toLowerCase();
 
     let nodeType: LayoutNode['type'] = 'container';
-    if (raw.tag === 'Text') nodeType = 'text';
-    else if (raw.tag === 'Button') nodeType = 'button';
-    else if (p.flow === 'ROW' || p.flow === 'COLUMN') nodeType = 'flex';
-
-    // Style mapping
-    const style = createDefaultStyle();
-
-    // Flow & Flex
-    if (p.flow === 'ROW') {
-      style.display = 'flex';
-      style.flow = 'ROW';
-      style.flexDirection = 'row';
-    } else if (p.flow === 'COLUMN') {
-      style.display = 'flex';
-      style.flow = 'COLUMN';
-      style.flexDirection = 'column';
-    } else if (p.flow === 'NONE') {
-      style.display = 'block';
-      style.flow = 'NONE';
+    if (p.type) {
+      nodeType = p.type as LayoutNode['type'];
+    } else if (['text', 'heading', 'button', 'input', 'badge', 'card', 'scroll', 'image', 'divider', 'spacer', 'grid', 'flex', 'container'].includes(tagLower)) {
+      nodeType = tagLower as LayoutNode['type'];
+    } else if (p.flow === 'ROW' || p.flow === 'COLUMN') {
+      nodeType = 'flex';
     }
 
-    // Fill ratio
+    const style = createDefaultStyle();
+
+    // Width & Height
+    if (p.width !== undefined) style.width = typeof p.width === 'number' ? `${p.width}px` : String(p.width);
+    if (p.height !== undefined) style.height = typeof p.height === 'number' ? `${p.height}px` : String(p.height);
+    if (p.min_width !== undefined) style.minWidth = typeof p.min_width === 'number' ? `${p.min_width}px` : String(p.min_width);
+    if (p.min_height !== undefined) style.minHeight = typeof p.min_height === 'number' ? `${p.min_height}px` : String(p.min_height);
+    if (p.max_width !== undefined) style.maxWidth = typeof p.max_width === 'number' ? `${p.max_width}px` : String(p.max_width);
+    if (p.max_height !== undefined) style.maxHeight = typeof p.max_height === 'number' ? `${p.max_height}px` : String(p.max_height);
+
+    // Display & Flow
+    if (p.display) {
+      style.display = p.display;
+    } else if (p.flow === 'ROW' || p.flow === 'COLUMN' || nodeType === 'flex') {
+      style.display = 'flex';
+    } else if (nodeType === 'grid') {
+      style.display = 'grid';
+    } else {
+      style.display = 'block';
+    }
+
+    if (p.flow) {
+      style.flow = p.flow;
+    } else if (style.display === 'flex') {
+      style.flow = p.flex_direction === 'row' ? 'ROW' : 'COLUMN';
+    }
+
+    if (p.flex_direction) {
+      style.flexDirection = p.flex_direction;
+    } else if (p.flow === 'ROW') {
+      style.flexDirection = 'row';
+    } else if (p.flow === 'COLUMN') {
+      style.flexDirection = 'column';
+    }
+
+    if (p.justify_content) style.justifyContent = p.justify_content;
+    if (p.align_items) style.alignItems = p.align_items;
+    if (p.flex_wrap) style.flexWrap = p.flex_wrap;
+
+    // Fill ratio / flex grow
     if (p.fill_ratio !== undefined) {
       style.fillRatio = String(p.fill_ratio);
       style.flexGrow = String(p.fill_ratio);
@@ -683,64 +726,63 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
       style.columnGap = `${p.gap[0]}px`;
       style.rowGap = `${p.gap[1]}px`;
       style.gap = `${p.gap[1]}px ${p.gap[0]}px`;
+    } else if (typeof p.gap === 'number') {
+      style.gap = `${p.gap}px`;
+      style.rowGap = `${p.gap}px`;
+      style.columnGap = `${p.gap}px`;
+    } else if (typeof p.gap === 'string') {
+      style.gap = p.gap;
     }
 
-    // Padding
-    if (p.padding !== undefined) {
-      style.padding = parseSpacingVal(p.padding);
-    }
+    // Padding & Margin
+    if (p.padding !== undefined) style.padding = parseSpacingVal(p.padding);
+    if (p.margin !== undefined) style.margin = parseSpacingVal(p.margin);
 
-    // Margin (Tether UI Margin support!)
-    if (p.margin !== undefined) {
-      style.margin = parseSpacingVal(p.margin);
-    }
-
-    // Color / Background
+    // Colors
     if (p.color) {
-      if (raw.tag === 'Text') {
+      if (nodeType === 'text' || nodeType === 'heading') {
         style.color = rgbaToCss(p.color);
         style.backgroundColor = 'transparent';
       } else {
         style.backgroundColor = rgbaToCss(p.color);
       }
     }
+    if (p.text_color) {
+      style.color = rgbaToCss(p.text_color);
+    }
 
     // Border
-    if (p.border_width !== undefined) {
-      style.borderWidth = defaultSpacing(`${p.border_width}px`);
-    }
-    if (p.border_color) {
-      style.borderColor = rgbaToCss(p.border_color);
-    }
-    if (p.border_radius !== undefined) {
-      style.borderRadius = `${p.border_radius}px`;
-    }
+    if (p.border_width !== undefined) style.borderWidth = defaultSpacing(`${p.border_width}px`);
+    if (p.border_color) style.borderColor = rgbaToCss(p.border_color);
+    if (p.border_radius !== undefined) style.borderRadius = `${p.border_radius}px`;
 
-    // Anchors
-    if (p.anchor_min !== undefined) style.anchorMin = String(p.anchor_min);
-    if (p.anchor_max !== undefined) style.anchorMax = String(p.anchor_max);
-
-    // Alignment & Interactivity
-    if (p.content_align) style.contentAlign = p.content_align;
-    if (p.interactable) style.interactable = true;
-    if (p.font_size) style.fontSize = `${p.font_size}px`;
+    // Typography
+    if (p.font_size !== undefined) {
+      style.fontSize = typeof p.font_size === 'number' ? `${p.font_size}px` : String(p.font_size);
+    }
+    if (p.font_weight !== undefined) style.fontWeight = String(p.font_weight);
     if (p.text_align) style.textAlign = p.text_align;
-    if (p.opacity !== undefined) style.opacity = String(p.opacity);
 
-    let textContent = p.string;
-    if (raw.tag === 'Button' && !textContent && raw.children.length > 0) {
+    // Content & text
+    let textContent = p.string !== undefined ? String(p.string) : (p.text !== undefined ? String(p.text) : undefined);
+    if ((nodeType === 'button' || nodeType === 'text') && !textContent && raw.children.length > 0) {
       const childText = raw.children.find(c => c.tag === 'Text');
       if (childText && childText.props.string) {
         textContent = childText.props.string;
       }
     }
 
+    const placeholder = p.placeholder ? String(p.placeholder) : undefined;
+    const src = p.src ? String(p.src) : undefined;
+
     return {
-      id: nodeId,
-      name,
+      id: p.id || `node_${idCounter++}_${nodeType}`,
+      name: p.name || p.id || tag,
       type: nodeType,
       style,
       textContent,
+      placeholder,
+      src,
       children: raw.children.map(c => buildLayoutNode(c)),
       isExpanded: true,
     };
@@ -837,7 +879,9 @@ export const parseJsonLayout = (jsonText: string): LayoutNode => {
       name: obj.name || obj.id || 'Node',
       type: nodeType,
       style,
-      textContent: obj.textContent || (nodeType === 'text' || nodeType === 'button' ? obj.name : undefined),
+      textContent: obj.textContent !== undefined ? obj.textContent : (nodeType === 'text' || nodeType === 'button' ? obj.name : undefined),
+      placeholder: obj.placeholder,
+      src: obj.src,
       children: Array.isArray(obj.children) ? obj.children.map(buildFromJson) : [],
       isExpanded: true,
     };

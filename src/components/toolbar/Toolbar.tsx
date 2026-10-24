@@ -52,7 +52,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
           <Flame className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
           <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline">Preset:</span>
           <select
-            className="bg-transparent text-zinc-200 text-xs outline-none cursor-pointer font-medium max-w-[160px] sm:max-w-[200px] truncate"
+            className="bg-transparent text-zinc-200 text-[11px] outline-none cursor-pointer font-medium max-w-[160px] sm:max-w-[200px] truncate"
             onChange={(e) => actions.loadPreset(e.target.value)}
             defaultValue={LAYOUT_PRESETS[0].id}
           >
@@ -98,7 +98,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
           <span
             onClick={() => actions.setZoom(1)}
             title="Click to reset zoom"
-            className="px-1.5 font-mono text-[11px] text-zinc-300 cursor-pointer hover:text-white min-w-[36px] text-center"
+            className="px-1.5 font-mono text-[11px] text-zinc-200 cursor-pointer hover:text-white min-w-[36px] text-center"
           >
             {Math.round(zoom * 100)}%
           </span>
@@ -120,11 +120,11 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
 
         {/* Scroll Sensitivity */}
         <div className="h-7 hidden lg:flex items-center gap-1 bg-[#242427] px-2 rounded border border-[#333338]" title="Mouse Wheel / Trackpad Zoom Sensitivity">
-          <span className="text-[10px] text-zinc-500 font-medium">Sens:</span>
+          <span className="text-[11px] text-zinc-400 font-medium">Sens:</span>
           <select
             value={scrollSensitivity || 1.0}
             onChange={(e) => actions.setScrollSensitivity(parseFloat(e.target.value))}
-            className="bg-transparent text-zinc-200 text-[10px] outline-none cursor-pointer font-mono"
+            className="bg-transparent text-zinc-200 text-[11px] outline-none cursor-pointer font-mono"
           >
             <option value="0.5" className="bg-[#242427]">0.5x Smooth</option>
             <option value="1.0" className="bg-[#242427]">1.0x Normal</option>
@@ -156,7 +156,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
             value={maxHistorySteps || 64}
             onChange={(e) => actions.setMaxHistorySteps(parseInt(e.target.value, 10))}
             title="Max Undo/Redo History Steps"
-            className="bg-transparent text-zinc-400 hover:text-zinc-200 text-[10px] outline-none cursor-pointer font-mono hidden sm:block"
+            className="bg-transparent text-zinc-300 hover:text-zinc-100 text-[11px] outline-none cursor-pointer font-mono hidden sm:block"
           >
             <option value="16" className="bg-[#242427]">16 steps</option>
             <option value="32" className="bg-[#242427]">32 steps</option>
@@ -167,13 +167,13 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         </div>
       </div>
 
-      {/* Right: Overlays & VS Code Panel Toggles */}
+      {/* Right: Overlays & Standalone Full-size Panel Toggles */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
-        {/* Box Model Overlay Toggle (Icon Only) */}
+        {/* Box Model Overlay Toggle */}
         <button
           onClick={actions.toggleOverlays}
           title="Toggle Visual Box-Model Overlays (Content, Padding, Border, Margin)"
-          className={`h-7 w-7 flex items-center justify-center rounded border text-[11px] transition-colors ${
+          className={`h-7 w-7 flex items-center justify-center rounded border transition-colors ${
             showOverlays
               ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
               : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
@@ -186,7 +186,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         <button
           onClick={actions.toggleRulers}
           title="Toggle Coordinate Rulers & Grid"
-          className={`h-7 w-7 flex items-center justify-center rounded border text-[11px] transition-colors ${
+          className={`h-7 w-7 flex items-center justify-center rounded border transition-colors ${
             showRulers
               ? 'bg-blue-600/20 border-blue-500 text-blue-300'
               : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
@@ -197,42 +197,42 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
 
         <div className="h-4 w-[1px] bg-[#333338] mx-0.5" />
 
-        {/* VS Code Style 3-Panel Layout Toggles */}
-        <div className="h-7 flex items-center bg-[#242427] rounded border border-[#333338] p-0.5 gap-0.5">
-          <button
-            onClick={actions.toggleLeftPanel}
-            title={showLeftPanel ? 'Hide Primary Sidebar (Palette & Hierarchy)' : 'Show Primary Sidebar (Palette & Hierarchy)'}
-            className={`h-5.5 w-5.5 flex items-center justify-center rounded transition-colors ${
-              showLeftPanel
-                ? 'bg-blue-600/30 text-blue-300'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            <PanelLeft className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={actions.toggleBottomPanel}
-            title={showBottomPanel ? 'Hide Bottom Panel (Script Editor)' : 'Show Bottom Panel (Script Editor)'}
-            className={`h-5.5 w-5.5 flex items-center justify-center rounded transition-colors ${
-              showBottomPanel
-                ? 'bg-blue-600/30 text-blue-300'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            <PanelBottom className="w-3.5 h-3.5" />
-          </button>
-          <button
-            onClick={actions.toggleRightPanel}
-            title={showRightPanel ? 'Hide Secondary Sidebar (Details Inspector)' : 'Show Secondary Sidebar (Details Inspector)'}
-            className={`h-5.5 w-5.5 flex items-center justify-center rounded transition-colors ${
-              showRightPanel
-                ? 'bg-blue-600/30 text-blue-300'
-                : 'text-zinc-500 hover:text-zinc-300'
-            }`}
-          >
-            <PanelRight className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        {/* Standalone Full-size Panel Toggle Buttons (Outside the box, same size as overlays) */}
+        <button
+          onClick={actions.toggleLeftPanel}
+          title={showLeftPanel ? 'Hide Primary Sidebar (Palette & Hierarchy)' : 'Show Primary Sidebar (Palette & Hierarchy)'}
+          className={`h-7 w-7 flex items-center justify-center rounded border transition-colors ${
+            showLeftPanel
+              ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
+              : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <PanelLeft className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={actions.toggleBottomPanel}
+          title={showBottomPanel ? 'Hide Bottom Panel (Script Editor)' : 'Show Bottom Panel (Script Editor)'}
+          className={`h-7 w-7 flex items-center justify-center rounded border transition-colors ${
+            showBottomPanel
+              ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
+              : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <PanelBottom className="w-3.5 h-3.5" />
+        </button>
+
+        <button
+          onClick={actions.toggleRightPanel}
+          title={showRightPanel ? 'Hide Secondary Sidebar (Details Inspector)' : 'Show Secondary Sidebar (Details Inspector)'}
+          className={`h-7 w-7 flex items-center justify-center rounded border transition-colors ${
+            showRightPanel
+              ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
+              : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          <PanelRight className="w-3.5 h-3.5" />
+        </button>
       </div>
     </header>
   );
