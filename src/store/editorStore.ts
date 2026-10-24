@@ -35,6 +35,7 @@ interface EditorState {
   metricsMap: Record<string, ComputedMetrics>;
   history: LayoutNode[];
   historyIndex: number;
+  maxHistorySteps: number;
   scrollSensitivity: number;
 
   // Panel layout sizes (Unreal Engine Docking)
@@ -61,6 +62,7 @@ let state: EditorState = {
   metricsMap: {},
   history: [JSON.parse(JSON.stringify(LAYOUT_PRESETS[0].rootNode))],
   historyIndex: 0,
+  maxHistorySteps: 64,
   scrollSensitivity: 1.0,
 
   leftPanelWidth: 260,
@@ -81,7 +83,10 @@ function emitChange() {
 function pushHistory(newRoot: LayoutNode) {
   const newHistory = state.history.slice(0, state.historyIndex + 1);
   newHistory.push(JSON.parse(JSON.stringify(newRoot)));
-  if (newHistory.length > 30) newHistory.shift();
+  const limit = state.maxHistorySteps || 64;
+  while (newHistory.length > limit) {
+    newHistory.shift();
+  }
   state = {
     ...state,
     rootNode: newRoot,
@@ -496,6 +501,18 @@ export const editorStore = {
       };
       emitChange();
     }
+  },
+
+  setMaxHistorySteps: (steps: number) => {
+    const clamped = Math.max(16, Math.min(steps, 256));
+    const trimmed = state.history.length > clamped ? state.history.slice(state.history.length - clamped) : state.history;
+    state = {
+      ...state,
+      maxHistorySteps: clamped,
+      history: trimmed,
+      historyIndex: Math.min(state.historyIndex, trimmed.length - 1),
+    };
+    emitChange();
   },
 };
 

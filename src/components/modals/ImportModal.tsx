@@ -3,7 +3,10 @@ import { useEditorStore } from '../../store/editorStore';
 import { 
   parseTetherYaml, 
   parseJsonLayout, 
-  parseHtmlLayout 
+  parseHtmlLayout,
+  exportLayoutEngineYaml,
+  exportLayoutEngineGoldenTest,
+  exportToHtmlCss
 } from '../../core/layoutSerializer';
 import { LayoutNode } from '../../types/layout';
 import { 
@@ -14,7 +17,9 @@ import {
   FileText, 
   FileJson, 
   Code2, 
-  Layers
+  Layers,
+  DownloadCloud,
+  Monitor
 } from 'lucide-react';
 
 interface ImportModalProps {
@@ -249,7 +254,7 @@ const renderSyntaxLines = (code: string, format: 'yaml' | 'json' | 'html'): Reac
 };
 
 export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwitchToExport }) => {
-  const { actions } = useEditorStore();
+  const { rootNode, metricsMap, actions } = useEditorStore();
   const [format, setFormat] = useState<'yaml' | 'json' | 'html'>('yaml');
   const [code, setCode] = useState(SAMPLE_YAML);
   const [error, setError] = useState<string | null>(null);
@@ -257,6 +262,16 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
+
+  const handleLoadCurrentScreen = () => {
+    if (format === 'yaml') {
+      setCode(exportLayoutEngineYaml(rootNode, metricsMap));
+    } else if (format === 'json') {
+      setCode(JSON.stringify(exportLayoutEngineGoldenTest(rootNode, metricsMap), null, 2));
+    } else {
+      setCode(exportToHtmlCss(rootNode).html);
+    }
+  };
 
   // Sync scrolling between overlay textarea and syntax highlighted pre
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
@@ -334,13 +349,15 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {onSwitchToExport && (
               <button
                 onClick={onSwitchToExport}
-                className="text-[11px] text-zinc-400 hover:text-blue-400 underline"
+                className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#24242d] hover:bg-[#2e2e38] text-sky-400 hover:text-sky-300 border border-[#393946] font-medium text-[11px] transition-all shadow-xs"
+                title="Switch to Export modal"
               >
-                Switch to Export
+                <DownloadCloud className="w-3.5 h-3.5 text-sky-400" />
+                <span>Switch to Export</span>
               </button>
             )}
             <button
@@ -365,7 +382,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
               }`}
             >
               <FileText className="w-3.5 h-3.5 text-amber-300" />
-              <span>Tether YAML</span>
+              <span>Hierarchical YAML</span>
             </button>
 
             {/* JSON TAB */}
@@ -395,22 +412,33 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
             </button>
           </div>
 
-          {/* Quick Preset Snippets */}
+          {/* Quick Preset Snippets + Use Current Screen */}
           <div className="flex items-center gap-1.5">
-            <span className="text-[11px] text-zinc-500 font-medium">Load Template:</span>
+            <button
+              onClick={handleLoadCurrentScreen}
+              className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 font-semibold text-[11px] transition-colors"
+              title="Copy the current active screen layout into the editor"
+            >
+              <Monitor className="w-3 h-3 text-emerald-400" />
+              <span>Use Current Screen</span>
+            </button>
+
+            <div className="h-4 w-[1px] bg-[#33333e] mx-1" />
+
+            <span className="text-[11px] text-zinc-500 font-medium">Templates:</span>
             {format === 'yaml' && (
               <>
                 <button
                   onClick={() => setCode(SAMPLE_YAML)}
                   className="px-2 py-0.5 rounded bg-[#25252e] hover:bg-[#32323e] border border-[#3d3d4b] text-amber-300 font-mono text-[10px]"
                 >
-                  modal.yaml
+                  Modal Dialog
                 </button>
                 <button
                   onClick={() => setCode(SAMPLE_DASHBOARD_YAML)}
                   className="px-2 py-0.5 rounded bg-[#25252e] hover:bg-[#32323e] border border-[#3d3d4b] text-sky-300 font-mono text-[10px]"
                 >
-                  dashboard.yaml
+                  Dashboard
                 </button>
               </>
             )}
@@ -419,7 +447,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
                 onClick={() => setCode(SAMPLE_JSON)}
                 className="px-2 py-0.5 rounded bg-[#25252e] hover:bg-[#32323e] border border-[#3d3d4b] text-blue-300 font-mono text-[10px]"
               >
-                Golden Test JSON
+                Layout JSON Tree
               </button>
             )}
             {format === 'html' && (

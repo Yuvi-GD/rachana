@@ -31,6 +31,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
     showMetrics,
     historyIndex,
     history,
+    maxHistorySteps,
     actions,
   } = useEditorStore();
 
@@ -138,12 +139,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           </select>
         </div>
 
-        {/* Undo / Redo */}
-        <div className="flex items-center bg-[#242427] rounded border border-[#333338] px-0.5">
+        {/* Undo / Redo with Steps Capacity Selector */}
+        <div className="flex items-center bg-[#242427] rounded border border-[#333338] px-1 py-0.5 gap-0.5">
           <button
             onClick={actions.undo}
             disabled={historyIndex <= 0}
-            title="Undo (Ctrl+Z)"
+            title={`Undo (Ctrl+Z) - Step ${historyIndex}/${history.length - 1}`}
             className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
           >
             <Undo2 className="w-3.5 h-3.5" />
@@ -151,11 +152,24 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           <button
             onClick={actions.redo}
             disabled={historyIndex >= history.length - 1}
-            title="Redo (Ctrl+Y)"
+            title={`Redo (Ctrl+Y) - Step ${historyIndex}/${history.length - 1}`}
             className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
           >
             <Redo2 className="w-3.5 h-3.5" />
           </button>
+          <div className="h-3.5 w-[1px] bg-[#333338] mx-0.5" />
+          <select
+            value={maxHistorySteps || 64}
+            onChange={(e) => actions.setMaxHistorySteps(parseInt(e.target.value, 10))}
+            title="Max Undo/Redo History Steps (16, 32, 64, 128, 256)"
+            className="bg-transparent text-zinc-400 hover:text-zinc-200 text-[10px] outline-none cursor-pointer font-mono"
+          >
+            <option value="16" className="bg-[#242427]">16 steps</option>
+            <option value="32" className="bg-[#242427]">32 steps</option>
+            <option value="64" className="bg-[#242427]">64 steps</option>
+            <option value="128" className="bg-[#242427]">128 steps</option>
+            <option value="256" className="bg-[#242427]">256 steps</option>
+          </select>
         </div>
       </div>
 

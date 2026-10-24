@@ -171,7 +171,7 @@ export interface ComputedMetrics {
 export interface LayoutEngineTestCase {
   id: string;
   title: string;
-  category: 'Tether UI' | 'Flexbox' | 'Grid' | 'BoxModel' | 'Positioning' | 'EdgeCases';
+  category: 'General' | 'Complex UI' | 'Flexbox' | 'Grid' | 'BoxModel' | 'Positioning' | 'EdgeCases';
   description: string;
   specReference?: string;
   rootNode: LayoutNode;

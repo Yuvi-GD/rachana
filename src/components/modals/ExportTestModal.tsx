@@ -5,7 +5,7 @@ import {
   exportLayoutEngineYaml, 
   exportToHtmlCss 
 } from '../../core/layoutSerializer';
-import { X, Copy, Check, Download, FileText, FileJson, Code, DownloadCloud } from 'lucide-react';
+import { X, Copy, Check, Download, FileText, FileJson, Code, DownloadCloud, UploadCloud } from 'lucide-react';
 
 interface ExportTestModalProps {
   isOpen: boolean;
@@ -187,13 +187,15 @@ ${html}
             </span>
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
             {onSwitchToImport && (
               <button
                 onClick={onSwitchToImport}
-                className="text-[11px] text-zinc-400 hover:text-emerald-400 underline"
+                className="flex items-center gap-1.5 px-3 py-1 rounded bg-[#24242d] hover:bg-[#2e2e38] text-emerald-400 hover:text-emerald-300 border border-[#393946] font-medium text-[11px] transition-all shadow-xs"
+                title="Switch to Import modal"
               >
-                Switch to Import
+                <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Switch to Import</span>
               </button>
             )}
             <button

@@ -207,6 +207,13 @@ export const Viewport: React.FC = () => {
     setMousePos(null);
   };
 
+  // Deselect when clicking empty viewport/canvas background
+  const handleContainerClick = (e: React.MouseEvent) => {
+    if (e.button === 0) {
+      actions.selectNode(null);
+    }
+  };
+
   // Start Resizing any Element (including Root)
   const handleElementResizeStart = (
     e: React.MouseEvent,
@@ -404,6 +411,7 @@ export const Viewport: React.FC = () => {
   return (
     <div
       ref={containerRef}
+      onClick={handleContainerClick}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
