@@ -19,6 +19,7 @@ export const App: React.FC = () => {
     showLeftPanel,
     showBottomPanel,
     showRightPanel,
+    isCodeMaximized,
     leftPanelWidth, 
     paletteHeight, 
     rightPanelWidth, 
@@ -125,13 +126,13 @@ export const App: React.FC = () => {
         {/* Center Canvas Pane (Viewport & Resizable Metrics Drawer) */}
         {/* ======================================================== */}
         <div className="flex-1 flex flex-col min-w-0 overflow-hidden relative">
-          {/* Viewport Canvas */}
-          <div className="flex-1 relative overflow-hidden">
+          {/* Viewport Canvas (Hidden when code editor is maximized in center pane) */}
+          <div className={`relative overflow-hidden ${isCodeMaximized ? 'hidden' : 'flex-1'}`}>
             <Viewport />
           </div>
 
           {/* Viewport <-> Bottom Metrics Splitter */}
-          {isBottomVisible && (
+          {isBottomVisible && !isCodeMaximized && (
             <Splitter
               direction="vertical"
               invert={true}
@@ -144,10 +145,10 @@ export const App: React.FC = () => {
           )}
 
           {/* Bottom Live Script Panel */}
-          {isBottomVisible && (
+          {(isBottomVisible || isCodeMaximized) && (
             <div
-              style={{ height: `${bottomPanelHeight}px` }}
-              className="flex-shrink-0 overflow-hidden"
+              style={isCodeMaximized ? undefined : { height: `${bottomPanelHeight}px` }}
+              className={`overflow-hidden ${isCodeMaximized ? 'flex-1 h-full' : 'flex-shrink-0'}`}
             >
               <LiveYamlPanel />
             </div>

@@ -117,7 +117,10 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'move';
+    
+    // Support both internal move and palette copy
+    const isPaletteDrag = Boolean((window as any).__draggedPaletteWidget);
+    e.dataTransfer.dropEffect = isPaletteDrag ? 'copy' : 'move';
 
     const rect = e.currentTarget.getBoundingClientRect();
     const relY = e.clientY - rect.top;
@@ -190,8 +193,10 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
     if (widgetType) {
       if ((pos === 'before' || pos === 'after') && !isRoot) {
         actions.addNodeAround(node.id, widgetType, widgetLabel, pos);
-      } else {
+      } else if (pos === 'inside' && isContainer) {
         actions.addNode(node.id, widgetType, widgetLabel);
+      } else {
+        actions.addNodeAround(node.id, widgetType, widgetLabel, 'after');
       }
       return;
     }
@@ -342,7 +347,8 @@ export const Hierarchy: React.FC = () => {
 
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
+    const isPaletteDrag = Boolean((window as any).__draggedPaletteWidget);
+    e.dataTransfer.dropEffect = isPaletteDrag ? 'copy' : 'move';
   };
 
   const handleContainerDrop = (e: React.DragEvent) => {

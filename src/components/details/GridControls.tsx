@@ -63,37 +63,22 @@ export const GridControls: React.FC<GridControlsProps> = ({ style, onChange }) =
         />
       </div>
 
-      {/* Gap & Auto-Flow */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-            Gap
-          </label>
-          <input
-            type="text"
-            value={style.gap}
-            onChange={(e) => onChange({ gap: e.target.value })}
-            placeholder="16px"
-            className="w-full bg-[#242429] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
-          />
-        </div>
-
-        <div>
-          <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-            Auto Flow
-          </label>
-          <select
-            value={style.gridAutoFlow}
-            onChange={(e) => onChange({ gridAutoFlow: e.target.value as any })}
-            className="w-full bg-[#242429] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
-          >
-            <option value="row">Row</option>
-            <option value="column">Column</option>
-            <option value="dense">Dense</option>
-            <option value="row dense">Row Dense</option>
-            <option value="column dense">Column Dense</option>
-          </select>
-        </div>
+      {/* Auto-Flow */}
+      <div>
+        <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
+          Grid Auto Flow
+        </label>
+        <select
+          value={style.gridAutoFlow}
+          onChange={(e) => onChange({ gridAutoFlow: e.target.value as any })}
+          className="w-full bg-[#1c1c20] hover:bg-[#222227] border border-[#34343d] rounded px-2.5 py-1 text-xs text-zinc-200 outline-none cursor-pointer font-medium"
+        >
+          <option value="row">row (Fill rows first)</option>
+          <option value="column">column (Fill columns first)</option>
+          <option value="dense">dense (Fill empty slots)</option>
+          <option value="row dense">row dense</option>
+          <option value="column dense">column dense</option>
+        </select>
       </div>
 
       {/* Grid Item Properties */}

@@ -113,35 +113,20 @@ export const FlexControls: React.FC<FlexControlsProps> = ({ style, onChange }) =
         </div>
       </div>
 
-      {/* Flex Wrap & Gap */}
-      <div className="grid grid-cols-2 gap-2">
-        <div>
-          <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-            Flex Wrap
-          </label>
-          <select
-            value={style.flexWrap}
-            onChange={(e) => onChange({ flexWrap: e.target.value as any })}
-            className="w-full bg-[#242429] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
-          >
-            <option value="nowrap">No Wrap</option>
-            <option value="wrap">Wrap</option>
-            <option value="wrap-reverse">Wrap Reverse</option>
-          </select>
-        </div>
-
-        <div>
-          <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-            Gap (Spacing)
-          </label>
-          <input
-            type="text"
-            value={style.gap}
-            onChange={(e) => onChange({ gap: e.target.value })}
-            placeholder="12px"
-            className="w-full bg-[#242429] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
-          />
-        </div>
+      {/* Flex Wrap */}
+      <div>
+        <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
+          Flex Wrap
+        </label>
+        <select
+          value={style.flexWrap}
+          onChange={(e) => onChange({ flexWrap: e.target.value as any })}
+          className="w-full bg-[#1c1c20] hover:bg-[#222227] border border-[#34343d] rounded px-2.5 py-1 text-xs text-zinc-200 outline-none cursor-pointer font-medium"
+        >
+          <option value="nowrap">nowrap (Single Line)</option>
+          <option value="wrap">wrap (Multi-Line)</option>
+          <option value="wrap-reverse">wrap-reverse (Multi-Line Inverted)</option>
+        </select>
       </div>
 
       {/* Flex Item Properties (Grow / Shrink / Basis / AlignSelf) */}

@@ -15,9 +15,13 @@ import {
   Layers, 
   BoxSelect, 
   Image as ImageIcon, 
-  Edit3, 
-  Eye,
-  ChevronRight
+  ChevronRight,
+  AlignLeft,
+  AlignCenter,
+  AlignRight,
+  AlignJustify,
+  Copy,
+  Check
 } from 'lucide-react';
 
 interface UnrealSectionHeaderProps {
@@ -59,11 +63,66 @@ const UnrealSectionHeader: React.FC<UnrealSectionHeaderProps> = ({
 );
 
 export const DetailsPanel: React.FC = () => {
-  const { rootNode, selectedNode, metricsMap, actions } = useEditorStore();
-  const [boxModelMode, setBoxModelMode] = useState<'edit' | 'inspect'>('edit');
+  const { rootNode, selectedNode, metricsMap, zoom, actions } = useEditorStore();
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
+  const [showBoxModelDrawer, setShowBoxModelDrawer] = useState(false);
   const [activeColorPicker, setActiveColorPicker] = useState<'background' | 'border' | 'text' | null>(null);
   const [colorPickerPos, setColorPickerPos] = useState<{ left: number; top: number } | null>(null);
+  const [propertyToast, setPropertyToast] = useState<string | null>(null);
+  const [propContextMenu, setPropContextMenu] = useState<{
+    x: number;
+    y: number;
+    key: string;
+    value: any;
+  } | null>(null);
+
+  const triggerToast = (msg: string) => {
+    setPropertyToast(msg);
+    setTimeout(() => setPropertyToast(null), 1500);
+  };
+
+  const copyProperty = (key: string, value: any) => {
+    const strVal = typeof value === 'object' ? JSON.stringify(value) : String(value ?? '');
+    navigator.clipboard.writeText(strVal);
+    (window as any).__rachanaPropertyClipboard = { key, value: strVal };
+    triggerToast(`Copied ${key}: ${strVal}`);
+  };
+
+  const pasteProperty = (key: string) => {
+    const clip = (window as any).__rachanaPropertyClipboard;
+    if (clip && clip.value !== undefined) {
+      handleStyleChange({ [key]: clip.value });
+      triggerToast(`Pasted ${key}: ${clip.value}`);
+    } else {
+      navigator.clipboard.readText().then((text) => {
+        if (text) {
+          handleStyleChange({ [key]: text });
+          triggerToast(`Pasted ${key}: ${text}`);
+        }
+      }).catch(() => {});
+    }
+  };
+
+  const getPropHandlers = (key: string, value: any) => ({
+    onMouseDown: (e: React.MouseEvent) => {
+      if (e.shiftKey && e.button === 0) {
+        e.preventDefault();
+        e.stopPropagation();
+        copyProperty(key, value);
+      }
+    },
+    onContextMenu: (e: React.MouseEvent) => {
+      if (e.shiftKey) {
+        e.preventDefault();
+        e.stopPropagation();
+        pasteProperty(key);
+        return;
+      }
+      e.preventDefault();
+      e.stopPropagation();
+      setPropContextMenu({ x: e.clientX, y: e.clientY, key, value });
+    },
+  });
 
   const handleOpenColorPicker = (e: React.MouseEvent, type: 'background' | 'border' | 'text') => {
     e.stopPropagation();
@@ -102,6 +161,12 @@ export const DetailsPanel: React.FC = () => {
   const isFlex = style.display.includes('flex');
   const isGrid = style.display.includes('grid');
   const isRoot = selectedNode.id === rootNode.id;
+
+  // Relative coordinates to the Screen Canvas
+  const rootMetrics = metricsMap[rootNode.id];
+  const effectiveZoom = zoom || 1;
+  const relX = isRoot ? 0 : (rootMetrics && metrics ? Math.round((metrics.boundingRect.left - rootMetrics.boundingRect.left) / effectiveZoom) : 0);
+  const relY = isRoot ? 0 : (rootMetrics && metrics ? Math.round((metrics.boundingRect.top - rootMetrics.boundingRect.top) / effectiveZoom) : 0);
 
   // Context-sensitive category detection
   const isContainerType = ['container', 'flex', 'grid', 'card', 'scroll'].includes(selectedNode.type);
@@ -166,10 +231,10 @@ export const DetailsPanel: React.FC = () => {
               {metrics ? `${Math.round(metrics.boundingRect.width)} × ${Math.round(metrics.boundingRect.height)} px` : '—'}
             </span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5" title="Screen Coordinates (Relative to Canvas Root)">
             <span className="text-zinc-500 text-[10px] uppercase font-semibold">Pos:</span>
             <span className="text-blue-300 font-medium bg-[#141e2c] px-2 py-0.5 rounded border border-blue-800/40">
-              {metrics ? `X: ${Math.round(metrics.boundingRect.x)}, Y: ${Math.round(metrics.boundingRect.y)}` : '—'}
+              {metrics ? `X: ${relX}, Y: ${relY}` : '—'}
             </span>
           </div>
         </div>
@@ -181,7 +246,7 @@ export const DetailsPanel: React.FC = () => {
       <div className="flex-1 overflow-y-auto space-y-0 custom-scrollbar">
         {/* SPECIFIC: TEXT CONTENT & HEADING */}
         {(isTextType || isButtonType || isBadgeType) && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Typography Content"
               icon={<TypeIcon className="w-3.5 h-3.5 text-emerald-400" />}
@@ -190,7 +255,7 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('textContent') && (
               <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div>
+                <div {...getPropHandlers('textContent', selectedNode.textContent || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
                     String Label
                   </label>
@@ -199,7 +264,7 @@ export const DetailsPanel: React.FC = () => {
                     value={selectedNode.textContent || ''}
                     onChange={(e) => actions.updateNodeProps(selectedNode.id, { textContent: e.target.value })}
                     placeholder="Enter text..."
-                    className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2.5 py-1 text-xs text-zinc-100 outline-none"
+                    className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-100 outline-none"
                   />
                 </div>
               </div>
@@ -209,7 +274,7 @@ export const DetailsPanel: React.FC = () => {
 
         {/* SPECIFIC: INPUT FIELD PROPERTIES */}
         {isInputType && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Form Input Attributes"
               icon={<Sliders className="w-3.5 h-3.5 text-indigo-400" />}
@@ -218,7 +283,7 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('inputProps') && (
               <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div>
+                <div {...getPropHandlers('placeholder', selectedNode.placeholder || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
                     Placeholder Text
                   </label>
@@ -227,10 +292,10 @@ export const DetailsPanel: React.FC = () => {
                     value={selectedNode.placeholder || ''}
                     onChange={(e) => actions.updateNodeProps(selectedNode.id, { placeholder: e.target.value })}
                     placeholder="e.g. Enter email..."
-                    className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2 py-0.5 text-xs text-zinc-100 outline-none"
+                    className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2 py-0.5 text-xs text-zinc-100 outline-none"
                   />
                 </div>
-                <div>
+                <div {...getPropHandlers('textContent', selectedNode.textContent || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
                     Default Value
                   </label>
@@ -239,7 +304,7 @@ export const DetailsPanel: React.FC = () => {
                     value={selectedNode.textContent || ''}
                     onChange={(e) => actions.updateNodeProps(selectedNode.id, { textContent: e.target.value })}
                     placeholder="Initial text..."
-                    className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2 py-0.5 text-xs text-zinc-100 outline-none"
+                    className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2 py-0.5 text-xs text-zinc-100 outline-none"
                   />
                 </div>
               </div>
@@ -249,7 +314,7 @@ export const DetailsPanel: React.FC = () => {
 
         {/* SPECIFIC: IMAGE MEDIA PROPERTIES */}
         {isImageType && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Media Assets"
               icon={<ImageIcon className="w-3.5 h-3.5 text-orange-400" />}
@@ -258,7 +323,7 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('mediaProps') && (
               <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div>
+                <div {...getPropHandlers('src', selectedNode.src || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
                     Image Source URL
                   </label>
@@ -267,7 +332,7 @@ export const DetailsPanel: React.FC = () => {
                     value={selectedNode.src || ''}
                     onChange={(e) => actions.updateNodeProps(selectedNode.id, { src: e.target.value })}
                     placeholder="https://... or data:image/..."
-                    className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2 py-0.5 text-xs text-zinc-100 outline-none font-mono"
+                    className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2 py-0.5 text-xs text-zinc-100 outline-none font-mono"
                   />
                 </div>
                 <div>
@@ -277,7 +342,7 @@ export const DetailsPanel: React.FC = () => {
                   <select
                     value={style.objectFit || 'cover'}
                     onChange={(e) => handleStyleChange({ objectFit: e.target.value as any })}
-                    className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                    className="w-full bg-[#1c1c20] hover:bg-[#222227] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
                   >
                     <option value="cover">cover (Crop to fill)</option>
                     <option value="contain">contain (Aspect fit)</option>
@@ -293,46 +358,18 @@ export const DetailsPanel: React.FC = () => {
 
         {/* 1. SPACING & BOX MODEL */}
         {!isDividerType && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Spacing & Box Model"
               icon={<BoxSelect className="w-3.5 h-3.5 text-amber-400" />}
               isOpen={isSectionOpen('boxModel')}
               onToggle={() => toggleSection('boxModel')}
               rightContent={
-                <div className="flex items-center gap-1.5">
-                  <div className="flex items-center bg-[#151518] rounded p-0.5 border border-[#30303a]">
-                    <button
-                      type="button"
-                      onClick={() => setBoxModelMode('edit')}
-                      title="Edit Spacing & Geometry"
-                      className={`p-1 rounded transition-colors ${
-                        boxModelMode === 'edit'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      <Edit3 className="w-3 h-3" />
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setBoxModelMode('inspect')}
-                      title="View Computed Geometry (DevTools)"
-                      className={`p-1 rounded transition-colors ${
-                        boxModelMode === 'inspect'
-                          ? 'bg-blue-600 text-white'
-                          : 'text-zinc-400 hover:text-zinc-200'
-                      }`}
-                    >
-                      <Eye className="w-3 h-3" />
-                    </button>
-                  </div>
-                  {metrics && (
-                    <span className="text-[10px] font-mono text-zinc-400">
-                      {Math.round(metrics.contentBox.width)}×{Math.round(metrics.contentBox.height)}px
-                    </span>
-                  )}
-                </div>
+                metrics && (
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    {Math.round(metrics.contentBox.width)}×{Math.round(metrics.contentBox.height)}px
+                  </span>
+                )
               }
             />
             {isSectionOpen('boxModel') && (
@@ -347,7 +384,7 @@ export const DetailsPanel: React.FC = () => {
                   columnGap={style.columnGap}
                   contentWidth={metrics?.contentBox.width}
                   contentHeight={metrics?.contentBox.height}
-                  mode={boxModelMode}
+                  mode="edit"
                   onMarginChange={(m) => handleStyleChange({ margin: m })}
                   onPaddingChange={(p) => handleStyleChange({ padding: p })}
                   onBorderChange={(b) => handleStyleChange({ borderWidth: b })}
@@ -359,7 +396,7 @@ export const DetailsPanel: React.FC = () => {
         )}
 
         {/* 2. POSITIONING & COORDINATES */}
-        <div>
+        <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
           <UnrealSectionHeader
             title="Positioning & Coordinates"
             icon={<Move className="w-3.5 h-3.5 text-emerald-400" />}
@@ -369,14 +406,14 @@ export const DetailsPanel: React.FC = () => {
           {isSectionOpen('position') && (
             <div className="p-2.5 space-y-2 bg-[#17171b]/40">
               <div className="grid grid-cols-2 gap-2">
-                <div>
+                <div {...getPropHandlers('position', style.position)}>
                   <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
                     Position
                   </label>
                   <select
                     value={style.position}
                     onChange={(e) => handleStyleChange({ position: e.target.value as any })}
-                    className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
                   >
                     <option value="static">static (Normal flow)</option>
                     <option value="relative">relative</option>
@@ -386,7 +423,7 @@ export const DetailsPanel: React.FC = () => {
                   </select>
                 </div>
 
-                <div>
+                <div {...getPropHandlers('zIndex', style.zIndex)}>
                   <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
                     Z-Index
                   </label>
@@ -395,7 +432,7 @@ export const DetailsPanel: React.FC = () => {
                     value={style.zIndex}
                     onChange={(e) => handleStyleChange({ zIndex: e.target.value })}
                     placeholder="auto"
-                    className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
+                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
                   />
                 </div>
               </div>
@@ -403,7 +440,7 @@ export const DetailsPanel: React.FC = () => {
               {style.position !== 'static' && (
                 <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#292930]">
                   {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-                    <div key={side}>
+                    <div key={side} {...getPropHandlers(side, style[side])}>
                       <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">{side}</label>
                       <UnitInput
                         value={style[side]}
@@ -422,7 +459,7 @@ export const DetailsPanel: React.FC = () => {
 
         {/* 3. LAYOUT MODE & FLOW (Containers Only) */}
         {isContainerType && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Layout Mode & Flow"
               icon={<Move className="w-3.5 h-3.5 text-blue-400" />}
@@ -432,14 +469,14 @@ export const DetailsPanel: React.FC = () => {
             {isSectionOpen('layoutFlow') && (
               <div className="p-2.5 space-y-2.5 bg-[#17171b]/40">
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
+                  <div {...getPropHandlers('display', style.display)}>
                     <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
                       Display
                     </label>
                     <select
                       value={style.display}
                       onChange={(e) => handleStyleChange({ display: e.target.value as any })}
-                      className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer font-medium"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer font-medium"
                     >
                       <option value="block">block</option>
                       <option value="flex">flex</option>
@@ -451,14 +488,14 @@ export const DetailsPanel: React.FC = () => {
                     </select>
                   </div>
 
-                  <div>
+                  <div {...getPropHandlers('boxSizing', style.boxSizing)}>
                     <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
                       Box-Sizing
                     </label>
                     <select
                       value={style.boxSizing}
                       onChange={(e) => handleStyleChange({ boxSizing: e.target.value as any })}
-                      className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
                     >
                       <option value="border-box">border-box (Standard)</option>
                       <option value="content-box">content-box (Legacy)</option>
@@ -506,7 +543,7 @@ export const DetailsPanel: React.FC = () => {
                   </div>
 
                   {/* Fill Ratio */}
-                  <div className="pt-1">
+                  <div className="pt-1" {...getPropHandlers('fillRatio', style.fillRatio || style.flexGrow || '1.0')}>
                     <label className="text-[10px] text-zinc-300 font-semibold block mb-1">
                       Fill Ratio (fill_ratio / flex-grow)
                     </label>
@@ -517,7 +554,7 @@ export const DetailsPanel: React.FC = () => {
                       value={style.fillRatio || style.flexGrow || '1.0'}
                       onChange={(e) => handleStyleChange({ fillRatio: e.target.value, flexGrow: e.target.value })}
                       placeholder="1.0"
-                      className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-1 text-xs text-sky-300 outline-none font-mono"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-sky-300 outline-none font-mono"
                     />
                   </div>
 
@@ -554,7 +591,7 @@ export const DetailsPanel: React.FC = () => {
 
         {/* 4. FLEXBOX & GRID CONTROLS */}
         {isFlex && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Flexbox Parameters"
               icon={<Sliders className="w-3.5 h-3.5 text-blue-400" />}
@@ -570,7 +607,7 @@ export const DetailsPanel: React.FC = () => {
         )}
 
         {isGrid && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Grid Parameters"
               icon={<LayoutGrid className="w-3.5 h-3.5 text-purple-400" />}
@@ -587,7 +624,7 @@ export const DetailsPanel: React.FC = () => {
 
         {/* 5. SIZING & CONSTRAINTS */}
         {!isDividerType && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Sizing & Constraints"
               icon={<Maximize className="w-3.5 h-3.5 text-cyan-400" />}
@@ -596,7 +633,7 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('sizing') && (
               <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div>
+                <div {...getPropHandlers('width', style.width)}>
                   <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
                     Width
                   </label>
@@ -609,7 +646,7 @@ export const DetailsPanel: React.FC = () => {
                   />
                 </div>
 
-                <div>
+                <div {...getPropHandlers('height', style.height)}>
                   <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
                     Height
                   </label>
@@ -623,7 +660,7 @@ export const DetailsPanel: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
+                  <div {...getPropHandlers('minWidth', style.minWidth)}>
                     <label className="text-[10px] text-zinc-400 block mb-1">Min Width</label>
                     <UnitInput
                       value={style.minWidth}
@@ -634,7 +671,7 @@ export const DetailsPanel: React.FC = () => {
                     />
                   </div>
 
-                  <div>
+                  <div {...getPropHandlers('maxWidth', style.maxWidth)}>
                     <label className="text-[10px] text-zinc-400 block mb-1">Max Width</label>
                     <UnitInput
                       value={style.maxWidth}
@@ -647,7 +684,7 @@ export const DetailsPanel: React.FC = () => {
                 </div>
 
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
+                  <div {...getPropHandlers('minHeight', style.minHeight)}>
                     <label className="text-[10px] text-zinc-400 block mb-1">Min Height</label>
                     <UnitInput
                       value={style.minHeight}
@@ -658,7 +695,7 @@ export const DetailsPanel: React.FC = () => {
                     />
                   </div>
 
-                  <div>
+                  <div {...getPropHandlers('maxHeight', style.maxHeight)}>
                     <label className="text-[10px] text-zinc-400 block mb-1">Max Height</label>
                     <UnitInput
                       value={style.maxHeight}
@@ -674,9 +711,9 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 6. STYLE & APPEARANCE (Full Color Palette Popover Integration) */}
+        {/* 6. STYLE & APPEARANCE */}
         {!isSpacerType && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Appearance & Materials"
               icon={<PaletteIcon className="w-3.5 h-3.5 text-pink-400" />}
@@ -685,8 +722,8 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('appearance') && (
               <div className="p-2.5 space-y-3 bg-[#17171b]/40">
-                {/* Background Color */}
-                <div>
+                {/* Background Color Alone */}
+                <div {...getPropHandlers('backgroundColor', style.backgroundColor)}>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[10px] font-semibold text-zinc-400 uppercase">
                       Background Color
@@ -704,7 +741,8 @@ export const DetailsPanel: React.FC = () => {
                       type="text"
                       value={style.backgroundColor}
                       onChange={(e) => handleStyleChange({ backgroundColor: e.target.value })}
-                      className="flex-1 bg-[#1c1c20] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
+                      placeholder="#000000 or transparent"
+                      className="flex-1 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
                     />
                     <button
                       type="button"
@@ -722,10 +760,12 @@ export const DetailsPanel: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Border Color & Style */}
-                <div className="space-y-1">
-                  <div className="flex items-center justify-between mb-0.5">
-                    <label className="text-[10px] text-zinc-400">Border Color & Style</label>
+                {/* Border Color Alone */}
+                <div {...getPropHandlers('borderColor', style.borderColor)}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] font-semibold text-zinc-400 uppercase">
+                      Border Color
+                    </label>
                     <button
                       type="button"
                       onClick={(e) => handleOpenColorPicker(e, 'border')}
@@ -739,7 +779,8 @@ export const DetailsPanel: React.FC = () => {
                       type="text"
                       value={style.borderColor}
                       onChange={(e) => handleStyleChange({ borderColor: e.target.value })}
-                      className="flex-1 bg-[#1c1c20] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none font-mono"
+                      placeholder="#3f3f46 or transparent"
+                      className="flex-1 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
                     />
                     <button
                       type="button"
@@ -748,38 +789,49 @@ export const DetailsPanel: React.FC = () => {
                         backgroundColor: style.borderColor === 'transparent' ? 'transparent' : style.borderColor,
                       }}
                       title="Open full RGB/HSV Color Palette Window"
-                      className="w-6 h-6 rounded border border-[#444] cursor-pointer hover:scale-105 transition-transform flex items-center justify-center relative shadow-sm"
+                      className="w-7 h-7 rounded border border-[#444] cursor-pointer hover:scale-105 transition-transform flex items-center justify-center relative shadow-sm"
                     >
                       {style.borderColor === 'transparent' && (
-                        <span className="text-[8px] text-red-500 font-bold">×</span>
+                        <span className="text-[9px] text-red-500 font-bold">×</span>
                       )}
                     </button>
-                    <select
-                      value={style.borderStyle}
-                      onChange={(e) => handleStyleChange({ borderStyle: e.target.value as any })}
-                      className="w-24 bg-[#1c1c20] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none cursor-pointer"
-                    >
-                      <option value="solid">solid</option>
-                      <option value="dashed">dashed</option>
-                      <option value="dotted">dotted</option>
-                      <option value="none">none</option>
-                    </select>
                   </div>
                 </div>
 
-                {/* Border Radius */}
-                <div>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Border Radius</label>
-                  <UnitInput
-                    value={style.borderRadius}
-                    onChange={(val) => handleStyleChange({ borderRadius: val })}
-                    units={['px', '%', 'rem']}
-                    placeholder="0"
-                  />
+                {/* Borders & Shape: Style & Radius Grouped Together */}
+                <div className="bg-[#1a1a1e] p-2 rounded border border-[#2b2b36] space-y-2">
+                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400 block">
+                    Borders & Shape
+                  </span>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div {...getPropHandlers('borderStyle', style.borderStyle)}>
+                      <label className="text-[9px] text-zinc-500 uppercase block mb-1">Style</label>
+                      <select
+                        value={style.borderStyle}
+                        onChange={(e) => handleStyleChange({ borderStyle: e.target.value as any })}
+                        className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                      >
+                        <option value="solid">solid</option>
+                        <option value="dashed">dashed</option>
+                        <option value="dotted">dotted</option>
+                        <option value="none">none</option>
+                      </select>
+                    </div>
+
+                    <div {...getPropHandlers('borderRadius', style.borderRadius)}>
+                      <label className="text-[9px] text-zinc-500 uppercase block mb-1">Corner Radius</label>
+                      <UnitInput
+                        value={style.borderRadius}
+                        onChange={(val) => handleStyleChange({ borderRadius: val })}
+                        units={['px', '%', 'rem']}
+                        placeholder="0"
+                      />
+                    </div>
+                  </div>
                 </div>
 
-                {/* Opacity Slider */}
-                <div>
+                {/* Opacity */}
+                <div {...getPropHandlers('opacity', style.opacity)}>
                   <div className="flex items-center justify-between mb-1">
                     <label className="text-[10px] text-zinc-400">Opacity</label>
                     <span className="text-[10px] font-mono text-zinc-400">
@@ -793,8 +845,24 @@ export const DetailsPanel: React.FC = () => {
                     step="0.05"
                     value={style.opacity || '1'}
                     onChange={(e) => handleStyleChange({ opacity: e.target.value })}
-                    className="w-full accent-blue-600"
+                    className="w-full accent-blue-600 cursor-pointer"
                   />
+                </div>
+
+                {/* Cursor */}
+                <div {...getPropHandlers('cursor', style.cursor || 'default')}>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Cursor</label>
+                  <select
+                    value={style.cursor || 'default'}
+                    onChange={(e) => handleStyleChange({ cursor: e.target.value })}
+                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                  >
+                    <option value="default">default</option>
+                    <option value="pointer">pointer (Hand / Clickable)</option>
+                    <option value="text">text (I-beam)</option>
+                    <option value="move">move (4-way Grab)</option>
+                    <option value="not-allowed">not-allowed (Disabled)</option>
+                  </select>
                 </div>
               </div>
             )}
@@ -803,7 +871,7 @@ export const DetailsPanel: React.FC = () => {
 
         {/* 7. TYPOGRAPHY STYLING */}
         {(isTextType || isButtonType || isInputType || isBadgeType) && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Typography Styling"
               icon={<TypeIcon className="w-3.5 h-3.5 text-emerald-400" />}
@@ -813,7 +881,7 @@ export const DetailsPanel: React.FC = () => {
             {isSectionOpen('typography') && (
               <div className="p-2.5 space-y-2.5 bg-[#17171b]/40">
                 {/* Text Color */}
-                <div>
+                <div {...getPropHandlers('color', style.color)}>
                   <div className="flex items-center justify-between mb-0.5">
                     <label className="text-[10px] text-zinc-400">Text Color</label>
                     <button
@@ -829,7 +897,8 @@ export const DetailsPanel: React.FC = () => {
                       type="text"
                       value={style.color}
                       onChange={(e) => handleStyleChange({ color: e.target.value })}
-                      className="flex-1 bg-[#1c1c20] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none font-mono"
+                      placeholder="#ffffff or transparent"
+                      className="flex-1 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
                     />
                     <button
                       type="button"
@@ -838,7 +907,7 @@ export const DetailsPanel: React.FC = () => {
                         backgroundColor: style.color === 'transparent' ? 'transparent' : style.color,
                       }}
                       title="Open full RGB/HSV Color Palette Window"
-                      className="w-6 h-6 rounded border border-[#444] cursor-pointer hover:scale-105 transition-transform flex items-center justify-center relative shadow-sm"
+                      className="w-7 h-7 rounded border border-[#444] cursor-pointer hover:scale-105 transition-transform flex items-center justify-center relative shadow-sm"
                     >
                       {style.color === 'transparent' && (
                         <span className="text-[8px] text-red-500 font-bold">×</span>
@@ -848,7 +917,7 @@ export const DetailsPanel: React.FC = () => {
                 </div>
 
                 {/* Font Size */}
-                <div>
+                <div {...getPropHandlers('fontSize', style.fontSize)}>
                   <label className="text-[10px] text-zinc-400 block mb-0.5">Font Size</label>
                   <UnitInput
                     value={style.fontSize}
@@ -858,35 +927,48 @@ export const DetailsPanel: React.FC = () => {
                   />
                 </div>
 
-                {/* Font Weight & Text Align */}
+                {/* Font Weight & Text Align as Button Group */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div>
-                    <label className="text-[10px] text-zinc-400 block mb-0.5">Font Weight</label>
+                  <div {...getPropHandlers('fontWeight', style.fontWeight)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Font Weight</label>
                     <select
                       value={style.fontWeight}
                       onChange={(e) => handleStyleChange({ fontWeight: e.target.value })}
-                      className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none cursor-pointer"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
                     >
                       <option value="300">300 (Light)</option>
                       <option value="400">400 (Regular)</option>
                       <option value="500">500 (Medium)</option>
                       <option value="600">600 (Semi-Bold)</option>
                       <option value="700">700 (Bold)</option>
+                      <option value="800">800 (Extra-Bold)</option>
                     </select>
                   </div>
 
-                  <div>
-                    <label className="text-[10px] text-zinc-400 block mb-0.5">Text Align</label>
-                    <select
-                      value={style.textAlign}
-                      onChange={(e) => handleStyleChange({ textAlign: e.target.value as any })}
-                      className="w-full bg-[#1c1c20] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none cursor-pointer"
-                    >
-                      <option value="left">Left</option>
-                      <option value="center">Center</option>
-                      <option value="right">Right</option>
-                      <option value="justify">Justify</option>
-                    </select>
+                  <div {...getPropHandlers('textAlign', style.textAlign)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Text Align</label>
+                    <div className="grid grid-cols-4 gap-0.5 bg-[#17171b] p-0.5 rounded border border-[#34343d]">
+                      {[
+                        { val: 'left', icon: <AlignLeft className="w-3.5 h-3.5" />, title: 'Align Left' },
+                        { val: 'center', icon: <AlignCenter className="w-3.5 h-3.5" />, title: 'Align Center' },
+                        { val: 'right', icon: <AlignRight className="w-3.5 h-3.5" />, title: 'Align Right' },
+                        { val: 'justify', icon: <AlignJustify className="w-3.5 h-3.5" />, title: 'Justify' },
+                      ].map((align) => (
+                        <button
+                          key={align.val}
+                          type="button"
+                          onClick={() => handleStyleChange({ textAlign: align.val as any })}
+                          title={align.title}
+                          className={`flex items-center justify-center py-1 rounded text-xs transition-colors ${
+                            style.textAlign === align.val
+                              ? 'bg-blue-600 text-white shadow-sm font-bold'
+                              : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#25252e]'
+                          }`}
+                        >
+                          {align.icon}
+                        </button>
+                      ))}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -896,7 +978,7 @@ export const DetailsPanel: React.FC = () => {
 
         {/* 8. OVERFLOW & SCROLLING */}
         {isContainerType && (
-          <div>
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Overflow & Clipping"
               icon={<Layers className="w-3.5 h-3.5 text-purple-400" />}
@@ -905,7 +987,7 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('overflow') && (
               <div className="p-2.5 space-y-3 bg-[#17171b]/40">
-                <div>
+                <div {...getPropHandlers('overflowX', style.overflowX || style.overflow)}>
                   <label className="text-[10px] uppercase font-bold text-purple-400 tracking-wider block mb-1">
                     Overflow X
                   </label>
@@ -927,7 +1009,7 @@ export const DetailsPanel: React.FC = () => {
                   </div>
                 </div>
 
-                <div>
+                <div {...getPropHandlers('overflowY', style.overflowY || style.overflow)}>
                   <label className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider block mb-1">
                     Overflow Y
                   </label>
@@ -953,6 +1035,109 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Docked Collapsible Box Model Inspector (DevTools Concentric Diagram) */}
+      <div className="flex-shrink-0 border-t border-[#292934] bg-[#161619]">
+        <div
+          onClick={() => setShowBoxModelDrawer(!showBoxModelDrawer)}
+          className="h-7 px-3 flex items-center justify-between cursor-pointer hover:bg-[#1d1d23] select-none text-[10px] font-bold text-zinc-300 uppercase tracking-wider transition-colors"
+        >
+          <div className="flex items-center gap-1.5">
+            <ChevronRight className={`w-3.5 h-3.5 text-zinc-400 transition-transform duration-150 ${showBoxModelDrawer ? 'rotate-90 text-white' : ''}`} />
+            <BoxSelect className="w-3.5 h-3.5 text-amber-400" />
+            <span>Box Model Inspector</span>
+          </div>
+          {metrics && (
+            <span className="font-mono text-[9px] text-zinc-400 bg-[#22222a] px-1.5 py-0.5 rounded border border-[#31313c]">
+              {Math.round(metrics.boundingRect.width)}×{Math.round(metrics.boundingRect.height)} px
+            </span>
+          )}
+        </div>
+
+        {showBoxModelDrawer && (
+          <div className="p-2.5 max-h-56 overflow-y-auto bg-[#131316] border-t border-[#22222a] custom-scrollbar">
+            <BoxModelInput
+              label="Geometry Inspector"
+              margin={style.margin}
+              padding={style.padding}
+              borderWidth={style.borderWidth}
+              contentWidth={metrics?.contentBox.width}
+              contentHeight={metrics?.contentBox.height}
+              mode="inspect"
+              onMarginChange={(m) => handleStyleChange({ margin: m })}
+              onPaddingChange={(p) => handleStyleChange({ padding: p })}
+              onBorderChange={(b) => handleStyleChange({ borderWidth: b })}
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Property Context Menu (Right Click on property row) */}
+      {propContextMenu && (
+        <>
+          <div
+            className="fixed inset-0 z-50 bg-transparent"
+            onClick={() => setPropContextMenu(null)}
+          />
+          <div
+            style={{ 
+              left: `${Math.min(propContextMenu.x, window.innerWidth - 180)}px`, 
+              top: `${Math.min(propContextMenu.y, window.innerHeight - 150)}px` 
+            }}
+            className="fixed z-50 w-44 rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1 text-xs text-zinc-200 select-none animate-in fade-in zoom-in-95 duration-75"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="px-2.5 py-1 text-[9px] font-mono text-zinc-400 uppercase tracking-wider border-b border-[#25252d]">
+              Property: {propContextMenu.key}
+            </div>
+            <button
+              onClick={() => {
+                copyProperty(propContextMenu.key, propContextMenu.value);
+                setPropContextMenu(null);
+              }}
+              className="w-full px-2.5 py-1.5 text-left hover:bg-blue-600/30 hover:text-white flex items-center justify-between transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Copy className="w-3.5 h-3.5 text-zinc-400" />
+                <span>Copy Value</span>
+              </div>
+              <span className="text-[9px] font-mono text-zinc-500">Shift+Click</span>
+            </button>
+            <button
+              onClick={() => {
+                navigator.clipboard.writeText(propContextMenu.key);
+                triggerToast(`Copied name: ${propContextMenu.key}`);
+                setPropContextMenu(null);
+              }}
+              className="w-full px-2.5 py-1.5 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2 transition-colors"
+            >
+              <Copy className="w-3.5 h-3.5 text-zinc-400" />
+              <span>Copy Property Name</span>
+            </button>
+            <button
+              onClick={() => {
+                pasteProperty(propContextMenu.key);
+                setPropContextMenu(null);
+              }}
+              className="w-full px-2.5 py-1.5 text-left hover:bg-blue-600/30 hover:text-white flex items-center justify-between transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Paste Value</span>
+              </div>
+              <span className="text-[9px] font-mono text-zinc-500">Shift+RClick</span>
+            </button>
+          </div>
+        </>
+      )}
+
+      {/* Floating Property Toast Notification */}
+      {propertyToast && (
+        <div className="fixed bottom-4 right-4 z-50 bg-[#16161a] border border-blue-500/60 shadow-2xl rounded px-3 py-1.5 text-xs text-blue-200 font-mono animate-in fade-in slide-in-from-bottom-2 duration-150 flex items-center gap-2">
+          <span className="w-2 h-2 rounded-full bg-blue-400 animate-pulse" />
+          <span>{propertyToast}</span>
+        </div>
+      )}
 
       {/* Anchored Popover Window for Full RGB/HSV Color Palette (No Background Blur) */}
       {activeColorPicker && colorPickerPos && (

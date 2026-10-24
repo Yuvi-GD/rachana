@@ -14,15 +14,12 @@ import {
   Grid3X3, 
   Box, 
   Type, 
-  Heading as HeadingIcon, 
   MousePointerClick, 
   FormInput, 
-  Tag, 
   Image as ImageIcon, 
   Minus, 
   MoveHorizontal,
   ChevronRight,
-  Layers,
   RotateCcw
 } from 'lucide-react';
 
@@ -61,8 +58,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
   }, [onClose]);
 
   // Viewport bounds clamp
-  const adjustedX = Math.min(x, window.innerWidth - 220);
-  const adjustedY = Math.min(y, window.innerHeight - 300);
+  const isNearRightEdge = x + 440 > window.innerWidth;
+  const adjustedX = Math.max(10, Math.min(x, window.innerWidth - 230));
+  const adjustedY = Math.max(10, Math.min(y, window.innerHeight - 340));
 
   const handleAddChild = (type: LayoutNodeType, label?: string) => {
     actions.addNode(node.id, type, label);
@@ -100,18 +98,20 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
   };
 
   const handleClearChildren = () => {
-    actions.deleteNode(node.id); // for root or parent with children
+    actions.deleteNode(node.id);
     onClose();
   };
+
+  const submenuPosClass = isNearRightEdge ? 'right-full top-0 pr-1' : 'left-full top-0 pl-1';
 
   return (
     <div
       ref={menuRef}
       style={{ left: `${adjustedX}px`, top: `${adjustedY}px` }}
-      className="fixed z-50 w-56 rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl text-xs text-zinc-200 select-none py-1 font-sans backdrop-blur-md"
+      className="fixed z-50 w-56 rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl text-xs text-zinc-200 select-none py-1 font-sans"
     >
       {/* Node Header Identity */}
-      <div className="px-3 py-1.5 border-b border-[#25252d] flex items-center justify-between text-[11px] bg-[#141417]">
+      <div className="px-3 py-1.5 border-b border-[#25252d] flex items-center justify-between text-[11px] bg-[#141417] rounded-t-lg">
         <span className="font-semibold text-zinc-100 truncate max-w-[120px]">
           {node.name}
         </span>
@@ -121,174 +121,167 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
       </div>
 
       {/* Menu Actions */}
-      <div className="py-1">
+      <div className="p-1 space-y-0.5">
         {/* 1. Add Child Submenu (Only on containers) */}
         {isContainerNodeType(node.type) && (
-        <div
-          onMouseEnter={() => setActiveSubmenu('add')}
-          className="relative group px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded-xs mx-1"
-        >
-          <div className="flex items-center gap-2">
-            <Plus className="w-3.5 h-3.5 text-emerald-400" />
-            <span>Add Child Widget</span>
-          </div>
-          <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
-
-          {/* Submenu */}
-          {activeSubmenu === 'add' && (
-            <div className="absolute left-full top-0 ml-1 w-48 rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1 z-50">
-              <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-zinc-500 tracking-wider">
-                Containers
+          <div
+            onMouseEnter={() => setActiveSubmenu('add')}
+            className="relative group"
+          >
+            <div className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded transition-colors">
+              <div className="flex items-center gap-2">
+                <Plus className="w-3.5 h-3.5 text-emerald-400" />
+                <span>Add Child Widget</span>
               </div>
-              <button
-                onClick={() => handleAddChild('flex', 'Flex Row')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Columns className="w-3.5 h-3.5 text-blue-400" />
-                <span>Flex Row</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('flex', 'Flex Column')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Rows className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Flex Column</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('grid', 'Grid Container')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />
-                <span>Grid 2x2</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('card', 'Card Box')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Box className="w-3.5 h-3.5 text-amber-400" />
-                <span>Card Box</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('container', 'Block Container')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Box className="w-3.5 h-3.5 text-slate-400" />
-                <span>Block Container</span>
-              </button>
-
-              <div className="border-t border-[#26262e] my-1" />
-              <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-zinc-500 tracking-wider">
-                Primitives
-              </div>
-              <button
-                onClick={() => handleAddChild('heading', 'Heading')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <HeadingIcon className="w-3.5 h-3.5 text-yellow-400" />
-                <span>Heading Text</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('text', 'Text Block')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Type className="w-3.5 h-3.5 text-emerald-400" />
-                <span>Text Block</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('button', 'Button')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <MousePointerClick className="w-3.5 h-3.5 text-sky-400" />
-                <span>Button Widget</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('input', 'Input Field')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <FormInput className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Text Input</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('badge', 'Badge')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Tag className="w-3.5 h-3.5 text-pink-400" />
-                <span>Badge Pill</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('image', 'Image Box')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <ImageIcon className="w-3.5 h-3.5 text-orange-400" />
-                <span>Image Box</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('divider', 'Divider')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Minus className="w-3.5 h-3.5 text-zinc-400" />
-                <span>Divider Line</span>
-              </button>
-              <button
-                onClick={() => handleAddChild('spacer', 'Spacer')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <MoveHorizontal className="w-3.5 h-3.5 text-pink-400" />
-                <span>Flex Spacer</span>
-              </button>
+              <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
             </div>
-          )}
-        </div>
+
+            {/* Submenu with seamless hover bridge */}
+            {activeSubmenu === 'add' && (
+              <div 
+                className={`absolute ${submenuPosClass} w-48 z-50`}
+                onMouseLeave={() => setActiveSubmenu(null)}
+              >
+                <div className="rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1">
+                  <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-zinc-500 tracking-wider">
+                    Containers
+                  </div>
+                  <button
+                    onClick={() => handleAddChild('flex', 'Flex Row')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <Columns className="w-3.5 h-3.5 text-blue-400" />
+                    <span>Flex Row</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('flex', 'Flex Column')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <Rows className="w-3.5 h-3.5 text-cyan-400" />
+                    <span>Flex Column</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('grid', 'Grid Container')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />
+                    <span>Grid 2x2</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('container', 'Container')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <Box className="w-3.5 h-3.5 text-slate-400" />
+                    <span>Container</span>
+                  </button>
+
+                  <div className="border-t border-[#26262e] my-1" />
+                  <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-zinc-500 tracking-wider">
+                    Primitives
+                  </div>
+                  <button
+                    onClick={() => handleAddChild('text', 'Text')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <Type className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>Text Block</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('button', 'Button')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <MousePointerClick className="w-3.5 h-3.5 text-sky-400" />
+                    <span>Button</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('input', 'Input')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <FormInput className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Text Input</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('image', 'Image')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <ImageIcon className="w-3.5 h-3.5 text-orange-400" />
+                    <span>Image</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('divider', 'Divider')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <Minus className="w-3.5 h-3.5 text-zinc-400" />
+                    <span>Divider</span>
+                  </button>
+                  <button
+                    onClick={() => handleAddChild('spacer', 'Spacer')}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    <MoveHorizontal className="w-3.5 h-3.5 text-pink-400" />
+                    <span>Spacer</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         )}
 
-        {/* 2. Replace Type Submenu (Works for ROOT & all nodes!) */}
+        {/* 2. Replace Type Submenu */}
         <div
           onMouseEnter={() => setActiveSubmenu('replace')}
-          className="relative group px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded-xs mx-1"
+          className="relative group"
         >
-          <div className="flex items-center gap-2">
-            <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
-            <span>Replace / Change Type</span>
+          <div className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded transition-colors">
+            <div className="flex items-center gap-2">
+              <RefreshCw className="w-3.5 h-3.5 text-amber-400" />
+              <span>Replace / Change Type</span>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
           </div>
-          <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
 
           {activeSubmenu === 'replace' && (
-            <div className="absolute left-full top-0 ml-1 w-44 rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1 z-50">
-              <button
-                onClick={() => handleReplaceType('flex')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Columns className="w-3.5 h-3.5 text-blue-400" />
-                <span>Flex Container</span>
-              </button>
-              <button
-                onClick={() => handleReplaceType('grid')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />
-                <span>Grid Container</span>
-              </button>
-              <button
-                onClick={() => handleReplaceType('card')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Box className="w-3.5 h-3.5 text-amber-400" />
-                <span>Card Box</span>
-              </button>
-              <button
-                onClick={() => handleReplaceType('container')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Box className="w-3.5 h-3.5 text-slate-400" />
-                <span>Block Container</span>
-              </button>
-              <button
-                onClick={() => handleReplaceType('scroll')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Layers className="w-3.5 h-3.5 text-cyan-400" />
-                <span>Scroll Area</span>
-              </button>
+            <div 
+              className={`absolute ${submenuPosClass} w-44 z-50`}
+              onMouseLeave={() => setActiveSubmenu(null)}
+            >
+              <div className="rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1">
+                <button
+                  onClick={() => handleReplaceType('flex')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <Columns className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Flex Container</span>
+                </button>
+                <button
+                  onClick={() => handleReplaceType('grid')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Grid Container</span>
+                </button>
+                <button
+                  onClick={() => handleReplaceType('container')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <Box className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Container (Div)</span>
+                </button>
+                <button
+                  onClick={() => handleReplaceType('text')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <Type className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>Text</span>
+                </button>
+                <button
+                  onClick={() => handleReplaceType('button')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <MousePointerClick className="w-3.5 h-3.5 text-sky-400" />
+                  <span>Button</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -296,37 +289,44 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
         {/* 3. Wrap in Container Submenu */}
         <div
           onMouseEnter={() => setActiveSubmenu('wrap')}
-          className="relative group px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded-xs mx-1"
+          className="relative group"
         >
-          <div className="flex items-center gap-2">
-            <FolderPlus className="w-3.5 h-3.5 text-sky-400" />
-            <span>Wrap in Container</span>
+          <div className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded transition-colors">
+            <div className="flex items-center gap-2">
+              <FolderPlus className="w-3.5 h-3.5 text-sky-400" />
+              <span>Wrap in Container</span>
+            </div>
+            <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
           </div>
-          <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
 
           {activeSubmenu === 'wrap' && (
-            <div className="absolute left-full top-0 ml-1 w-44 rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1 z-50">
-              <button
-                onClick={() => handleWrap('flex')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Columns className="w-3.5 h-3.5 text-blue-400" />
-                <span>Wrap in Flex Row</span>
-              </button>
-              <button
-                onClick={() => handleWrap('container')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Box className="w-3.5 h-3.5 text-slate-400" />
-                <span>Wrap in Block</span>
-              </button>
-              <button
-                onClick={() => handleWrap('card')}
-                className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
-              >
-                <Box className="w-3.5 h-3.5 text-amber-400" />
-                <span>Wrap in Card</span>
-              </button>
+            <div 
+              className={`absolute ${submenuPosClass} w-44 z-50`}
+              onMouseLeave={() => setActiveSubmenu(null)}
+            >
+              <div className="rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1">
+                <button
+                  onClick={() => handleWrap('flex')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <Columns className="w-3.5 h-3.5 text-blue-400" />
+                  <span>Wrap in Flex Row</span>
+                </button>
+                <button
+                  onClick={() => handleWrap('container')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <Box className="w-3.5 h-3.5 text-slate-400" />
+                  <span>Wrap in Block</span>
+                </button>
+                <button
+                  onClick={() => handleWrap('grid')}
+                  className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                >
+                  <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />
+                  <span>Wrap in Grid</span>
+                </button>
+              </div>
             </div>
           )}
         </div>
@@ -336,8 +336,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
         {/* 4. Duplicate (Ctrl+D) */}
         {!isRoot && (
           <button
+            onMouseEnter={() => setActiveSubmenu(null)}
             onClick={handleDuplicate}
-            className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between text-left rounded-xs mx-1"
+            className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between text-left rounded transition-colors"
           >
             <div className="flex items-center gap-2">
               <Copy className="w-3.5 h-3.5 text-zinc-400" />
@@ -349,8 +350,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
 
         {/* 5. Copy YAML */}
         <button
+          onMouseEnter={() => setActiveSubmenu(null)}
           onClick={handleCopyYaml}
-          className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between text-left rounded-xs mx-1"
+          className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between text-left rounded transition-colors"
         >
           <div className="flex items-center gap-2">
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5 text-amber-400" />}
@@ -361,8 +363,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
         {/* 6. Clear Children (if has children) */}
         {node.children && node.children.length > 0 && (
           <button
+            onMouseEnter={() => setActiveSubmenu(null)}
             onClick={handleClearChildren}
-            className="w-full px-2 py-1.5 hover:bg-amber-600/20 hover:text-amber-200 text-amber-400/90 flex items-center gap-2 text-left rounded-xs mx-1"
+            className="w-full px-2 py-1.5 hover:bg-amber-600/20 hover:text-amber-200 text-amber-400/90 flex items-center gap-2 text-left rounded transition-colors"
           >
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Clear Children ({node.children.length})</span>
@@ -372,8 +375,9 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
         {/* 7. Delete Widget / Reset Root */}
         <div className="border-t border-[#25252d] my-1" />
         <button
+          onMouseEnter={() => setActiveSubmenu(null)}
           onClick={handleDelete}
-          className="w-full px-2 py-1.5 hover:bg-red-600/20 text-red-400 hover:text-red-300 flex items-center justify-between text-left rounded-xs mx-1"
+          className="w-full px-2 py-1.5 hover:bg-red-600/20 text-red-400 hover:text-red-300 flex items-center justify-between text-left rounded transition-colors"
         >
           <div className="flex items-center gap-2">
             <Trash2 className="w-3.5 h-3.5" />

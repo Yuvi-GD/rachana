@@ -47,6 +47,7 @@ export interface EditorState {
   paletteHeight: number;
   rightPanelWidth: number;
   bottomPanelHeight: number;
+  isCodeMaximized: boolean;
 }
 
 // Initial state
@@ -77,6 +78,7 @@ let state: EditorState = {
   paletteHeight: typeof window !== 'undefined' ? Math.max(260, Math.round((window.innerHeight - 60) * 0.5)) : 360,
   rightPanelWidth: 340,
   bottomPanelHeight: 180,
+  isCodeMaximized: false,
 };
 
 type Listener = () => void;
@@ -298,6 +300,16 @@ export const editorStore = {
 
   toggleRightPanel: () => {
     state = { ...state, showRightPanel: !state.showRightPanel };
+    emitChange();
+  },
+
+  toggleCodeMaximized: () => {
+    state = { ...state, isCodeMaximized: !state.isCodeMaximized };
+    emitChange();
+  },
+
+  setCodeMaximized: (val: boolean) => {
+    state = { ...state, isCodeMaximized: val };
     emitChange();
   },
 

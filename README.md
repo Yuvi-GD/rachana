@@ -1,74 +1,59 @@
-# Rachana (रचना) — Visual Layout Studio & Engine Testbed
+# Rachana - Visual Layout Studio and Engine Testbed
 
-> **रचना (Rachana)** — *Sanskrit for Creation, Layout, Design, and Architectural Composition.*
-
-**Rachana** is a professional visual layout testbed, inspector, and blueprint editor inspired by **Unreal Engine's UMG Widget Designer** and browser **DevTools box-model inspectors**. 
-
-Designed specifically for layout engine authors, UI system architects, and design-to-code engineers, Rachana provides real-time ground-truth verification of flexbox, grid, box-model geometry, sizing constraints, and hierarchy trees.
+Rachana is a high-precision visual layout testbed, geometry inspector, and test case generator designed for authors of custom layout engines (such as Flexbox, CSS Grid, Yoga, Taffy, and game engine UI frameworks like Unreal Engine UMG). It bridges high-level declarative layout schemas with ground-truth browser layout computation, providing sub-pixel verification of layout algorithms.
 
 ---
 
-## 🌟 Key Capabilities
+## Technical Overview
 
-### 1. Unreal Engine & Slate-Inspired Docking Workspace
-- **Palette**: Catalog of containers (`Flex Row`, `Flex Column`, `CSS Grid`, `Card Box`, `Scroll Area`, `Block Container`) and primitives (`Heading`, `Text`, `Button`, `Input`, `Badge`, `Image`, `Divider`, `Spacer`).
-- **Hierarchy Tree**: Hierarchical tree with drag-and-drop reparenting, instant sibling insertion indicators (`before`, `after`, `inside`), and HTML spec protection.
-- **Sandboxed Viewport**: High-performance canvas with infinite 2D coordinate rulers, cursor-centered zoom, smooth panning, and device resolution presets.
-- **Details Inspector**: Context-sensitive property controls tailored strictly to the selected element type, with all sections expanded for rapid editing.
-- **VS Code Layout Toggles**: Top-right toggle buttons to hide or expand the Primary Sidebar (Palette/Hierarchy), Bottom Panel (Script Editor), and Secondary Sidebar (Details Inspector).
-
-### 2. DevTools-Grade Box Model & 8-Direction Resizing
-- **Multi-Layer Visualization**:
-  - **Margin Area**: Translucent dashed orange boundary.
-  - **Border Area**: High-contrast blue outline.
-  - **Padding Area**: Translucent dotted emerald boundary.
-  - **Content Area**: Translucent blue content bounding box.
-- **8-Directional Interactive Handles**: Resize any container or primitive from all 4 sides (`N`, `S`, `E`, `W`) and all 4 corners (`NW`, `NE`, `SW`, `SE`).
-- **Click-Deselect Protection**: Seamless mouse release handling that prevents accidental canvas deselection after resizing.
-- **Computed Geometry Sampling**: Real-time measurement of bounding client rects, client/scroll dimensions, and computed CSS values.
-
-### 3. Unified Multi-Format Live Script Editor
-- **Multi-Format Tabs**: Instant switching between **YAML**, **JSON**, and **HTML/CSS**.
-- **VS Code Dark+ Syntax Highlighting**: Dual-layer code editor with color tokens for tags, keys, strings, numbers, enums, brackets, and comments.
-- **Synchronized Line Gutter**: Sticky line numbers that scroll synchronously with vertical code movement.
-- **Single-Click Sync**: Apply live code changes directly to the interactive viewport with syntax validation.
-- **Direct Import & Export**: One-click file upload (`.yaml`, `.json`, `.html`) and download (`layout.yaml`, `layout.json`, `layout.html`) without preset clutter.
-- **<kbd>Tab</kbd> Indentation**: Pressing <kbd>Tab</kbd> inserts 2 spaces with proper caret preservation.
-
-### 4. Right-Click Context Menu & Canvas Control
-- **Add Child Widget**: Context-sensitive container and primitive creation.
-- **Replace With...**: Dynamically convert any widget or root canvas to another type without losing child nodes.
-- **Wrap in Container**: Wrap any element or tree branch in a Flex Row, Flex Column, Grid, or Card.
-- **Reset Canvas**: Clear canvas to an empty container with a single click.
-- **Copy YAML**: Copy the element's subtree as clean YAML to clipboard.
+Developing a custom layout engine requires reference vectors against which algorithmic output can be tested. Rachana provides an interactive visual environment to author complex UI trees, visually inspect computed box model layers, and export standardized test vectors containing the exact bounding rects, content offsets, and intrinsic dimensions computed by the layout engine.
 
 ---
 
-## ⌨️ Keyboard Shortcuts
+## Core Systems
 
-| Shortcut | Action |
-| :--- | :--- |
-| <kbd>Ctrl</kbd> + <kbd>Z</kbd> | Undo layout changes |
-| <kbd>Ctrl</kbd> + <kbd>Y</kbd> / <kbd>Ctrl</kbd> + <kbd>Shift</kbd> + <kbd>Z</kbd> | Redo layout changes |
-| <kbd>Ctrl</kbd> + <kbd>D</kbd> | Duplicate selected element |
-| <kbd>Delete</kbd> / <kbd>Backspace</kbd> | Delete selected widget (or clear canvas if root) |
-| <kbd>Escape</kbd> | Deselect active widget |
-| <kbd>Tab</kbd> | Insert 2-space indentation in Script Editor |
-| <kbd>Middle Click Drag</kbd> / <kbd>Right Click Drag</kbd> | Pan canvas viewport |
-| <kbd>Mouse Wheel</kbd> | Zoom in/out centered at mouse cursor |
+### 1. Ground-Truth Layout Verification
+- Sub-pixel bounding box sampling: Captures exact `x`, `y`, `width`, and `height` coordinates for every node in the layout tree.
+- Box model metrics extraction: Real-time calculation of computed margins, border widths, padding boxes, and content boxes.
+- Intrinsic and scroll sizing: Measures `clientWidth`, `clientHeight`, `scrollWidth`, `scrollHeight`, and overflow clipping bounds.
+- Golden test export: Generates structured JSON test snapshots containing both the structural input tree and the reference computed rects for automated engine testing suites.
+
+### 2. Lossless AST and Multi-Format Serialization
+- Bidirectional AST roundtrip: Ensures 100% fidelity when converting layout state across YAML, JSON, and HTML/CSS.
+- Typed node mapping: Explicit serialization of containers (Block, Flex, Grid) and primitives (Text, Button, Input, Image, Divider, Spacer) with preserved dimensions, alignment flags, and typography parameters.
+- Multi-format code panel: Dual-layer code editor featuring token-level syntax coloring, synchronized line gutter scrolling, undo/redo history stack, and real-time AST synchronizer.
+
+### 3. Interactive Viewport and Geometry Gizmos
+- 8-directional resize gizmo: Manipulate container and primitive boundaries from all cardinal directions (North, South, East, West) and diagonal corners.
+- Canvas-relative coordinate tracking: Positional metrics (`Pos X`, `Pos Y`) reflect offsets relative to the root Screen Canvas rather than global browser window coordinates.
+- Infinite 2D coordinate rulers: Zoom-aware adaptive ruler ticks calibrated to the viewport transform matrix.
+- Pan and zoom engine: Cursor-anchored matrix zooming with smooth panning and configurable scroll sensitivity.
+
+### 4. Details Property Inspector
+- Structured property categorization: Logical groupings for Flow Direction, Sizing, Constraints, Flexbox parameters, Grid tracks, Appearance, Typography, and Coordinates.
+- Unified spacing controls: Direct numerical inputs for Margin, Padding, Border Width, and Gap with independent side linking.
+- Anchored color palette: Floating popover anchored to clicked swatches without viewport blur or occlusion, featuring interactive RGB gradient sliders, HSV controls, and alpha channel configuration.
+- Direct hexadecimal inputs: Dedicated outside inputs for hex code entry without requiring popover activation.
+- Property copy and paste pipeline: Shift + click shortcut support and contextual menus to duplicate or apply property values across different layout nodes.
+- Docked box model drawer: Collapsible bottom inspector rendering concentric DevTools-grade box model diagrams.
+
+### 5. Studio Workspace Layout
+- Resizable docking panes: Unreal Engine Slate-inspired three-column workspace layout with Primary Sidebar, Center Canvas, and Secondary Sidebar.
+- Focus code mode: Full-height code editor toggle that expands the script workspace across the center column while preserving left and right tooling panels.
+- Panel visibility controls: Independent toggles for Primary Sidebar, Bottom Drawer, and Secondary Sidebar.
 
 ---
 
-## 🚀 Getting Started
+## Development and Build Workflow
 
 ### Prerequisites
-- Node.js 18+
+- Node.js 18.0 or higher
 - npm or pnpm
 
-### Installation
+### Getting Started
 
 ```bash
-# Clone repository
+# Clone the repository
 git clone https://github.com/your-username/rachana.git
 cd rachana
 
@@ -79,67 +64,22 @@ npm install
 npm run dev
 ```
 
-Open [http://localhost:5173](http://localhost:5173) in your browser.
+The application runs locally at `http://localhost:5173` (or the next available port).
 
-### Building for Production
+### Production Build
 
 ```bash
-# Build production bundle
+# Type check and build bundle
 npm run build
 
-# Preview build locally
+# Preview production build locally
 npm run preview
 ```
 
 ---
 
-## 🏗️ Architecture & Project Structure
+## Architecture and Design Principles
 
-```
-rachana/
-├── src/
-│   ├── types/                  # Layout node models, spacing, and computed metrics
-│   │   └── layout.ts
-│   ├── core/                   # Serializers, presets, and default styles
-│   │   ├── defaultStyles.ts    # Node presets & default styling models
-│   │   ├── layoutPresets.ts    # Golden layout test cases
-│   │   └── layoutSerializer.ts # Multi-format parsers (YAML, JSON, HTML) & exporters
-│   ├── store/                  # Centralized Zustand-style reactive editor store
-│   │   └── editorStore.ts
-│   ├── components/
-│   │   ├── toolbar/            # Top Studio Header with device presets, zoom & panel toggles
-│   │   │   └── Toolbar.tsx
-│   │   ├── palette/            # Drag & drop widget catalog
-│   │   │   └── Palette.tsx
-│   │   ├── hierarchy/          # Tree hierarchy with reordering & drop indicators
-│   │   │   └── Hierarchy.tsx
-│   │   ├── viewport/           # Infinite canvas, 8-directional handles & rulers
-│   │   │   ├── Viewport.tsx
-│   │   │   ├── BoxModelOverlay.tsx
-│   │   │   └── InfiniteRuler.tsx
-│   │   ├── details/            # Context-sensitive property inspector & box model
-│   │   │   ├── DetailsPanel.tsx
-│   │   │   ├── BoxModelInput.tsx
-│   │   │   ├── FlexControls.tsx
-│   │   │   └── GridControls.tsx
-│   │   ├── script/             # Unified YAML, JSON & HTML Live Editor
-│   │   │   └── LiveYamlPanel.tsx
-│   │   ├── common/             # Context menus, unit pickers & splitters
-│   │   │   ├── ContextMenu.tsx
-│   │   │   ├── UnitInput.tsx
-│   │   │   └── Splitter.tsx
-│   │   └── modals/             # Standalone import & golden test export dialogs
-│   │       ├── ImportModal.tsx
-│   │       └── ExportTestModal.tsx
-│   ├── App.tsx                 # Main resizable 3-pane layout shell
-│   ├── index.css               # Global dark styling & sleek custom scrollbars
-│   └── main.tsx                # Application entrypoint
-├── package.json
-└── vite.config.ts
-```
-
----
-
-## 📜 License
-
-MIT License. Designed and crafted with precision for layout engine developers.
+- Strict Type Safety: Written entirely in TypeScript with strong typings for layout nodes, computed metrics, and CSS property subsets.
+- Modular Component Hierarchy: Separation between state management (central store with history stack), AST serialization routines, and rendering subsystems.
+- Isolated Measurement: Layout nodes render in a dedicated viewport shell monitored by ResizeObserver and requestAnimationFrame measurement passes to prevent UI interference.

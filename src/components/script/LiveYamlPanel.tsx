@@ -18,7 +18,11 @@ import {
   Upload, 
   AlertCircle, 
   FileJson, 
-  Code
+  Code,
+  Undo2,
+  Redo2,
+  Maximize2,
+  Minimize2
 } from 'lucide-react';
 
 export type ScriptFormat = 'yaml' | 'json' | 'html';
@@ -175,9 +179,11 @@ const renderHtmlLine = (line: string): React.ReactNode => {
 };
 
 export const LiveYamlPanel: React.FC = () => {
-  const { rootNode, metricsMap, showBottomPanel, showMetrics, actions } = useEditorStore();
+  const { rootNode, metricsMap, showBottomPanel, showMetrics, isCodeMaximized, actions } = useEditorStore();
   const [format, setFormat] = useState<ScriptFormat>('yaml');
   const [code, setCode] = useState('');
+  const [undoStack, setUndoStack] = useState<string[]>([]);
+  const [redoStack, setRedoStack] = useState<string[]>([]);
   const [autoSync, setAutoSync] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -250,8 +256,28 @@ export const LiveYamlPanel: React.FC = () => {
     }
   };
 
+  const handleUndo = () => {
+    if (undoStack.length === 0) return;
+    const prev = undoStack[undoStack.length - 1];
+    setUndoStack((u) => u.slice(0, u.length - 1));
+    setRedoStack((r) => [...r, code]);
+    setCode(prev);
+    handleParseAndUpdate(prev, format);
+  };
+
+  const handleRedo = () => {
+    if (redoStack.length === 0) return;
+    const next = redoStack[redoStack.length - 1];
+    setRedoStack((r) => r.slice(0, r.length - 1));
+    setUndoStack((u) => [...u, code]);
+    setCode(next);
+    handleParseAndUpdate(next, format);
+  };
+
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextCode = e.target.value;
+    setUndoStack((prev) => [...prev.slice(-49), code]);
+    setRedoStack([]);
     setCode(nextCode);
     if (autoSync) {
       handleParseAndUpdate(nextCode, format);
@@ -268,11 +294,28 @@ export const LiveYamlPanel: React.FC = () => {
       return;
     }
 
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      e.preventDefault();
+      handleUndo();
+      return;
+    }
+
+    if (
+      ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y') ||
+      ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'z')
+    ) {
+      e.preventDefault();
+      handleRedo();
+      return;
+    }
+
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = e.currentTarget.selectionStart;
       const end = e.currentTarget.selectionEnd;
       const nextCode = code.substring(0, start) + '  ' + code.substring(end);
+      setUndoStack((prev) => [...prev.slice(-49), code]);
+      setRedoStack([]);
       setCode(nextCode);
 
       setTimeout(() => {
@@ -435,6 +478,43 @@ export const LiveYamlPanel: React.FC = () => {
           >
             <RotateCw className="w-3 h-3 text-blue-400" />
             <span>Sync</span>
+          </button>
+
+          {/* Script Undo / Redo controls */}
+          <div className="flex items-center bg-[#18181d] rounded p-0.5 border border-[#2b2b34]">
+            <button
+              type="button"
+              onClick={handleUndo}
+              disabled={undoStack.length === 0}
+              title="Undo Script Edit (Ctrl+Z)"
+              className="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-[#25252e] disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <Undo2 className="w-3 h-3" />
+            </button>
+            <button
+              type="button"
+              onClick={handleRedo}
+              disabled={redoStack.length === 0}
+              title="Redo Script Edit (Ctrl+Y)"
+              className="p-1 rounded text-zinc-400 hover:text-zinc-200 hover:bg-[#25252e] disabled:opacity-30 disabled:hover:bg-transparent"
+            >
+              <Redo2 className="w-3 h-3" />
+            </button>
+          </div>
+
+          {/* Focus Code / Fullscreen Toggle */}
+          <button
+            type="button"
+            onClick={actions.toggleCodeMaximized}
+            title={isCodeMaximized ? "Restore Split View" : "Full-Height Code View (Hide Viewport)"}
+            className={`flex items-center gap-1 px-2 py-1 rounded border text-[10px] font-semibold transition-colors ${
+              isCodeMaximized
+                ? 'bg-purple-600/30 text-purple-200 border-purple-500/50'
+                : 'bg-[#1a1a20] hover:bg-[#25252e] border-[#2e2e38] text-zinc-300 hover:text-white'
+            }`}
+          >
+            {isCodeMaximized ? <Minimize2 className="w-3 h-3 text-purple-400" /> : <Maximize2 className="w-3 h-3 text-purple-400" />}
+            <span>{isCodeMaximized ? 'Restore View' : 'Focus Code'}</span>
           </button>
 
           {/* Import File Button */}
