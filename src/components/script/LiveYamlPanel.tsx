@@ -7,46 +7,66 @@ import {
   Copy, 
   Check, 
   RotateCcw, 
-  ChevronDown
+  ChevronDown,
+  AlertCircle
 } from 'lucide-react';
 
-// YAML Syntax Highlighter
+// Enhanced YAML Syntax Highlighter
 const renderYamlLines = (yamlText: string) => {
   return yamlText.split('\n').map((line, idx) => {
     let highlighted: React.ReactNode = line;
 
-    // Comments
-    if (line.trim().startsWith('#')) {
+    const trimmed = line.trim();
+
+    // 1. Comments
+    if (trimmed.startsWith('#')) {
       highlighted = <span className="text-zinc-500 italic">{line}</span>;
-    } else {
-      // Key-Value matching: e.g. "  fill_ratio: 1.0" or "- Panel:"
-      const kvMatch = line.match(/^(\s*(?:-\s*)?)([a-zA-Z0-9_-]+):(.*)$/);
+    } 
+    // 2. Dash Item / Object indicator: "- Panel:" or "- Text:"
+    else {
+      const kvMatch = line.match(/^(\s*)(-\s*)?([a-zA-Z0-9_-]+):(.*)$/);
       if (kvMatch) {
-        const indent = kvMatch[1];
-        const key = kvMatch[2];
-        const rest = kvMatch[3];
+        const indent = kvMatch[1] || '';
+        const dash = kvMatch[2] || '';
+        const key = kvMatch[3];
+        const rest = kvMatch[4] || '';
 
-        let styledRest: React.ReactNode = rest;
         const trimmedRest = rest.trim();
+        let styledRest: React.ReactNode = rest;
 
+        // Quoted strings
         if (trimmedRest.startsWith('"') && trimmedRest.endsWith('"')) {
-          styledRest = <span className="text-emerald-300">{rest}</span>;
-        } else if (trimmedRest.startsWith('[') && trimmedRest.endsWith(']')) {
+          styledRest = <span className="text-emerald-400 font-medium">{rest}</span>;
+        } else if (trimmedRest.startsWith("'") && trimmedRest.endsWith("'")) {
+          styledRest = <span className="text-emerald-400 font-medium">{rest}</span>;
+        }
+        // Bracketed array: e.g. [0, 15] or [255, 255, 255, 255]
+        else if (trimmedRest.startsWith('[') && trimmedRest.endsWith(']')) {
           styledRest = <span className="text-amber-300 font-bold">{rest}</span>;
-        } else if (trimmedRest === 'true' || trimmedRest === 'false') {
+        }
+        // Booleans
+        else if (trimmedRest === 'true' || trimmedRest === 'false') {
           styledRest = <span className="text-purple-400 font-bold">{rest}</span>;
-        } else if (!isNaN(parseFloat(trimmedRest))) {
+        }
+        // Numbers
+        else if (!isNaN(parseFloat(trimmedRest)) && !trimmedRest.includes(' ')) {
           styledRest = <span className="text-sky-300 font-bold">{rest}</span>;
-        } else if (trimmedRest === 'ROW' || trimmedRest === 'COLUMN' || trimmedRest === 'CENTER' || trimmedRest === 'START' || trimmedRest === 'END') {
-          styledRest = <span className="text-yellow-400 font-semibold">{rest}</span>;
+        }
+        // Flow Enums
+        else if (['ROW', 'COLUMN', 'NONE', 'START', 'CENTER', 'END', 'SPACE_BETWEEN'].includes(trimmedRest)) {
+          styledRest = <span className="text-yellow-400 font-bold">{rest}</span>;
         }
 
-        const isPanelKey = key === 'Panel' || key === 'Text' || key === 'Button' || key === 'Image';
+        const isWidgetType = [
+          'Panel', 'Text', 'Button', 'Image', 'Heading', 'Input', 
+          'Badge', 'Card', 'Scroll', 'Spacer', 'Divider', 'children', 'content'
+        ].includes(key);
 
         highlighted = (
           <>
             <span className="text-zinc-600">{indent}</span>
-            <span className={isPanelKey ? 'text-amber-400 font-bold' : 'text-blue-300 font-medium'}>
+            {dash && <span className="text-amber-500 font-bold">{dash}</span>}
+            <span className={isWidgetType ? 'text-amber-400 font-bold' : 'text-blue-400 font-medium'}>
               {key}:
             </span>
             {styledRest}
@@ -56,7 +76,7 @@ const renderYamlLines = (yamlText: string) => {
     }
 
     return (
-      <div key={idx} className="leading-5">
+      <div key={idx} className="h-5 leading-5 whitespace-pre">
         {highlighted || ' '}
       </div>
     );
@@ -66,70 +86,72 @@ const renderYamlLines = (yamlText: string) => {
 export const LiveYamlPanel: React.FC = () => {
   const { rootNode, metricsMap, showMetrics, actions } = useEditorStore();
   const [code, setCode] = useState('');
-  const [isUserEditing, setIsUserEditing] = useState(false);
+  const [isFocused, setIsFocused] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [parseStatus, setParseStatus] = useState<{ valid: boolean; nodeCount: number; message: string }>({
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseStatus, setParseStatus] = useState<{ valid: boolean; nodeCount: number }>({
     valid: true,
     nodeCount: 0,
-    message: 'Synced',
   });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
-  const userEditingTimer = useRef<number | null>(null);
 
-  // Sync from Store -> Code when user is NOT actively typing
+  // Sync from Store -> Code ONLY when editor is NOT focused by user
   useEffect(() => {
-    if (!isUserEditing) {
+    if (!isFocused) {
       const generated = exportLayoutEngineYaml(rootNode, metricsMap);
       setCode(generated);
+      setParseError(null);
 
       const countNodes = (n: LayoutNode): number => 1 + (n.children ? n.children.reduce((acc, c) => acc + countNodes(c), 0) : 0);
       setParseStatus({
         valid: true,
         nodeCount: countNodes(rootNode),
-        message: 'Live Synced',
       });
     }
-  }, [rootNode, metricsMap, isUserEditing]);
+  }, [rootNode, metricsMap, isFocused]);
 
-  // Handle user typing in the YAML editor
-  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-    const newCode = e.target.value;
-    setCode(newCode);
-    setIsUserEditing(true);
-
-    if (userEditingTimer.current) clearTimeout(userEditingTimer.current);
-
-    // Attempt live parse
+  const handleParseAndUpdate = (yamlText: string) => {
     try {
-      const parsed = parseTetherYaml(newCode);
+      const parsed = parseTetherYaml(yamlText);
       const countNodes = (n: LayoutNode): number => 1 + (n.children ? n.children.reduce((acc, c) => acc + countNodes(c), 0) : 0);
       const total = countNodes(parsed);
 
-      setParseStatus({
-        valid: true,
-        nodeCount: total,
-        message: `Valid (${total} widgets)`,
-      });
-
-      // Update store root node in real-time!
+      setParseError(null);
+      setParseStatus({ valid: true, nodeCount: total });
       actions.loadCustomRootNode(parsed);
-    } catch {
-      setParseStatus({
-        valid: false,
-        nodeCount: 0,
-        message: 'Editing (syntax pending)',
-      });
+    } catch (e: any) {
+      setParseError(e.message || 'Invalid YAML format');
+      setParseStatus({ valid: false, nodeCount: 0 });
     }
-
-    // Reset user editing flag 1.5 seconds after typing stops
-    userEditingTimer.current = window.setTimeout(() => {
-      setIsUserEditing(false);
-    }, 1500);
   };
 
-  // Sync scroll between textarea and pre
+  const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const nextCode = e.target.value;
+    setCode(nextCode);
+    handleParseAndUpdate(nextCode);
+  };
+
+  // Tab key indentation support (inserts 2 spaces)
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Tab') {
+      e.preventDefault();
+      const start = e.currentTarget.selectionStart;
+      const end = e.currentTarget.selectionEnd;
+      const nextCode = code.substring(0, start) + '  ' + code.substring(end);
+      setCode(nextCode);
+
+      setTimeout(() => {
+        if (textareaRef.current) {
+          textareaRef.current.selectionStart = textareaRef.current.selectionEnd = start + 2;
+        }
+      }, 0);
+
+      handleParseAndUpdate(nextCode);
+    }
+  };
+
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
     if (preRef.current) {
       preRef.current.scrollTop = e.currentTarget.scrollTop;
@@ -144,9 +166,9 @@ export const LiveYamlPanel: React.FC = () => {
   };
 
   const handleReSync = () => {
-    setIsUserEditing(false);
     const generated = exportLayoutEngineYaml(rootNode, metricsMap);
     setCode(generated);
+    setParseError(null);
   };
 
   if (!showMetrics) return null;
@@ -154,9 +176,9 @@ export const LiveYamlPanel: React.FC = () => {
   const linesCount = code.split('\n').length;
 
   return (
-    <div className="h-full bg-[#141417] border-t border-[#27272e] flex flex-col select-none text-xs overflow-hidden">
+    <div className="h-full bg-[#121215] border-t border-[#27272e] flex flex-col select-none text-xs overflow-hidden">
       {/* Title & Action Bar */}
-      <div className="h-7 px-3 bg-[#111114] border-b border-[#242429] flex items-center justify-between text-zinc-300 flex-shrink-0">
+      <div className="h-7 px-3 bg-[#0f0f12] border-b border-[#242429] flex items-center justify-between text-zinc-300 flex-shrink-0">
         <div className="flex items-center gap-2">
           <FileCode2 className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
           <span className="font-bold uppercase tracking-wider text-[11px] text-zinc-100 flex-shrink-0">
@@ -166,8 +188,8 @@ export const LiveYamlPanel: React.FC = () => {
           {/* Status Indicator */}
           <div className="flex items-center gap-1.5 ml-2 font-mono text-[10px]">
             <div className={`w-2 h-2 rounded-full ${parseStatus.valid ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span className={parseStatus.valid ? 'text-emerald-300' : 'text-amber-300'}>
-              {parseStatus.message}
+            <span className={parseStatus.valid ? 'text-emerald-300 font-semibold' : 'text-amber-300'}>
+              {parseStatus.valid ? `Live Synced (${parseStatus.nodeCount} nodes)` : 'Editing...'}
             </span>
           </div>
         </div>
@@ -178,7 +200,7 @@ export const LiveYamlPanel: React.FC = () => {
             type="button"
             onClick={handleReSync}
             title="Re-generate and format YAML from active canvas"
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1c1c22] hover:bg-[#25252e] border border-[#2f2f3a] text-zinc-300 hover:text-white text-[10px] transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1a1a20] hover:bg-[#25252e] border border-[#2e2e38] text-zinc-300 hover:text-white text-[10px] transition-colors"
           >
             <RotateCcw className="w-3 h-3 text-sky-400" />
             <span>Re-Sync</span>
@@ -187,7 +209,7 @@ export const LiveYamlPanel: React.FC = () => {
           <button
             type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1c1c22] hover:bg-[#25252e] border border-[#2f2f3a] text-zinc-300 hover:text-white text-[10px] transition-colors"
+            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1a1a20] hover:bg-[#25252e] border border-[#2e2e38] text-zinc-300 hover:text-white text-[10px] transition-colors"
           >
             {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-amber-400" />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
@@ -206,22 +228,30 @@ export const LiveYamlPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* Editor Body: Dual-Layer Syntax Highlighted Live Textarea */}
-      <div className="flex-1 relative flex overflow-hidden font-mono text-[11px]">
+      {/* Optional Syntax Pending Banner */}
+      {parseError && (
+        <div className="px-3 py-1 bg-amber-950/60 border-b border-amber-900/60 text-amber-300 text-[10px] font-mono flex items-center gap-1.5">
+          <AlertCircle className="w-3 h-3 text-amber-400 flex-shrink-0" />
+          <span>{parseError}</span>
+        </div>
+      )}
+
+      {/* Editor Body: Pixel-Perfect Dual-Layer Syntax Highlighted Editor */}
+      <div className="flex-1 relative flex overflow-hidden font-mono text-[11px] bg-[#121215]">
         {/* Line Numbers Gutter */}
-        <div className="w-9 py-2 bg-[#0e0e11] border-r border-[#202026] text-zinc-600 select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono text-[10px] leading-5">
+        <div className="w-10 py-2.5 bg-[#0d0d10] border-r border-[#1e1e24] text-zinc-600 select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono text-[11px] leading-5">
           {Array.from({ length: Math.max(linesCount, 1) }).map((_, i) => (
-            <div key={i}>{i + 1}</div>
+            <div key={i} className="h-5 leading-5">{i + 1}</div>
           ))}
         </div>
 
-        {/* Dual Layer Workspace */}
+        {/* Dual Layer Workspace with Identical Box Model */}
         <div className="relative flex-1 h-full overflow-hidden">
           {/* Syntax Highlighted Background */}
           <pre
             ref={preRef}
             aria-hidden="true"
-            className="absolute inset-0 p-2 m-0 bg-transparent text-transparent font-mono text-[11px] leading-5 overflow-hidden pointer-events-none whitespace-pre select-none"
+            className="absolute inset-0 p-2.5 m-0 bg-transparent text-transparent font-mono text-[11px] leading-5 overflow-hidden pointer-events-none whitespace-pre select-none"
           >
             {renderYamlLines(code)}
           </pre>
@@ -231,9 +261,12 @@ export const LiveYamlPanel: React.FC = () => {
             ref={textareaRef}
             value={code}
             onChange={handleCodeChange}
+            onKeyDown={handleKeyDown}
+            onFocus={() => setIsFocused(true)}
+            onBlur={() => setIsFocused(false)}
             onScroll={handleScroll}
             spellCheck={false}
-            className="absolute inset-0 p-2 m-0 bg-transparent text-zinc-200 font-mono text-[11px] leading-5 resize-none outline-none overflow-auto custom-scrollbar whitespace-pre caret-white selection:bg-blue-600/40"
+            className="absolute inset-0 p-2.5 m-0 bg-transparent text-zinc-100 font-mono text-[11px] leading-5 resize-none outline-none overflow-auto custom-scrollbar whitespace-pre caret-white selection:bg-blue-600/40"
             placeholder="# Layout Engine YAML Editor&#10;Panel:&#10;  id: &quot;root&quot;&#10;  flow: COLUMN"
           />
         </div>

@@ -6,6 +6,7 @@ export interface UnitInputProps {
   units?: string[];
   allowAuto?: boolean;
   allowNone?: boolean;
+  allowZero?: boolean;
   placeholder?: string;
   className?: string;
   min?: number;
@@ -19,6 +20,7 @@ export const UnitInput: React.FC<UnitInputProps> = ({
   units = ['px', '%', 'rem'],
   allowAuto = false,
   allowNone = false,
+  allowZero = false,
   placeholder = '0',
   className = '',
   min,
@@ -55,87 +57,119 @@ export const UnitInput: React.FC<UnitInputProps> = ({
       }
       return;
     }
-    // If user typed a number
     onChange(`${newNum}${activeUnit}`);
   };
 
   const handleUnitChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     const newUnit = e.target.value;
-    if (newUnit === 'auto') {
-      onChange('auto');
-    } else if (newUnit === 'none') {
-      onChange('none');
+    const numToUse = numStr !== '' ? numStr : '0';
+    onChange(`${numToUse}${newUnit}`);
+  };
+
+  const toggleAuto = () => {
+    if (isAuto) {
+      onChange(`100${units[0] || 'px'}`);
     } else {
-      const numToUse = numStr !== '' ? numStr : '0';
-      onChange(`${numToUse}${newUnit}`);
+      onChange('auto');
     }
   };
 
+  const toggleNone = () => {
+    if (isNone) {
+      onChange(`100${units[0] || 'px'}`);
+    } else {
+      onChange('none');
+    }
+  };
+
+  const setZero = () => {
+    onChange(`0${activeUnit}`);
+  };
 
   return (
-    <div className={`flex items-center rounded border border-[#34343d] bg-[#1c1c20] focus-within:border-blue-500 overflow-hidden ${className}`}>
-      {/* Number Input or Auto/None badge */}
-      {isAuto ? (
-        <div className="flex-1 px-2 py-1 text-xs font-mono text-cyan-400 font-semibold select-none flex items-center justify-between">
-          <span>auto</span>
-          <button
-            type="button"
-            onClick={() => onChange(`100${units[0] || 'px'}`)}
-            className="text-[9px] text-zinc-500 hover:text-zinc-200 underline"
-            title="Switch to numeric value"
-          >
-            edit
-          </button>
-        </div>
-      ) : isNone ? (
-        <div className="flex-1 px-2 py-1 text-xs font-mono text-zinc-500 font-semibold select-none flex items-center justify-between">
-          <span>none</span>
-          <button
-            type="button"
-            onClick={() => onChange(`100${units[0] || 'px'}`)}
-            className="text-[9px] text-zinc-500 hover:text-zinc-200 underline"
-            title="Switch to numeric value"
-          >
-            edit
-          </button>
-        </div>
-      ) : (
-        <input
-          type="number"
-          value={numStr}
-          onChange={handleNumberChange}
-          placeholder={placeholder}
-          min={min}
-          max={max}
-          step={step}
-          className="w-full bg-transparent px-2 py-1 text-xs text-zinc-100 outline-none font-mono placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
-        />
+    <div className={`flex items-center gap-1 ${className}`}>
+      {/* Input container with number + unit dropdown */}
+      <div className="flex-1 flex items-center rounded border border-[#34343d] bg-[#1c1c20] focus-within:border-blue-500 overflow-hidden min-w-0 transition-colors">
+        {isAuto ? (
+          <div className="flex-1 px-2 py-1 text-xs font-mono text-cyan-400 font-semibold select-none">
+            auto
+          </div>
+        ) : isNone ? (
+          <div className="flex-1 px-2 py-1 text-xs font-mono text-zinc-500 font-semibold select-none">
+            none
+          </div>
+        ) : (
+          <input
+            type="number"
+            value={numStr}
+            onChange={handleNumberChange}
+            placeholder={placeholder}
+            min={min}
+            max={max}
+            step={step}
+            className="w-full bg-transparent px-2 py-1 text-xs text-zinc-100 outline-none font-mono placeholder:text-zinc-600 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none min-w-0"
+          />
+        )}
+
+        {/* Unit Dropdown (px, %, rem, vw, vh) */}
+        {!isAuto && !isNone && (
+          <div className="flex items-center border-l border-[#2e2e36] bg-[#222228] px-1 flex-shrink-0">
+            <select
+              value={activeUnit}
+              onChange={handleUnitChange}
+              className="bg-transparent text-[10px] font-mono text-zinc-300 outline-none cursor-pointer py-1 pr-0.5 hover:text-white"
+            >
+              {units.map((u) => (
+                <option key={u} value={u} className="bg-[#222228] text-zinc-200">
+                  {u}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* Quick Action Pill Buttons for Auto, None, Zero */}
+      {allowAuto && (
+        <button
+          type="button"
+          onClick={toggleAuto}
+          title={isAuto ? 'Switch to numeric value' : 'Set to auto'}
+          className={`px-1.5 py-1 rounded text-[10px] font-mono font-semibold transition-all flex-shrink-0 border ${
+            isAuto
+              ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-xs'
+              : 'bg-[#222227] hover:bg-[#2b2b33] border-[#34343d] text-zinc-400 hover:text-zinc-200'
+          }`}
+        >
+          Auto
+        </button>
       )}
 
-      {/* Unit Dropdown / Selector */}
-      <div className="flex items-center border-l border-[#2e2e36] bg-[#222228] px-1">
-        <select
-          value={isAuto ? 'auto' : isNone ? 'none' : activeUnit}
-          onChange={handleUnitChange}
-          className="bg-transparent text-[10px] font-mono text-zinc-300 outline-none cursor-pointer py-1 pr-0.5 hover:text-white"
+      {allowNone && (
+        <button
+          type="button"
+          onClick={toggleNone}
+          title={isNone ? 'Switch to numeric value' : 'Set to none'}
+          className={`px-1.5 py-1 rounded text-[10px] font-mono font-semibold transition-all flex-shrink-0 border ${
+            isNone
+              ? 'bg-purple-950/80 border-purple-500 text-purple-300 shadow-xs'
+              : 'bg-[#222227] hover:bg-[#2b2b33] border-[#34343d] text-zinc-400 hover:text-zinc-200'
+          }`}
         >
-          {units.map((u) => (
-            <option key={u} value={u} className="bg-[#222228] text-zinc-200">
-              {u}
-            </option>
-          ))}
-          {allowAuto && (
-            <option value="auto" className="bg-[#222228] text-cyan-300">
-              auto
-            </option>
-          )}
-          {allowNone && (
-            <option value="none" className="bg-[#222228] text-zinc-400">
-              none
-            </option>
-          )}
-        </select>
-      </div>
+          None
+        </button>
+      )}
+
+      {allowZero && (
+        <button
+          type="button"
+          onClick={setZero}
+          title="Reset to 0"
+          className="px-1.5 py-1 rounded text-[10px] font-mono font-medium bg-[#222227] hover:bg-[#2b2b33] border border-[#34343d] text-zinc-400 hover:text-zinc-200 transition-colors flex-shrink-0"
+        >
+          0
+        </button>
+      )}
     </div>
   );
 };

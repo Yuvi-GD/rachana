@@ -7,7 +7,11 @@ import {
   Grid3X3, 
   Box, 
   Type, 
+  Heading as HeadingIcon,
   MousePointerClick, 
+  FormInput,
+  Tag,
+  Minus,
   Image, 
   MoveHorizontal,
   Trash2,
@@ -15,10 +19,12 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
-  EyeOff
+  EyeOff,
+  Layers
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
 import { LayoutNode, LayoutNodeType } from '../../types/layout';
+import { ContextMenu } from '../common/ContextMenu';
 
 const getNodeIcon = (type: LayoutNodeType, style?: LayoutNode['style']) => {
   if (type === 'flex') {
@@ -31,14 +37,26 @@ const getNodeIcon = (type: LayoutNodeType, style?: LayoutNode['style']) => {
   switch (type) {
     case 'grid':
       return <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />;
+    case 'card':
+      return <Box className="w-3.5 h-3.5 text-amber-400" />;
+    case 'scroll':
+      return <Layers className="w-3.5 h-3.5 text-cyan-400" />;
     case 'container':
       return <Box className="w-3.5 h-3.5 text-slate-400" />;
+    case 'heading':
+      return <HeadingIcon className="w-3.5 h-3.5 text-yellow-400" />;
     case 'text':
       return <Type className="w-3.5 h-3.5 text-emerald-400" />;
     case 'button':
-      return <MousePointerClick className="w-3.5 h-3.5 text-amber-400" />;
+      return <MousePointerClick className="w-3.5 h-3.5 text-sky-400" />;
+    case 'input':
+      return <FormInput className="w-3.5 h-3.5 text-indigo-400" />;
+    case 'badge':
+      return <Tag className="w-3.5 h-3.5 text-pink-400" />;
     case 'image':
       return <Image className="w-3.5 h-3.5 text-orange-400" />;
+    case 'divider':
+      return <Minus className="w-3.5 h-3.5 text-zinc-400" />;
     case 'spacer':
       return <MoveHorizontal className="w-3.5 h-3.5 text-pink-400" />;
     default:
@@ -49,9 +67,10 @@ const getNodeIcon = (type: LayoutNodeType, style?: LayoutNode['style']) => {
 interface TreeNodeItemProps {
   node: LayoutNode;
   depth: number;
+  onContextMenu: (e: React.MouseEvent, node: LayoutNode) => void;
 }
 
-const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
+const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu }) => {
   const { rootNode, selectedNodeId, hoveredNodeId, actions } = useEditorStore();
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -163,6 +182,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
         onClick={handleSelect}
+        onContextMenu={(e) => onContextMenu(e, node)}
         onMouseEnter={() => actions.setHoveredNode(node.id)}
         onMouseLeave={() => actions.setHoveredNode(null)}
         style={{ paddingLeft: `${depth * 14 + 4}px` }}
@@ -266,7 +286,12 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
       {hasChildren && isExpanded && (
         <div>
           {node.children.map((child) => (
-            <TreeNodeItem key={child.id} node={child} depth={depth + 1} />
+            <TreeNodeItem 
+              key={child.id} 
+              node={child} 
+              depth={depth + 1} 
+              onContextMenu={onContextMenu}
+            />
           ))}
         </div>
       )}
@@ -276,6 +301,14 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
 
 export const Hierarchy: React.FC = () => {
   const { rootNode, selectedNodeId, actions } = useEditorStore();
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: LayoutNode } | null>(null);
+
+  const handleRowContextMenu = (e: React.MouseEvent, node: LayoutNode) => {
+    e.preventDefault();
+    e.stopPropagation();
+    actions.selectNode(node.id);
+    setContextMenu({ x: e.clientX, y: e.clientY, node });
+  };
 
   const handleContainerDragOver = (e: React.DragEvent) => {
     e.preventDefault();
@@ -310,7 +343,7 @@ export const Hierarchy: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e22] text-zinc-300 border-r border-[#27272a] select-none">
+    <div className="flex flex-col h-full bg-[#1e1e22] text-zinc-300 border-r border-[#27272a] select-none relative">
       {/* Header */}
       <div className="h-8 px-3 border-b border-[#27272a] flex items-center justify-between bg-[#19191c]">
         <span className="font-semibold text-zinc-200 text-[11px] uppercase tracking-wider">
@@ -323,9 +356,10 @@ export const Hierarchy: React.FC = () => {
       <div 
         onDragOver={handleContainerDragOver}
         onDrop={handleContainerDrop}
+        onContextMenu={(e) => handleRowContextMenu(e, rootNode)}
         className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar"
       >
-        <TreeNodeItem node={rootNode} depth={0} />
+        <TreeNodeItem node={rootNode} depth={0} onContextMenu={handleRowContextMenu} />
       </div>
 
       {/* Selected Indicator */}
@@ -338,6 +372,16 @@ export const Hierarchy: React.FC = () => {
           {selectedNodeId ? `#${selectedNodeId}` : 'none'}
         </button>
       </div>
+
+      {/* Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          node={contextMenu.node}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 };

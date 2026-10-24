@@ -198,6 +198,131 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         children: [],
       };
 
+    case 'card':
+      return {
+        id,
+        name: customName || 'Card Box',
+        type: 'card',
+        isExpanded: true,
+        style: createDefaultStyle({
+          display: 'block',
+          padding: defaultSpacing('16px'),
+          backgroundColor: '#1f1f26',
+          borderColor: '#2e2e38',
+          borderWidth: defaultSpacing('1px'),
+          borderRadius: '8px',
+          minHeight: '100px',
+        }),
+        children: [],
+      };
+
+    case 'scroll':
+      return {
+        id,
+        name: customName || 'Scroll Area',
+        type: 'scroll',
+        isExpanded: true,
+        style: createDefaultStyle({
+          display: 'block',
+          overflowY: 'auto',
+          overflowX: 'hidden',
+          padding: defaultSpacing('12px'),
+          backgroundColor: 'rgba(20, 20, 24, 0.7)',
+          borderColor: '#2a2a34',
+          borderRadius: '6px',
+          maxHeight: '220px',
+        }),
+        children: [],
+      };
+
+    case 'heading':
+      return {
+        id,
+        name: customName || 'Heading Text',
+        type: 'heading',
+        textContent: 'Heading Title',
+        style: createDefaultStyle({
+          display: 'block',
+          width: 'auto',
+          height: 'auto',
+          padding: defaultSpacing('0px'),
+          backgroundColor: 'transparent',
+          borderColor: 'transparent',
+          borderWidth: defaultSpacing('0px'),
+          color: '#ffffff',
+          fontSize: '22px',
+          fontWeight: '700',
+          lineHeight: '28px',
+        }),
+        children: [],
+      };
+
+    case 'input':
+      return {
+        id,
+        name: customName || 'Text Input Field',
+        type: 'input',
+        placeholder: 'Enter text here...',
+        textContent: '',
+        style: createDefaultStyle({
+          display: 'block',
+          width: '100%',
+          maxWidth: '320px',
+          height: 'auto',
+          padding: { top: '8px', right: '12px', bottom: '8px', left: '12px' },
+          backgroundColor: '#17171b',
+          borderColor: '#393946',
+          borderWidth: defaultSpacing('1px'),
+          borderRadius: '6px',
+          color: '#f4f4f5',
+          fontSize: '13px',
+          fontWeight: '400',
+        }),
+        children: [],
+      };
+
+    case 'badge':
+      return {
+        id,
+        name: customName || 'Badge Pill',
+        type: 'badge',
+        textContent: 'NEW',
+        style: createDefaultStyle({
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 'auto',
+          height: 'auto',
+          padding: { top: '2px', right: '8px', bottom: '2px', left: '8px' },
+          backgroundColor: 'rgba(56, 189, 248, 0.2)',
+          borderColor: '#0284c7',
+          borderWidth: defaultSpacing('1px'),
+          borderRadius: '9999px',
+          color: '#38bdf8',
+          fontSize: '11px',
+          fontWeight: '700',
+        }),
+        children: [],
+      };
+
+    case 'divider':
+      return {
+        id,
+        name: customName || 'Horizontal Divider',
+        type: 'divider',
+        style: createDefaultStyle({
+          display: 'block',
+          width: '100%',
+          height: '1px',
+          padding: defaultSpacing('0px'),
+          margin: { top: '8px', right: '0px', bottom: '8px', left: '0px' },
+          backgroundColor: '#27272a',
+          borderColor: '#3f3f46',
+          borderWidth: defaultSpacing('0px'),
+        }),
+        children: [],
+      };
+
     case 'spacer':
       return {
         id,

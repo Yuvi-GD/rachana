@@ -2,9 +2,15 @@ export type LayoutNodeType =
   | 'container'
   | 'flex'
   | 'grid'
+  | 'card'
+  | 'scroll'
   | 'text'
-  | 'image'
+  | 'heading'
   | 'button'
+  | 'input'
+  | 'image'
+  | 'badge'
+  | 'divider'
   | 'spacer';
 
 export interface SpacingSides {
@@ -108,6 +114,7 @@ export interface LayoutNodeStyle {
   textTransform?: 'none' | 'uppercase' | 'lowercase' | 'capitalize';
   whiteSpace?: 'normal' | 'nowrap' | 'pre' | 'pre-wrap';
   cursor?: string;
+  objectFit?: 'fill' | 'contain' | 'cover' | 'none' | 'scale-down';
   customCss?: string;
 }
 
@@ -118,6 +125,9 @@ export interface LayoutNode {
   style: LayoutNodeStyle;
   children: LayoutNode[];
   textContent?: string;
+  placeholder?: string;
+  src?: string;
+  alt?: string;
   isExpanded?: boolean;
   isLocked?: boolean;
   isHidden?: boolean;

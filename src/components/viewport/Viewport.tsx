@@ -4,6 +4,7 @@ import { LayoutNode, ComputedMetrics, LayoutNodeType } from '../../types/layout'
 import { nodeStyleToCss } from '../../core/layoutSerializer';
 import { BoxModelOverlay } from './BoxModelOverlay';
 import { InfiniteRuler } from './InfiniteRuler';
+import { ContextMenu } from '../common/ContextMenu';
 
 export const Viewport: React.FC = () => {
   const {
@@ -31,6 +32,7 @@ export const Viewport: React.FC = () => {
   const [isPanning, setIsPanning] = useState(false);
   const [startPan, setStartPan] = useState({ x: 0, y: 0 });
   const [canvasRect, setCanvasRect] = useState<DOMRect | null>(null);
+  const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: LayoutNode } | null>(null);
 
   // Resize State for any selected element (including root)
   const [isResizingElement, setIsResizingElement] = useState(false);
@@ -292,8 +294,17 @@ export const Viewport: React.FC = () => {
     actions,
   ]);
 
-  const handleContextMenu = (e: React.MouseEvent) => {
+  const handleNodeContextMenu = (e: React.MouseEvent, node: LayoutNode) => {
     e.preventDefault();
+    e.stopPropagation();
+    actions.selectNode(node.id);
+    setContextMenu({ x: e.clientX, y: e.clientY, node });
+  };
+
+  const handleContainerContextMenu = (e: React.MouseEvent) => {
+    e.preventDefault();
+    actions.selectNode(rootNode.id);
+    setContextMenu({ x: e.clientX, y: e.clientY, node: rootNode });
   };
 
   const extractDraggedWidget = (e: React.DragEvent): { widgetType: LayoutNodeType | null; widgetLabel?: string } => {
@@ -365,6 +376,7 @@ export const Viewport: React.FC = () => {
     const commonProps = {
       id: `node-dom-${node.id}`,
       onClick: handleClick,
+      onContextMenu: (e: React.MouseEvent) => handleNodeContextMenu(e, node),
       onDragOver: (e: React.DragEvent) => handleNodeDragOver(e, node.id),
       onDragLeave: (e: React.DragEvent) => handleNodeDragLeave(e, node.id),
       onDrop: (e: React.DragEvent) => handleNodeDrop(e, node.id),
@@ -394,6 +406,51 @@ export const Viewport: React.FC = () => {
       );
     }
 
+    if (node.type === 'heading') {
+      return (
+        <h3 key={node.id} {...commonProps} className={`${commonProps.className} m-0 font-bold`}>
+          {node.textContent || 'Heading'}
+        </h3>
+      );
+    }
+
+    if (node.type === 'input') {
+      return (
+        <input
+          key={node.id}
+          {...commonProps}
+          readOnly
+          value={node.textContent || ''}
+          placeholder={node.placeholder || 'Enter text...'}
+          className={`${commonProps.className} outline-none cursor-pointer`}
+        />
+      );
+    }
+
+    if (node.type === 'badge') {
+      return (
+        <span key={node.id} {...commonProps} className={`${commonProps.className} select-none`}>
+          {node.textContent || 'Badge'}
+        </span>
+      );
+    }
+
+    if (node.type === 'divider') {
+      return <div key={node.id} {...commonProps} />;
+    }
+
+    if (node.type === 'image') {
+      return (
+        <div key={node.id} {...commonProps} className={`${commonProps.className} overflow-hidden flex items-center justify-center`}>
+          {node.src ? (
+            <img src={node.src} alt={node.alt || ''} className="w-full h-full object-cover pointer-events-none" />
+          ) : (
+            <div className="text-[10px] text-zinc-500 font-mono select-none">Image Box</div>
+          )}
+        </div>
+      );
+    }
+
     return (
       <div key={node.id} {...commonProps}>
         {isDropTarget && (
@@ -416,7 +473,7 @@ export const Viewport: React.FC = () => {
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
       onWheel={handleWheel}
-      onContextMenu={handleContextMenu}
+      onContextMenu={handleContainerContextMenu}
       className="relative flex-1 h-full w-full overflow-hidden bg-[#121214] select-none cursor-default"
       style={{
         backgroundImage: `
@@ -474,6 +531,16 @@ export const Viewport: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Right Click Context Menu */}
+      {contextMenu && (
+        <ContextMenu
+          x={contextMenu.x}
+          y={contextMenu.y}
+          node={contextMenu.node}
+          onClose={() => setContextMenu(null)}
+        />
+      )}
     </div>
   );
 };

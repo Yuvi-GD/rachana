@@ -361,6 +361,109 @@ export const editorStore = {
     }
   },
 
+  replaceNodeType: (id: string, newType: LayoutNodeType) => {
+    const rootCopy = clone(state.rootNode);
+    let updated = false;
+
+    updateNodeInTree(rootCopy, id, (node) => {
+      node.type = newType;
+      if (newType === 'flex') {
+        node.style.display = 'flex';
+        if (!node.style.flexDirection) node.style.flexDirection = 'row';
+        node.style.flow = node.style.flexDirection === 'column' ? 'COLUMN' : 'ROW';
+      } else if (newType === 'grid') {
+        node.style.display = 'grid';
+        if (!node.style.gridTemplateColumns) node.style.gridTemplateColumns = '1fr 1fr';
+      } else if (newType === 'container') {
+        node.style.display = 'block';
+        node.style.flow = 'NONE';
+      } else if (newType === 'card') {
+        node.style.display = 'block';
+        node.style.backgroundColor = '#1f1f26';
+        node.style.borderColor = '#2e2e38';
+        node.style.borderRadius = '8px';
+      } else if (newType === 'scroll') {
+        node.style.display = 'block';
+        node.style.overflowY = 'auto';
+      } else if (newType === 'button') {
+        node.style.display = 'inline-block';
+        node.style.cursor = 'pointer';
+        if (!node.textContent) node.textContent = 'Button';
+      } else if (newType === 'text') {
+        node.style.display = 'block';
+        if (!node.textContent) node.textContent = 'Text';
+      } else if (newType === 'heading') {
+        node.style.display = 'block';
+        node.style.fontSize = '22px';
+        node.style.fontWeight = '700';
+        if (!node.textContent) node.textContent = 'Heading';
+      }
+      updated = true;
+    });
+
+    if (updated) {
+      pushHistory(rootCopy);
+    }
+  },
+
+  wrapNode: (id: string, wrapperType: LayoutNodeType) => {
+    if (id === state.rootNode.id) {
+      const rootCopy = clone(state.rootNode);
+      const newRoot = createWidgetPreset(wrapperType, 'Root Canvas (Wrapped)');
+      newRoot.style.width = rootCopy.style.width;
+      newRoot.style.height = rootCopy.style.height;
+      rootCopy.style.width = '100%';
+      rootCopy.style.height = '100%';
+      newRoot.children = [rootCopy];
+      state = {
+        ...state,
+        rootNode: newRoot,
+        selectedNodeId: newRoot.id,
+      };
+      pushHistory(newRoot);
+      return;
+    }
+
+    const rootCopy = clone(state.rootNode);
+    function findAndWrap(parent: LayoutNode): boolean {
+      const idx = parent.children.findIndex(c => c.id === id);
+      if (idx !== -1) {
+        const target = parent.children[idx];
+        const wrapper = createWidgetPreset(wrapperType, `Wrapper (${wrapperType})`);
+        wrapper.children = [target];
+        parent.children[idx] = wrapper;
+        state.selectedNodeId = wrapper.id;
+        return true;
+      }
+      for (const child of parent.children) {
+        if (findAndWrap(child)) return true;
+      }
+      return false;
+    }
+
+    if (findAndWrap(rootCopy)) {
+      pushHistory(rootCopy);
+    }
+  },
+
+  resetRootCanvas: (type: LayoutNodeType = 'container') => {
+    const rootW = state.screenWidth || 800;
+    const rootH = state.screenHeight || 520;
+    const newRoot = createWidgetPreset(type, 'Screen Canvas (Root)');
+    newRoot.id = 'root_' + Math.random().toString(36).substring(2, 7);
+    newRoot.style.width = `${rootW}px`;
+    newRoot.style.height = `${rootH}px`;
+    newRoot.children = [];
+    state = {
+      ...state,
+      rootNode: newRoot,
+      selectedNodeId: newRoot.id,
+      history: [newRoot],
+      historyIndex: 0,
+    };
+    emitChange();
+  },
+
   duplicateNode: (id: string) => {
     if (id === state.rootNode.id) return;
     const rootCopy = clone(state.rootNode);
