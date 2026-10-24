@@ -71,11 +71,8 @@ export const App: React.FC = () => {
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#121214] text-zinc-300">
-      {/* 1. Main Unreal Engine Toolbar */}
-      <Toolbar 
-        onOpenExport={() => setIsExportOpen(true)} 
-        onOpenImport={() => setIsImportOpen(true)}
-      />
+      {/* 1. Main Studio Toolbar */}
+      <Toolbar />
 
       {/* 2. Workspace Body: Resizable 3-Column Studio Layout */}
       <div className="flex-1 flex overflow-hidden relative">

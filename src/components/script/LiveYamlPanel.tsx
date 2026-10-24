@@ -185,6 +185,7 @@ export const LiveYamlPanel: React.FC = () => {
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
+  const lineGutterRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const isVisible = showBottomPanel !== undefined ? showBottomPanel : showMetrics;
@@ -272,6 +273,9 @@ export const LiveYamlPanel: React.FC = () => {
     if (preRef.current) {
       preRef.current.scrollTop = e.currentTarget.scrollTop;
       preRef.current.scrollLeft = e.currentTarget.scrollLeft;
+    }
+    if (lineGutterRef.current) {
+      lineGutterRef.current.scrollTop = e.currentTarget.scrollTop;
     }
   };
 
@@ -446,8 +450,11 @@ export const LiveYamlPanel: React.FC = () => {
 
       {/* Editor Body: VS Code Dark+ Styled Highlighted Workspace */}
       <div className="flex-1 relative flex overflow-hidden font-mono text-[11px] bg-[#121215]">
-        {/* Line Numbers Gutter */}
-        <div className="w-10 py-2 bg-[#0c0c0e] border-r border-[#1e1e24] text-zinc-600 select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono text-[11px] leading-5">
+        {/* Line Numbers Gutter (Synced Scroll) */}
+        <div 
+          ref={lineGutterRef}
+          className="w-10 py-2 bg-[#0c0c0e] border-r border-[#1e1e24] text-zinc-600 select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono text-[11px] leading-5"
+        >
           {Array.from({ length: Math.max(lines.length, 1) }).map((_, i) => (
             <div key={i} className="h-5 leading-5">{i + 1}</div>
           ))}

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { SpacingSides } from '../../types/layout';
-import { Link2, Unlink2, Eye, Edit3, Move } from 'lucide-react';
+import { Link2, Unlink2, Move } from 'lucide-react';
 import { UnitInput } from '../common/UnitInput';
 
 interface BoxModelInputProps {
@@ -13,6 +13,7 @@ interface BoxModelInputProps {
   columnGap?: string;
   contentWidth?: number;
   contentHeight?: number;
+  mode?: 'edit' | 'inspect';
   onMarginChange: (margin: SpacingSides) => void;
   onPaddingChange: (padding: SpacingSides) => void;
   onBorderChange: (border: SpacingSides) => void;
@@ -28,12 +29,14 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
   columnGap = '0px',
   contentWidth = 0,
   contentHeight = 0,
+  mode,
   onMarginChange,
   onPaddingChange,
   onBorderChange,
   onGapChange,
 }) => {
-  const [activeTab, setActiveTab] = useState<'edit' | 'inspect'>('edit');
+  const [internalTab] = useState<'edit' | 'inspect'>('edit');
+  const activeTab = mode || internalTab;
   const [marginLinked, setMarginLinked] = useState(false);
   const [paddingLinked, setPaddingLinked] = useState(false);
   const [borderLinked, setBorderLinked] = useState(false);
@@ -83,41 +86,6 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
 
   return (
     <div className="space-y-2.5 select-none text-xs">
-      {/* Tab Switcher: Edit vs Inspect */}
-      <div className="flex items-center justify-between border-b border-[#2d2d35] pb-1.5">
-        <div className="flex items-center gap-1 bg-[#1a1a1e] p-0.5 rounded border border-[#2e2e38]">
-          <button
-            type="button"
-            onClick={() => setActiveTab('edit')}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-              activeTab === 'edit'
-                ? 'bg-blue-600 text-white'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Edit3 className="w-3 h-3" />
-            <span>Edit Spacing</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('inspect')}
-            className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
-              activeTab === 'inspect'
-                ? 'bg-blue-600 text-white'
-                : 'text-zinc-400 hover:text-zinc-200'
-            }`}
-          >
-            <Eye className="w-3 h-3" />
-            <span>Computed (Readonly)</span>
-          </button>
-        </div>
-
-        <span className="text-[10px] font-mono text-zinc-500">
-          {Math.round(contentWidth)}×{Math.round(contentHeight)}px
-        </span>
-      </div>
-
       {activeTab === 'edit' ? (
         /* ======================================================== */
         /* EDIT CONTROLS (Gap, Margin, Padding, Border)              */

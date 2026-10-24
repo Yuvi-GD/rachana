@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
 import { BoxModelInput } from './BoxModelInput';
 import { FlexControls } from './FlexControls';
 import { GridControls } from './GridControls';
 import { UnitInput } from '../common/UnitInput';
-import { LayoutNodeType } from '../../types/layout';
 import { 
   Sliders, 
   Move, 
@@ -15,7 +14,9 @@ import {
   Layers,
   BoxSelect,
   Image as ImageIcon,
-  RotateCcw
+  RotateCcw,
+  Edit3,
+  Eye
 } from 'lucide-react';
 
 const COLOR_SWATCHES = [
@@ -39,6 +40,7 @@ const COLOR_SWATCHES = [
 
 export const DetailsPanel: React.FC = () => {
   const { rootNode, selectedNode, metricsMap, actions } = useEditorStore();
+  const [boxModelMode, setBoxModelMode] = useState<'edit' | 'inspect'>('edit');
 
   if (!selectedNode) {
     return (
@@ -89,32 +91,11 @@ export const DetailsPanel: React.FC = () => {
             </span>
           </div>
 
-          {/* Type / Replace Selector (Works for Root AND all widgets!) */}
-          <div className="flex items-center gap-1">
-            <select
-              value={selectedNode.type}
-              onChange={(e) => actions.replaceNodeType(selectedNode.id, e.target.value as LayoutNodeType)}
-              title="Change / Replace element type"
-              className="bg-[#23232a] hover:bg-[#2a2a33] border border-[#373744] rounded px-1.5 py-0.5 text-[10px] text-zinc-200 outline-none font-semibold cursor-pointer"
-            >
-              <optgroup label="Containers">
-                <option value="flex">Flex Container</option>
-                <option value="grid">Grid 2x2</option>
-                <option value="card">Card Box</option>
-                <option value="container">Block Container</option>
-                <option value="scroll">Scroll Area</option>
-              </optgroup>
-              <optgroup label="Primitives">
-                <option value="heading">Heading Text</option>
-                <option value="text">Text Block</option>
-                <option value="button">Button Widget</option>
-                <option value="input">Text Input</option>
-                <option value="badge">Badge Pill</option>
-                <option value="image">Image Box</option>
-                <option value="divider">Divider Line</option>
-                <option value="spacer">Spacer</option>
-              </optgroup>
-            </select>
+          {/* Type Badge & Root Reset Button */}
+          <div className="flex items-center gap-1.5">
+            <span className="font-mono text-[10px] text-zinc-300 bg-[#25252b] px-2 py-0.5 rounded border border-[#33333d] uppercase font-semibold">
+              {selectedNode.type}
+            </span>
 
             {/* Reset Root Canvas Button */}
             {isRoot && (
@@ -263,10 +244,44 @@ export const DetailsPanel: React.FC = () => {
         {!isDividerType && (
           <div className="border border-[#2d2d35] rounded-md bg-[#222227] overflow-hidden">
             <div className="px-2.5 py-1.5 bg-[#1f1f24] flex items-center justify-between text-zinc-200 font-semibold border-b border-[#2d2d35]">
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2">
                 <BoxSelect className="w-3.5 h-3.5 text-amber-400" />
                 <span className="text-[11px] uppercase tracking-wider">Spacing & Box Model</span>
+
+                {/* Sleek Edit / View Icons Right Beside Title */}
+                <div className="flex items-center bg-[#151518] rounded p-0.5 border border-[#30303a]">
+                  <button
+                    type="button"
+                    onClick={() => setBoxModelMode('edit')}
+                    title="Edit Spacing & Geometry"
+                    className={`p-1 rounded transition-colors ${
+                      boxModelMode === 'edit'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <Edit3 className="w-3 h-3" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBoxModelMode('inspect')}
+                    title="View Computed Geometry (DevTools)"
+                    className={`p-1 rounded transition-colors ${
+                      boxModelMode === 'inspect'
+                        ? 'bg-blue-600 text-white'
+                        : 'text-zinc-400 hover:text-zinc-200'
+                    }`}
+                  >
+                    <Eye className="w-3 h-3" />
+                  </button>
+                </div>
               </div>
+
+              {metrics && (
+                <span className="text-[10px] font-mono text-zinc-400">
+                  {Math.round(metrics.contentBox.width)}×{Math.round(metrics.contentBox.height)}px
+                </span>
+              )}
             </div>
 
             <div className="p-2.5">
@@ -280,6 +295,7 @@ export const DetailsPanel: React.FC = () => {
                 columnGap={style.columnGap}
                 contentWidth={metrics?.contentBox.width}
                 contentHeight={metrics?.contentBox.height}
+                mode={boxModelMode}
                 onMarginChange={(m) => handleStyleChange({ margin: m })}
                 onPaddingChange={(p) => handleStyleChange({ padding: p })}
                 onBorderChange={(b) => handleStyleChange({ borderWidth: b })}

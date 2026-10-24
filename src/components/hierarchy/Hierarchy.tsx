@@ -191,15 +191,19 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
     }
 
     if (widgetType) {
-      actions.addNode(node.id, widgetType, widgetLabel);
+      if (pos === 'before' || pos === 'after') {
+        actions.addNodeAround(node.id, widgetType, widgetLabel, pos);
+      } else {
+        actions.addNode(node.id, widgetType, widgetLabel);
+      }
       return;
     }
 
     if (draggedNodeId && draggedNodeId !== node.id) {
       if (pos === 'inside' && isContainer) {
         actions.reparentNode(draggedNodeId, node.id);
-      } else if (pos === 'before') {
-        actions.reparentNode(draggedNodeId, node.id, 0);
+      } else if (pos === 'before' || pos === 'after') {
+        actions.reparentNodeAround(draggedNodeId, node.id, pos);
       } else {
         actions.reparentNode(draggedNodeId, node.id);
       }

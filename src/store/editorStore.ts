@@ -388,6 +388,47 @@ export const editorStore = {
     pushHistory(rootCopy);
   },
 
+  addNodeAround: (referenceNodeId: string, widgetType: LayoutNodeType, customName?: string, position: 'before' | 'after' = 'after') => {
+    const rootCopy = clone(state.rootNode);
+    const newNode = createWidgetPreset(widgetType, customName);
+
+    const parentInfo = findParentOfNode(rootCopy, referenceNodeId);
+    if (parentInfo) {
+      const insertIndex = position === 'before' ? parentInfo.index : parentInfo.index + 1;
+      parentInfo.parent.children.splice(insertIndex, 0, newNode);
+      parentInfo.parent.isExpanded = true;
+    } else {
+      rootCopy.children.push(newNode);
+    }
+
+    state.selectedNodeId = newNode.id;
+    pushHistory(rootCopy);
+  },
+
+  reparentNodeAround: (draggedId: string, referenceNodeId: string, position: 'before' | 'after' = 'after') => {
+    if (!draggedId || !referenceNodeId || draggedId === referenceNodeId || draggedId === state.rootNode.id) return;
+    const rootCopy = clone(state.rootNode);
+
+    const draggedNode = findNodeById(rootCopy, draggedId);
+    if (!draggedNode) return;
+    if (findNodeById(draggedNode, referenceNodeId)) return;
+
+    const removed = removeNode(rootCopy, draggedId);
+    if (!removed) return;
+
+    const parentInfo = findParentOfNode(rootCopy, referenceNodeId);
+    if (parentInfo) {
+      const insertIndex = position === 'before' ? parentInfo.index : parentInfo.index + 1;
+      parentInfo.parent.children.splice(insertIndex, 0, removed);
+      parentInfo.parent.isExpanded = true;
+    } else {
+      rootCopy.children.push(removed);
+    }
+
+    state.selectedNodeId = removed.id;
+    pushHistory(rootCopy);
+  },
+
   deleteNode: (id: string) => {
     if (!id) return;
     const rootCopy = clone(state.rootNode);

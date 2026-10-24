@@ -5,12 +5,10 @@ import {
   RotateCcw, 
   Layers, 
   Ruler, 
-  Download, 
   Undo2, 
   Redo2, 
   Monitor,
   Flame,
-  UploadCloud,
   PanelLeft,
   PanelBottom,
   PanelRight
@@ -19,11 +17,11 @@ import { useEditorStore, DEVICE_PRESETS } from '../../store/editorStore';
 import { LAYOUT_PRESETS } from '../../core/presets';
 
 interface ToolbarProps {
-  onOpenExport: () => void;
-  onOpenImport: () => void;
+  onOpenExport?: () => void;
+  onOpenImport?: () => void;
 }
 
-export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) => {
+export const Toolbar: React.FC<ToolbarProps> = () => {
   const {
     zoom,
     scrollSensitivity,
@@ -40,34 +38,31 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
   } = useEditorStore();
 
   return (
-    <header className="h-11 bg-[#18181b] border-b border-[#27272a] flex items-center justify-between px-3 z-30 select-none text-xs">
-      {/* Brand & Preset Selector */}
-      <div className="flex items-center gap-3">
+    <header className="h-12 bg-[#18181b] border-b border-[#27272a] flex items-center justify-between px-3.5 z-30 select-none text-xs flex-shrink-0 overflow-x-auto custom-scrollbar min-w-0 gap-2">
+      {/* Left: Brand & Preset Selector */}
+      <div className="flex items-center gap-3 flex-shrink-0">
         <div className="flex items-center gap-2 font-bold text-white tracking-wide">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-amber-500 via-orange-600 to-indigo-700 flex items-center justify-center text-white shadow-sm font-black text-xs">
-            LF
+          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500 via-orange-600 to-indigo-700 flex items-center justify-center text-white shadow-md font-bold text-sm select-none">
+            र
           </div>
           <div className="flex items-baseline gap-1.5">
-            <span className="hidden md:inline font-bold text-slate-100 tracking-tight text-sm">
-              LayoutForge
+            <span className="font-bold text-slate-100 tracking-tight text-base">
+              Rachana
             </span>
-            <span className="text-[10px] text-amber-400 font-semibold tracking-wider uppercase font-mono">
-              Studio
+            <span className="text-[10px] text-amber-400/90 font-semibold tracking-widest uppercase font-mono hidden sm:inline">
+              रचना
             </span>
           </div>
-          <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-950/80 text-blue-400 border border-blue-800/60 font-semibold">
-            v1.0
-          </span>
         </div>
 
         <div className="h-4 w-[1px] bg-[#333338]" />
 
         {/* Preset Selector */}
         <div className="flex items-center gap-1.5">
-          <Flame className="w-3.5 h-3.5 text-amber-500" />
-          <span className="text-[11px] text-zinc-400 font-medium">Preset:</span>
+          <Flame className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
+          <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline">Preset:</span>
           <select
-            className="bg-[#242427] hover:bg-[#2c2c30] text-zinc-200 text-xs rounded border border-[#3f3f46] px-2 py-1 outline-none cursor-pointer font-medium transition-colors"
+            className="bg-[#242427] hover:bg-[#2c2c30] text-zinc-200 text-xs rounded border border-[#3f3f46] px-2 py-1 outline-none cursor-pointer font-medium transition-colors max-w-[160px] sm:max-w-[220px] truncate"
             onChange={(e) => actions.loadPreset(e.target.value)}
             defaultValue={LAYOUT_PRESETS[0].id}
           >
@@ -81,12 +76,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
       </div>
 
       {/* Middle: Canvas Viewport & Zoom controls */}
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-shrink-0">
         {/* Device Resolution */}
         <div className="flex items-center gap-1.5 bg-[#242427] px-2 py-1 rounded border border-[#333338]">
           <Monitor className="w-3.5 h-3.5 text-zinc-400" />
           <select
-            className="bg-transparent text-zinc-200 text-[11px] outline-none cursor-pointer font-mono"
+            className="bg-transparent text-zinc-200 text-[11px] outline-none cursor-pointer font-mono max-w-[110px] sm:max-w-none"
             value={devicePreset.name}
             onChange={(e) => {
               const p = DEVICE_PRESETS.find((dp) => dp.name === e.target.value);
@@ -113,7 +108,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           <span
             onClick={() => actions.setZoom(1)}
             title="Click to reset zoom"
-            className="px-1.5 font-mono text-[11px] text-zinc-300 cursor-pointer hover:text-white"
+            className="px-1.5 font-mono text-[11px] text-zinc-300 cursor-pointer hover:text-white min-w-[36px] text-center"
           >
             {Math.round(zoom * 100)}%
           </span>
@@ -134,7 +129,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
         </div>
 
         {/* Scroll Sensitivity */}
-        <div className="flex items-center gap-1 bg-[#242427] px-2 py-0.5 rounded border border-[#333338]" title="Mouse Wheel / Trackpad Zoom Sensitivity">
+        <div className="hidden lg:flex items-center gap-1 bg-[#242427] px-2 py-0.5 rounded border border-[#333338]" title="Mouse Wheel / Trackpad Zoom Sensitivity">
           <span className="text-[10px] text-zinc-500 font-medium">Sens:</span>
           <select
             value={scrollSensitivity || 1.0}
@@ -166,12 +161,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           >
             <Redo2 className="w-3.5 h-3.5" />
           </button>
-          <div className="h-3.5 w-[1px] bg-[#333338] mx-0.5" />
+          <div className="h-3.5 w-[1px] bg-[#333338] mx-0.5 hidden sm:block" />
           <select
             value={maxHistorySteps || 64}
             onChange={(e) => actions.setMaxHistorySteps(parseInt(e.target.value, 10))}
-            title="Max Undo/Redo History Steps (16, 32, 64, 128, 256)"
-            className="bg-transparent text-zinc-400 hover:text-zinc-200 text-[10px] outline-none cursor-pointer font-mono"
+            title="Max Undo/Redo History Steps"
+            className="bg-transparent text-zinc-400 hover:text-zinc-200 text-[10px] outline-none cursor-pointer font-mono hidden sm:block"
           >
             <option value="16" className="bg-[#242427]">16 steps</option>
             <option value="32" className="bg-[#242427]">32 steps</option>
@@ -182,20 +177,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
         </div>
       </div>
 
-      {/* Right: Overlays, Inspector Toggles & Export */}
-      <div className="flex items-center gap-2">
-        {/* Box Model Overlay Toggle */}
+      {/* Right: Overlays & VS Code Panel Toggles */}
+      <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Box Model Overlay Toggle (Icon Only) */}
         <button
           onClick={actions.toggleOverlays}
           title="Toggle Visual Box-Model Overlays (Content, Padding, Border, Margin)"
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-medium transition-colors ${
+          className={`p-1.5 rounded border text-[11px] transition-colors ${
             showOverlays
               ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
               : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
           }`}
         >
           <Layers className="w-3.5 h-3.5" />
-          <span>Box Model Overlay</span>
         </button>
 
         {/* Rulers Toggle */}
@@ -211,27 +205,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           <Ruler className="w-3.5 h-3.5" />
         </button>
 
-        {/* Import Layout Modal */}
-        <button
-          onClick={onOpenImport}
-          title="Import Layout (YAML, JSON, HTML)"
-          className="flex items-center gap-1.5 bg-[#25252b] hover:bg-[#32323a] text-zinc-200 border border-[#3f3f4c] px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
-        >
-          <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
-          <span>Import</span>
-        </button>
-
-        {/* Export Golden Test Vector */}
-        <button
-          onClick={onOpenExport}
-          title="Export Layout Test Case (YAML, JSON, HTML/CSS)"
-          className="flex items-center gap-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-semibold px-3 py-1 rounded shadow-sm text-[11px] transition-all"
-        >
-          <Download className="w-3.5 h-3.5" />
-          <span>Export</span>
-        </button>
-
-        <div className="h-4 w-[1px] bg-[#333338] mx-0.5" />
+        <div className="h-4 w-[1px] bg-[#333338] mx-1" />
 
         {/* VS Code Style 3-Panel Layout Toggles */}
         <div className="flex items-center bg-[#242427] rounded border border-[#333338] p-0.5 gap-0.5">
