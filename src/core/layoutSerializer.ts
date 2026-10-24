@@ -1,0 +1,963 @@
+import React from 'react';
+import { ComputedMetrics, LayoutNode, LayoutNodeStyle } from '../types/layout';
+import { createDefaultStyle, defaultSpacing } from './defaultStyles';
+
+// Helper to convert CSS color string to Tether UI [r, g, b, a] array
+export const cssColorToRgbaArray = (colorStr: string): [number, number, number, number] => {
+  if (!colorStr || colorStr === 'transparent') return [0, 0, 0, 0];
+
+  // If already rgba(r, g, b, a)
+  const rgbaMatch = colorStr.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*([\d.]+))?\)/);
+  if (rgbaMatch) {
+    const r = parseInt(rgbaMatch[1], 10);
+    const g = parseInt(rgbaMatch[2], 10);
+    const b = parseInt(rgbaMatch[3], 10);
+    const a = rgbaMatch[4] !== undefined ? Math.round(parseFloat(rgbaMatch[4]) * 255) : 255;
+    return [r, g, b, a];
+  }
+
+  // If hex #rrggbb or #rgb
+  if (colorStr.startsWith('#')) {
+    let hex = colorStr.replace('#', '');
+    if (hex.length === 3) {
+      hex = hex.split('').map(c => c + c).join('');
+    }
+    if (hex.length === 6) {
+      const r = parseInt(hex.substring(0, 2), 16) || 0;
+      const g = parseInt(hex.substring(2, 4), 16) || 0;
+      const b = parseInt(hex.substring(4, 6), 16) || 0;
+      return [r, g, b, 255];
+    }
+  }
+
+  return [40, 44, 52, 255]; // Default dark slate
+};
+
+// Map style to CSS including Tether UI flow & fill_ratio
+export const nodeStyleToCss = (style: LayoutNodeStyle): React.CSSProperties => {
+  // Translate flow to display/flexDirection if flow is specified
+  let display = style.display;
+  let flexDirection = style.flexDirection;
+
+  if (style.flow === 'ROW') {
+    display = 'flex';
+    flexDirection = 'row';
+  } else if (style.flow === 'COLUMN') {
+    display = 'flex';
+    flexDirection = 'column';
+  } else if (style.flow === 'NONE') {
+    display = 'block';
+  }
+
+  // Translate contentAlign
+  let justifyContent = style.justifyContent;
+  let alignItems = style.alignItems;
+  if (style.contentAlign === 'CENTER') {
+    justifyContent = 'center';
+    alignItems = 'center';
+  } else if (style.contentAlign === 'START') {
+    justifyContent = 'flex-start';
+  } else if (style.contentAlign === 'END') {
+    justifyContent = 'flex-end';
+  }
+
+  // Translate fill_ratio to flex-grow
+  const flexGrow = style.fillRatio ? parseFloat(style.fillRatio) : (parseFloat(style.flexGrow) || 0);
+
+  const css: React.CSSProperties = {
+    display,
+    position: style.position,
+    boxSizing: style.boxSizing,
+    overflow: style.overflow,
+    overflowX: style.overflowX,
+    overflowY: style.overflowY,
+
+    width: style.width,
+    height: style.height,
+    minWidth: style.minWidth,
+    minHeight: style.minHeight,
+    maxWidth: style.maxWidth,
+    maxHeight: style.maxHeight,
+    aspectRatio: style.aspectRatio,
+
+    marginTop: style.margin.top,
+    marginRight: style.margin.right,
+    marginBottom: style.margin.bottom,
+    marginLeft: style.margin.left,
+
+    paddingTop: style.padding.top,
+    paddingRight: style.padding.right,
+    paddingBottom: style.padding.bottom,
+    paddingLeft: style.padding.left,
+
+    flexDirection,
+    flexWrap: style.flexWrap,
+    justifyContent,
+    alignItems,
+    alignContent: style.alignContent,
+    gap: style.gap,
+    rowGap: style.rowGap,
+    columnGap: style.columnGap,
+
+    flexGrow,
+    flexShrink: parseFloat(style.flexShrink) ?? 1,
+    flexBasis: style.flexBasis,
+    alignSelf: style.alignSelf,
+    order: parseInt(style.order, 10) || 0,
+
+    gridTemplateColumns: style.gridTemplateColumns,
+    gridTemplateRows: style.gridTemplateRows,
+    gridAutoFlow: style.gridAutoFlow,
+    gridAutoRows: style.gridAutoRows,
+    gridAutoColumns: style.gridAutoColumns,
+
+    gridColumn: style.gridColumn,
+    gridRow: style.gridRow,
+    gridArea: style.gridArea,
+
+    top: style.top,
+    right: style.right,
+    bottom: style.bottom,
+    left: style.left,
+    zIndex: style.zIndex === 'auto' ? 'auto' : parseInt(style.zIndex, 10) || 'auto',
+
+    backgroundColor: style.backgroundColor,
+    borderTopWidth: style.borderWidth.top,
+    borderRightWidth: style.borderWidth.right,
+    borderBottomWidth: style.borderWidth.bottom,
+    borderLeftWidth: style.borderWidth.left,
+    borderColor: style.borderColor,
+    borderStyle: style.borderStyle,
+    borderRadius: style.borderRadius,
+    boxShadow: style.boxShadow,
+    opacity: parseFloat(style.opacity) || 1,
+    color: style.color,
+    fontSize: style.fontSize,
+    fontWeight: style.fontWeight,
+    lineHeight: style.lineHeight,
+    letterSpacing: style.letterSpacing,
+    textAlign: style.textAlign,
+    textTransform: style.textTransform,
+    whiteSpace: style.whiteSpace,
+    cursor: style.interactable ? 'pointer' : style.cursor,
+  };
+
+  return css;
+};
+
+export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: string } => {
+  let cssRules: string[] = [
+    `/* ======================================================== */`,
+    `/* HTML/CSS Layout Export with Parent-Child Hierarchy       */`,
+    `/* Generated by UMG Layout Testbed                          */`,
+    `/* ======================================================== */`,
+    `*, *::before, *::after { box-sizing: border-box; }`,
+    `body { margin: 0; padding: 24px; background: #121214; color: #eee; font-family: -apple-system, sans-serif; }`,
+  ];
+
+  const serializeNode = (node: LayoutNode, indent: number = 2): string => {
+    const spaces = ' '.repeat(indent);
+    const className = `node-${node.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+
+    const styleLines: string[] = [];
+    const s = node.style;
+    styleLines.push(`  display: ${s.display};`);
+    if (s.position !== 'static') styleLines.push(`  position: ${s.position};`);
+    if (s.boxSizing !== 'border-box') styleLines.push(`  box-sizing: ${s.boxSizing};`);
+    if (s.overflow !== 'visible') styleLines.push(`  overflow: ${s.overflow};`);
+    if (s.overflowX && s.overflowX !== s.overflow) styleLines.push(`  overflow-x: ${s.overflowX};`);
+    if (s.overflowY && s.overflowY !== s.overflow) styleLines.push(`  overflow-y: ${s.overflowY};`);
+
+    if (s.width !== 'auto') styleLines.push(`  width: ${s.width};`);
+    if (s.height !== 'auto') styleLines.push(`  height: ${s.height};`);
+    if (s.minWidth !== 'auto') styleLines.push(`  min-width: ${s.minWidth};`);
+    if (s.minHeight !== 'auto') styleLines.push(`  min-height: ${s.minHeight};`);
+    if (s.maxWidth !== 'none') styleLines.push(`  max-width: ${s.maxWidth};`);
+    if (s.maxHeight !== 'none') styleLines.push(`  max-height: ${s.maxHeight};`);
+
+    const m = s.margin;
+    if (m.top !== '0px' || m.right !== '0px' || m.bottom !== '0px' || m.left !== '0px') {
+      styleLines.push(`  margin: ${m.top} ${m.right} ${m.bottom} ${m.left};`);
+    }
+
+    const p = s.padding;
+    if (p.top !== '0px' || p.right !== '0px' || p.bottom !== '0px' || p.left !== '0px') {
+      styleLines.push(`  padding: ${p.top} ${p.right} ${p.bottom} ${p.left};`);
+    }
+
+    if (s.gap && s.gap !== '0px') {
+      styleLines.push(`  gap: ${s.gap};`);
+    }
+
+    if (s.display.includes('flex') || s.flow === 'ROW' || s.flow === 'COLUMN') {
+      styleLines.push(`  flex-direction: ${s.flow === 'ROW' ? 'row' : s.flow === 'COLUMN' ? 'column' : s.flexDirection};`);
+      if (s.flexWrap !== 'nowrap') styleLines.push(`  flex-wrap: ${s.flexWrap};`);
+      if (s.justifyContent !== 'flex-start') styleLines.push(`  justify-content: ${s.justifyContent};`);
+      if (s.alignItems !== 'stretch') styleLines.push(`  align-items: ${s.alignItems};`);
+    }
+
+    if (s.display.includes('grid')) {
+      styleLines.push(`  grid-template-columns: ${s.gridTemplateColumns};`);
+      if (s.gridTemplateRows !== 'auto') styleLines.push(`  grid-template-rows: ${s.gridTemplateRows};`);
+    }
+
+    if (s.fillRatio) {
+      styleLines.push(`  flex-grow: ${s.fillRatio};`);
+    } else if (s.flexGrow !== '0') {
+      styleLines.push(`  flex-grow: ${s.flexGrow};`);
+    }
+
+    if (s.backgroundColor && s.backgroundColor !== 'transparent') styleLines.push(`  background-color: ${s.backgroundColor};`);
+    const bw = s.borderWidth;
+    if (bw.top !== '0px' || bw.right !== '0px' || bw.bottom !== '0px' || bw.left !== '0px') {
+      styleLines.push(`  border-width: ${bw.top} ${bw.right} ${bw.bottom} ${bw.left};`);
+      styleLines.push(`  border-style: ${s.borderStyle};`);
+      styleLines.push(`  border-color: ${s.borderColor};`);
+    }
+    if (s.borderRadius && s.borderRadius !== '0px') styleLines.push(`  border-radius: ${s.borderRadius};`);
+    if (s.color) styleLines.push(`  color: ${s.color};`);
+    if (s.fontSize) styleLines.push(`  font-size: ${s.fontSize};`);
+
+    cssRules.push(`.${className} {\n${styleLines.join('\n')}\n}`);
+
+    let tag = 'div';
+    if (node.type === 'button') tag = 'button';
+    if (node.type === 'text') tag = 'p';
+
+    if (node.children.length === 0) {
+      const content = node.textContent || '';
+      return `${spaces}<${tag} class="${className}" id="${node.id}">${content}</${tag}>`;
+    }
+
+    const childrenStr = node.children.map(child => serializeNode(child, indent + 2)).join('\n');
+    return `${spaces}<${tag} class="${className}" id="${node.id}">\n${childrenStr}\n${spaces}</${tag}>`;
+  };
+
+  const html = serializeNode(rootNode, 0);
+  return { html, css: cssRules.join('\n\n') };
+};
+
+export interface HierarchicalLayoutNodeSnapshot {
+  id: string;
+  parentId: string | null;
+  name: string;
+  type: string;
+  declaredStyle: {
+    display: string;
+    flow?: string;
+    fillRatio?: string;
+    gap?: string;
+    position: string;
+    width: string;
+    height: string;
+    boxSizing: string;
+    margin: string;
+    padding: string;
+    color: string;
+    backgroundColor: string;
+  };
+  computedLayout?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    contentWidth: number;
+    contentHeight: number;
+    margin: { top: number; right: number; bottom: number; left: number };
+    padding: { top: number; right: number; bottom: number; left: number };
+    border: { top: number; right: number; bottom: number; left: number };
+    scroll: { width: number; height: number };
+  };
+  children: HierarchicalLayoutNodeSnapshot[];
+}
+
+export const buildHierarchicalSnapshot = (
+  node: LayoutNode,
+  metricsMap: Record<string, ComputedMetrics>,
+  parentId: string | null = null,
+  rootMetrics?: ComputedMetrics
+): HierarchicalLayoutNodeSnapshot => {
+  const m = metricsMap[node.id];
+  const s = node.style;
+
+  let computedLayout: HierarchicalLayoutNodeSnapshot['computedLayout'];
+  if (m) {
+    const parentM = parentId ? metricsMap[parentId] : null;
+    const relX = parentM ? Math.round((m.boundingRect.left - parentM.boundingRect.left) * 10) / 10 : 0;
+    const relY = parentM ? Math.round((m.boundingRect.top - parentM.boundingRect.top) * 10) / 10 : 0;
+
+    computedLayout = {
+      x: relX,
+      y: relY,
+      width: Math.round(m.boundingRect.width * 10) / 10,
+      height: Math.round(m.boundingRect.height * 10) / 10,
+      contentWidth: Math.round(m.contentBox.width * 10) / 10,
+      contentHeight: Math.round(m.contentBox.height * 10) / 10,
+      margin: m.margin,
+      padding: m.padding,
+      border: m.border,
+      scroll: {
+        width: m.scroll.scrollWidth,
+        height: m.scroll.scrollHeight,
+      },
+    };
+  }
+
+  const declaredStyle: HierarchicalLayoutNodeSnapshot['declaredStyle'] = {
+    display: s.display,
+    flow: s.flow,
+    fillRatio: s.fillRatio,
+    gap: s.gap,
+    position: s.position,
+    width: s.width,
+    height: s.height,
+    boxSizing: s.boxSizing,
+    margin: `${s.margin.top} ${s.margin.right} ${s.margin.bottom} ${s.margin.left}`,
+    padding: `${s.padding.top} ${s.padding.right} ${s.padding.bottom} ${s.padding.left}`,
+    color: s.color,
+    backgroundColor: s.backgroundColor,
+  };
+
+  return {
+    id: node.id,
+    parentId,
+    name: node.name,
+    type: node.type,
+    declaredStyle,
+    computedLayout,
+    children: node.children.map(child => buildHierarchicalSnapshot(child, metricsMap, node.id, rootMetrics || m)),
+  };
+};
+
+export const exportLayoutEngineGoldenTest = (
+  rootNode: LayoutNode,
+  metricsMap: Record<string, ComputedMetrics>,
+  testCaseName: string = 'LayoutTestCase',
+  screenWidth: number = 800,
+  screenHeight: number = 520
+) => {
+  const hierarchicalTree = buildHierarchicalSnapshot(rootNode, metricsMap);
+
+  return {
+    schemaVersion: '2.0',
+    generator: 'UMG-Layout-Testbed',
+    timestamp: new Date().toISOString(),
+    testCaseName,
+    screen: {
+      width: screenWidth,
+      height: screenHeight,
+    },
+    hierarchyTree: hierarchicalTree,
+  };
+};
+
+// ========================================================
+// ========================================================
+// Tether UI Native YAML Generator (Matches UI/*.yaml)
+// ========================================================
+export const exportLayoutEngineYaml = (
+  rootNode: LayoutNode,
+  _metricsMap?: Record<string, ComputedMetrics>,
+  _testCaseName: string = 'TetherUIScene',
+  _screenWidth: number = 800,
+  _screenHeight: number = 520
+): string => {
+  const lines: string[] = [];
+
+  const parseNum = (v: string): number => {
+    const n = parseFloat(v);
+    return isNaN(n) ? 0 : n;
+  };
+
+  const serializeTetherNode = (node: LayoutNode, indent: number, isArrayItem: boolean = false) => {
+    const sp = ' '.repeat(indent);
+    const prefix = isArrayItem ? `${sp}- ` : sp;
+    const bodyIndent = isArrayItem ? indent + 4 : indent + 2;
+    const bsp = ' '.repeat(bodyIndent);
+
+    const s = node.style;
+    const rgba = cssColorToRgbaArray(s.backgroundColor);
+    const borderRgba = cssColorToRgbaArray(s.borderColor);
+    const textRgba = cssColorToRgbaArray(s.color);
+
+    // Optional section comment for named containers
+    if (node.name && !node.name.startsWith('node-') && node.name !== node.id && node.name !== 'container' && node.name !== 'flex') {
+      lines.push(`${sp}# ---- ${node.name} ----`);
+    }
+
+    // Text Node
+    if (node.type === 'text') {
+      lines.push(`${prefix}Text:`);
+      if (node.id && !node.id.startsWith('node-')) {
+        lines.push(`${bsp}id: "${node.id}"`);
+      }
+      lines.push(`${bsp}string: "${node.textContent || ''}"`);
+      lines.push(`${bsp}font_size: ${(parseNum(s.fontSize) || 16.0).toFixed(1)}`);
+      lines.push(`${bsp}color: [${textRgba.join(', ')}]`);
+      if (s.textAlign && s.textAlign !== 'left') {
+        lines.push(`${bsp}text_align: ${s.textAlign}`);
+      }
+      if (s.fillRatio && s.fillRatio !== '0') {
+        lines.push(`${bsp}fill_ratio: ${parseFloat(s.fillRatio) || 1.0}`);
+      }
+      return;
+    }
+
+    // Button Node
+    if (node.type === 'button') {
+      lines.push(`${prefix}Button:`);
+      lines.push(`${bsp}id: "${node.id}"`);
+      lines.push(`${bsp}color: [${rgba.join(', ')}]`);
+      lines.push(`${bsp}content:`);
+      lines.push(`${bsp}  - Text:`);
+      lines.push(`${bsp}      string: "${node.textContent || 'Button'}"`);
+      lines.push(`${bsp}      font_size: ${(parseNum(s.fontSize) || 16.0).toFixed(1)}`);
+      lines.push(`${bsp}      color: [${textRgba.join(', ')}]`);
+      if (s.textAlign && s.textAlign !== 'left') {
+        lines.push(`${bsp}      text_align: ${s.textAlign}`);
+      }
+      return;
+    }
+
+    // Panel Node (Container, Flex, Grid, Spacer)
+    lines.push(`${prefix}Panel:`);
+    if (node.id) {
+      lines.push(`${bsp}id: "${node.id}"`);
+    }
+
+    // Color
+    if (s.backgroundColor && s.backgroundColor !== 'transparent') {
+      lines.push(`${bsp}color: [${rgba.join(', ')}]`);
+    } else {
+      lines.push(`${bsp}color: [0, 0, 0, 0]`);
+    }
+
+    // Flow
+    const flow = s.flow || (s.flexDirection === 'row' ? 'ROW' : 'COLUMN');
+    lines.push(`${bsp}flow: ${flow}`);
+
+    // Fill ratio (proportional sizing)
+    if (s.fillRatio) {
+      lines.push(`${bsp}fill_ratio: ${parseFloat(s.fillRatio)}`);
+    } else if (s.flexGrow && s.flexGrow !== '0') {
+      lines.push(`${bsp}fill_ratio: ${parseFloat(s.flexGrow)}`);
+    }
+
+    // Gap [x, y]
+    const gapX = parseNum(s.columnGap || s.gap);
+    const gapY = parseNum(s.rowGap || s.gap);
+    if (gapX > 0 || gapY > 0) {
+      lines.push(`${bsp}gap: [${gapX}, ${gapY}]`);
+    }
+
+    // Padding (single number if all match, or top/right/bottom/left)
+    const pTop = parseNum(s.padding.top);
+    const pRight = parseNum(s.padding.right);
+    const pBottom = parseNum(s.padding.bottom);
+    const pLeft = parseNum(s.padding.left);
+    if (pTop === pRight && pRight === pBottom && pBottom === pLeft && pTop > 0) {
+      lines.push(`${bsp}padding: ${pTop}`);
+    } else if (pTop > 0 || pRight > 0 || pBottom > 0 || pLeft > 0) {
+      lines.push(`${bsp}padding: [${pTop}, ${pRight}, ${pBottom}, ${pLeft}]`);
+    }
+
+    // Margin (Tether UI Margin support: scalar or array)
+    const mTop = parseNum(s.margin.top);
+    const mRight = parseNum(s.margin.right);
+    const mBottom = parseNum(s.margin.bottom);
+    const mLeft = parseNum(s.margin.left);
+    if (mTop === mRight && mRight === mBottom && mBottom === mLeft && mTop > 0) {
+      lines.push(`${bsp}margin: ${mTop}`);
+    } else if (mTop > 0 || mRight > 0 || mBottom > 0 || mLeft > 0) {
+      lines.push(`${bsp}margin: [${mTop}, ${mRight}, ${mBottom}, ${mLeft}]`);
+    }
+
+    // Border
+    const bWidth = parseNum(s.borderWidth.top);
+    if (bWidth > 0) {
+      lines.push(`${bsp}border_width: ${bWidth.toFixed(1)}`);
+      lines.push(`${bsp}border_color: [${borderRgba.join(', ')}]`);
+    }
+
+    const bRadius = parseNum(s.borderRadius);
+    if (bRadius > 0) {
+      lines.push(`${bsp}border_radius: ${bRadius.toFixed(1)}`);
+    }
+
+    // Interactivity
+    if (s.interactable) {
+      lines.push(`${bsp}interactable: true`);
+      lines.push(`${bsp}hover_color: AUTO`);
+      lines.push(`${bsp}press_color: AUTO`);
+    }
+
+    // Opacity
+    if (s.opacity && s.opacity !== '1' && s.opacity !== '1.0') {
+      lines.push(`${bsp}opacity: ${parseFloat(s.opacity)}`);
+    }
+
+    // Content alignment
+    if (s.contentAlign && s.contentAlign !== 'START') {
+      lines.push(`${bsp}content_align: ${s.contentAlign}`);
+    }
+
+    // Anchors
+    if (s.anchorMin && s.anchorMin !== '0.0') lines.push(`${bsp}anchor_min: ${s.anchorMin}`);
+    if (s.anchorMax && s.anchorMax !== '1.0') lines.push(`${bsp}anchor_max: ${s.anchorMax}`);
+
+    // Children recursively
+    if (node.children && node.children.length > 0) {
+      lines.push(`${bsp}children:`);
+      node.children.forEach(child => serializeTetherNode(child, bodyIndent + 2, true));
+    }
+  };
+
+  serializeTetherNode(rootNode, 0, false);
+
+  return lines.join('\n');
+};
+
+// ========================================================
+// Tether UI Native YAML Importer / Parser
+// ========================================================
+export const parseTetherYaml = (yamlText: string): LayoutNode => {
+  const lines = yamlText.split('\n');
+
+  // Helper to parse scalar values
+  const parseScalar = (str: string): any => {
+    str = str.trim();
+    if (str.startsWith('"') && str.endsWith('"')) return str.slice(1, -1);
+    if (str.startsWith("'") && str.endsWith("'")) return str.slice(1, -1);
+    if (str === 'true') return true;
+    if (str === 'false') return false;
+    if (str.startsWith('[') && str.endsWith(']')) {
+      const inner = str.slice(1, -1).trim();
+      if (!inner) return [];
+      return inner.split(',').map(s => {
+        const item = s.trim();
+        const num = parseFloat(item);
+        return isNaN(num) ? item : num;
+      });
+    }
+    const num = parseFloat(str);
+    return isNaN(num) ? str : num;
+  };
+
+  // Convert rgba array [r, g, b, a] to CSS rgba(r, g, b, a/255)
+  const rgbaToCss = (arr: any): string => {
+    if (Array.isArray(arr) && arr.length >= 3) {
+      const [r, g, b, a = 255] = arr;
+      const alpha = typeof a === 'number' ? (a > 1 ? a / 255 : a) : 1;
+      return `rgba(${r}, ${g}, ${b}, ${alpha.toFixed(2)})`;
+    }
+    return typeof arr === 'string' ? arr : 'transparent';
+  };
+
+  // Convert padding / margin value (scalar or array) to SpacingSides
+  const parseSpacingVal = (val: any) => {
+    if (typeof val === 'number') {
+      return defaultSpacing(`${val}px`);
+    }
+    if (Array.isArray(val)) {
+      if (val.length === 4) {
+        return {
+          top: `${val[0]}px`,
+          right: `${val[1]}px`,
+          bottom: `${val[2]}px`,
+          left: `${val[3]}px`,
+        };
+      }
+      if (val.length === 2) {
+        return {
+          top: `${val[1]}px`,
+          right: `${val[0]}px`,
+          bottom: `${val[1]}px`,
+          left: `${val[0]}px`,
+        };
+      }
+    }
+    return defaultSpacing('0px');
+  };
+
+  interface RawNodeItem {
+    indent: number;
+    tag: string;
+    props: Record<string, any>;
+    children: RawNodeItem[];
+    parent?: RawNodeItem;
+  }
+
+  const rootNodes: RawNodeItem[] = [];
+  const stack: RawNodeItem[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    const rawLine = lines[i];
+    // Strip comments
+    const commentIdx = rawLine.indexOf('#');
+    const lineWithoutComment = commentIdx >= 0 ? rawLine.substring(0, commentIdx) : rawLine;
+    if (!lineWithoutComment.trim()) continue;
+
+    const indentMatch = lineWithoutComment.match(/^(\s*)/);
+    const indent = indentMatch ? indentMatch[1].length : 0;
+    const trimmed = lineWithoutComment.trim();
+
+    // Check if new node definition: e.g. "- Panel:", "Panel:", "- Text:", "- Button:", "- StatCard:"
+    const nodeMatch = trimmed.match(/^(?:-\s*)?([A-Za-z0-9_-]+):$/);
+    const isTag = nodeMatch && ['Panel', 'Text', 'Button', 'StatCard', 'Widget', 'Slot', 'Scene'].includes(nodeMatch[1]);
+
+    if (isTag) {
+      const tag = nodeMatch[1];
+      const newNode: RawNodeItem = {
+        indent,
+        tag,
+        props: {},
+        children: [],
+      };
+
+      // Find parent based on indentation
+      while (stack.length > 0 && stack[stack.length - 1].indent >= indent) {
+        stack.pop();
+      }
+
+      if (stack.length > 0) {
+        stack[stack.length - 1].children.push(newNode);
+        newNode.parent = stack[stack.length - 1];
+      } else {
+        rootNodes.push(newNode);
+      }
+
+      stack.push(newNode);
+      continue;
+    }
+
+    // Children block indicator
+    if (trimmed === 'children:' || trimmed === 'content:' || trimmed === 'tree:') {
+      continue;
+    }
+
+    // Property line: key: value
+    const propMatch = trimmed.match(/^([A-Za-z0-9_-]+):\s*(.*)$/);
+    if (propMatch && stack.length > 0) {
+      const [, key, valStr] = propMatch;
+      stack[stack.length - 1].props[key] = parseScalar(valStr);
+    }
+  }
+
+  // Convert RawNodeItem to LayoutNode
+  let idCounter = 1;
+  const buildLayoutNode = (raw: RawNodeItem): LayoutNode => {
+    const p = raw.props;
+    const nodeId = p.id || `node_${idCounter++}_${raw.tag.toLowerCase()}`;
+    const name = p.name || p.id || raw.tag;
+
+    let nodeType: LayoutNode['type'] = 'container';
+    if (raw.tag === 'Text') nodeType = 'text';
+    else if (raw.tag === 'Button') nodeType = 'button';
+    else if (p.flow === 'ROW' || p.flow === 'COLUMN') nodeType = 'flex';
+
+    // Style mapping
+    const style = createDefaultStyle();
+
+    // Flow & Flex
+    if (p.flow === 'ROW') {
+      style.display = 'flex';
+      style.flow = 'ROW';
+      style.flexDirection = 'row';
+    } else if (p.flow === 'COLUMN') {
+      style.display = 'flex';
+      style.flow = 'COLUMN';
+      style.flexDirection = 'column';
+    } else if (p.flow === 'NONE') {
+      style.display = 'block';
+      style.flow = 'NONE';
+    }
+
+    // Fill ratio
+    if (p.fill_ratio !== undefined) {
+      style.fillRatio = String(p.fill_ratio);
+      style.flexGrow = String(p.fill_ratio);
+    }
+
+    // Gap [x, y]
+    if (Array.isArray(p.gap) && p.gap.length === 2) {
+      style.columnGap = `${p.gap[0]}px`;
+      style.rowGap = `${p.gap[1]}px`;
+      style.gap = `${p.gap[1]}px ${p.gap[0]}px`;
+    }
+
+    // Padding
+    if (p.padding !== undefined) {
+      style.padding = parseSpacingVal(p.padding);
+    }
+
+    // Margin (Tether UI Margin support!)
+    if (p.margin !== undefined) {
+      style.margin = parseSpacingVal(p.margin);
+    }
+
+    // Color / Background
+    if (p.color) {
+      if (raw.tag === 'Text') {
+        style.color = rgbaToCss(p.color);
+        style.backgroundColor = 'transparent';
+      } else {
+        style.backgroundColor = rgbaToCss(p.color);
+      }
+    }
+
+    // Border
+    if (p.border_width !== undefined) {
+      style.borderWidth = defaultSpacing(`${p.border_width}px`);
+    }
+    if (p.border_color) {
+      style.borderColor = rgbaToCss(p.border_color);
+    }
+    if (p.border_radius !== undefined) {
+      style.borderRadius = `${p.border_radius}px`;
+    }
+
+    // Anchors
+    if (p.anchor_min !== undefined) style.anchorMin = String(p.anchor_min);
+    if (p.anchor_max !== undefined) style.anchorMax = String(p.anchor_max);
+
+    // Alignment & Interactivity
+    if (p.content_align) style.contentAlign = p.content_align;
+    if (p.interactable) style.interactable = true;
+    if (p.font_size) style.fontSize = `${p.font_size}px`;
+    if (p.text_align) style.textAlign = p.text_align;
+    if (p.opacity !== undefined) style.opacity = String(p.opacity);
+
+    let textContent = p.string;
+    if (raw.tag === 'Button' && !textContent && raw.children.length > 0) {
+      const childText = raw.children.find(c => c.tag === 'Text');
+      if (childText && childText.props.string) {
+        textContent = childText.props.string;
+      }
+    }
+
+    return {
+      id: nodeId,
+      name,
+      type: nodeType,
+      style,
+      textContent,
+      children: raw.children.map(c => buildLayoutNode(c)),
+      isExpanded: true,
+    };
+  };
+
+  if (rootNodes.length === 0) {
+    return {
+      id: 'root',
+      name: 'Root Container',
+      type: 'container',
+      style: createDefaultStyle(),
+      children: [],
+      isExpanded: true,
+    };
+  }
+
+  // If single root node
+  if (rootNodes.length === 1) {
+    return buildLayoutNode(rootNodes[0]);
+  }
+
+  // If multiple top-level nodes (like UI/index.yaml), wrap in AppRoot
+  return {
+    id: 'AppRoot',
+    name: 'App Root',
+    type: 'container',
+    style: createDefaultStyle({
+      display: 'flex',
+      flow: 'COLUMN',
+      flexDirection: 'column',
+      width: '840px',
+      height: '540px',
+    }),
+    children: rootNodes.map(r => buildLayoutNode(r)),
+    isExpanded: true,
+  };
+};
+
+// ========================================================
+// JSON Hierarchy Layout Parser
+// ========================================================
+export const parseJsonLayout = (jsonText: string): LayoutNode => {
+  const parsed = JSON.parse(jsonText);
+  const rootObj = parsed.hierarchyTree || parsed;
+
+  let idCounter = 1;
+
+  const buildFromJson = (obj: any): LayoutNode => {
+    const style = createDefaultStyle();
+
+    if (obj.declaredStyle) {
+      const ds = obj.declaredStyle;
+      if (ds.display) style.display = ds.display;
+      if (ds.flow) style.flow = ds.flow;
+      if (ds.fillRatio) {
+        style.fillRatio = String(ds.fillRatio);
+        style.flexGrow = String(ds.fillRatio);
+      }
+      if (ds.gap) {
+        style.gap = ds.gap;
+        style.rowGap = ds.gap;
+        style.columnGap = ds.gap;
+      }
+      if (ds.width) style.width = ds.width;
+      if (ds.height) style.height = ds.height;
+      if (ds.backgroundColor) style.backgroundColor = ds.backgroundColor;
+      if (ds.color) style.color = ds.color;
+      if (ds.margin) {
+        const parts = ds.margin.split(' ');
+        if (parts.length === 4) {
+          style.margin = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+        } else if (parts.length === 1) {
+          style.margin = defaultSpacing(parts[0]);
+        }
+      }
+      if (ds.padding) {
+        const parts = ds.padding.split(' ');
+        if (parts.length === 4) {
+          style.padding = { top: parts[0], right: parts[1], bottom: parts[2], left: parts[3] };
+        } else if (parts.length === 1) {
+          style.padding = defaultSpacing(parts[0]);
+        }
+      }
+    } else if (obj.style) {
+      Object.assign(style, obj.style);
+    }
+
+    let nodeType: LayoutNode['type'] = obj.type || 'container';
+    if (obj.tagName === 'button' || obj.tagName === 'btn') nodeType = 'button';
+    if (obj.tagName === 'p' || obj.tagName === 'span' || obj.tagName === 'h1' || obj.tagName === 'h2') nodeType = 'text';
+
+    return {
+      id: obj.id || `node_${idCounter++}_json`,
+      name: obj.name || obj.id || 'Node',
+      type: nodeType,
+      style,
+      textContent: obj.textContent || (nodeType === 'text' || nodeType === 'button' ? obj.name : undefined),
+      children: Array.isArray(obj.children) ? obj.children.map(buildFromJson) : [],
+      isExpanded: true,
+    };
+  };
+
+  return buildFromJson(rootObj);
+};
+
+// ========================================================
+// HTML + CSS Layout Parser
+// ========================================================
+export const parseHtmlLayout = (htmlText: string): LayoutNode => {
+  const parser = new DOMParser();
+  const trimmed = htmlText.trim();
+  const wrapped = trimmed.startsWith('<html') ? trimmed : `<div>${trimmed}</div>`;
+  const doc = parser.parseFromString(wrapped, 'text/html');
+
+  let idCounter = 1;
+
+  const traverseElement = (el: HTMLElement): LayoutNode => {
+    const tagName = el.tagName.toLowerCase();
+    const style = createDefaultStyle();
+
+    let nodeType: LayoutNode['type'] = 'container';
+    if (tagName === 'button') nodeType = 'button';
+    else if (['span', 'p', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'label', 'a', 'strong', 'b', 'em'].includes(tagName)) {
+      nodeType = 'text';
+    } else if (tagName === 'img') {
+      nodeType = 'image';
+    }
+
+    const inline = el.style;
+    if (inline.display) {
+      style.display = inline.display as any;
+      if (inline.display.includes('flex')) {
+        nodeType = nodeType === 'button' ? 'button' : 'flex';
+      } else if (inline.display.includes('grid')) {
+        nodeType = 'grid';
+      }
+    }
+    if (inline.flexDirection) style.flexDirection = inline.flexDirection as any;
+    if (inline.justifyContent) style.justifyContent = inline.justifyContent as any;
+    if (inline.alignItems) style.alignItems = inline.alignItems as any;
+    if (inline.flexGrow) {
+      style.flexGrow = inline.flexGrow;
+      style.fillRatio = inline.flexGrow;
+    }
+    if (inline.gap) {
+      style.gap = inline.gap;
+      style.rowGap = inline.rowGap || inline.gap;
+      style.columnGap = inline.columnGap || inline.gap;
+    }
+    if (inline.rowGap) style.rowGap = inline.rowGap;
+    if (inline.columnGap) style.columnGap = inline.columnGap;
+    if (inline.width) style.width = inline.width;
+    if (inline.height) style.height = inline.height;
+    if (inline.backgroundColor) style.backgroundColor = inline.backgroundColor;
+    if (inline.color) style.color = inline.color;
+    if (inline.fontSize) style.fontSize = inline.fontSize;
+    if (inline.borderRadius) style.borderRadius = inline.borderRadius;
+    if (inline.borderWidth) style.borderWidth = defaultSpacing(inline.borderWidth);
+    if (inline.borderColor) style.borderColor = inline.borderColor;
+    if (inline.padding) style.padding = defaultSpacing(inline.padding);
+    if (inline.margin) style.margin = defaultSpacing(inline.margin);
+
+    if (style.display === 'flex') {
+      style.flow = style.flexDirection === 'row' ? 'ROW' : 'COLUMN';
+    }
+
+    const nodeId = el.id || `node_${idCounter++}_${tagName}`;
+    const name = el.id ? `#${el.id}` : el.className ? `.${el.className.split(' ')[0]}` : tagName;
+
+    let textContent: string | undefined;
+    if (nodeType === 'text' || nodeType === 'button' || el.children.length === 0) {
+      const txt = el.textContent?.trim();
+      if (txt) textContent = txt;
+    }
+
+    const childElements = Array.from(el.children).filter(c => c instanceof HTMLElement) as HTMLElement[];
+    const children = childElements.map(traverseElement);
+
+    return {
+      id: nodeId,
+      name,
+      type: nodeType,
+      style,
+      textContent,
+      children,
+      isExpanded: true,
+    };
+  };
+
+  const bodyChildren = Array.from(doc.body.children).filter(c => c instanceof HTMLElement) as HTMLElement[];
+  if (bodyChildren.length === 0) {
+    return {
+      id: 'root',
+      name: 'Root Container',
+      type: 'container',
+      style: createDefaultStyle(),
+      children: [],
+      isExpanded: true,
+    };
+  }
+
+  if (bodyChildren.length === 1) {
+    return traverseElement(bodyChildren[0]);
+  }
+
+  return {
+    id: 'AppRoot',
+    name: 'Imported Document',
+    type: 'container',
+    style: createDefaultStyle({
+      display: 'flex',
+      flow: 'COLUMN',
+      flexDirection: 'column',
+      width: '840px',
+      height: '540px',
+    }),
+    children: bodyChildren.map(traverseElement),
+    isExpanded: true,
+  };
+};
