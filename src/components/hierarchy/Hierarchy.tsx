@@ -18,13 +18,13 @@ import {
   Copy,
   ArrowUp,
   ArrowDown,
-  Eye,
-  EyeOff,
   Layers
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
-import { LayoutNode, LayoutNodeType } from '../../types/layout';
+import { LayoutNode, LayoutNodeType, isContainerNodeType } from '../../types/layout';
 import { ContextMenu } from '../common/ContextMenu';
+
+let globalDraggedId: string | null = null;
 
 const getNodeIcon = (type: LayoutNodeType, style?: LayoutNode['style']) => {
   if (type === 'flex') {
@@ -72,13 +72,14 @@ interface TreeNodeItemProps {
 
 const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu }) => {
   const { rootNode, selectedNodeId, hoveredNodeId, actions } = useEditorStore();
-  const [isDragOver, setIsDragOver] = useState(false);
+  const [dropPosition, setDropPosition] = useState<'inside' | 'before' | 'after' | null>(null);
 
   const isSelected = selectedNodeId === node.id;
   const isHovered = hoveredNodeId === node.id;
   const hasChildren = node.children && node.children.length > 0;
   const isExpanded = node.isExpanded !== false;
   const isRoot = node.id === rootNode.id;
+  const isContainer = isContainerNodeType(node.type);
 
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -110,66 +111,98 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
     actions.moveNode(node.id, 'down');
   };
 
-  const handleToggleHide = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    actions.updateNodeProps(node.id, { isHidden: !node.isHidden });
-  };
-
   const handleDragStart = (e: React.DragEvent) => {
     if (isRoot) return;
-    const payload = JSON.stringify({ draggedNodeId: node.id });
+    globalDraggedId = node.id;
     e.dataTransfer.setData('draggedNodeId', node.id);
-    e.dataTransfer.setData('application/json', payload);
-    e.dataTransfer.setData('text/plain', payload);
+    e.dataTransfer.setData('text/plain', node.id);
     e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragEnd = () => {
+    globalDraggedId = null;
+    setDropPosition(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    e.dataTransfer.dropEffect = 'copy';
-    if (!isDragOver) setIsDragOver(true);
+    e.dataTransfer.dropEffect = 'move';
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const relY = e.clientY - rect.top;
+    const height = rect.height;
+
+    if (isContainer) {
+      if (relY < height * 0.25 && !isRoot) {
+        setDropPosition('before');
+      } else if (relY > height * 0.75 && !isRoot) {
+        setDropPosition('after');
+      } else {
+        setDropPosition('inside');
+      }
+    } else {
+      // Leaf elements cannot receive children: drop before or after
+      if (relY < height * 0.5) {
+        setDropPosition('before');
+      } else {
+        setDropPosition('after');
+      }
+    }
   };
 
   const handleDragLeave = (e: React.DragEvent) => {
     e.stopPropagation();
-    setIsDragOver(false);
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (
+      e.clientX <= rect.left ||
+      e.clientX >= rect.right ||
+      e.clientY <= rect.top ||
+      e.clientY >= rect.bottom
+    ) {
+      setDropPosition(null);
+    }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsDragOver(false);
+    const pos = dropPosition;
+    setDropPosition(null);
 
-    let widgetType: LayoutNodeType | null = null;
-    let widgetLabel: string | undefined;
-    let draggedNodeId = e.dataTransfer.getData('draggedNodeId') || null;
+    const draggedNodeId = globalDraggedId || e.dataTransfer.getData('draggedNodeId') || null;
+    globalDraggedId = null;
 
-    const rawData = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
-    if (rawData) {
-      try {
-        const parsed = JSON.parse(rawData);
-        if (parsed.widgetType) {
-          widgetType = parsed.widgetType;
-          widgetLabel = parsed.widgetLabel;
-        }
-        if (parsed.draggedNodeId) {
-          draggedNodeId = parsed.draggedNodeId;
-        }
-      } catch {
-        // Not JSON
-      }
-    }
+    // Check if dropping a new widget from the palette
+    let widgetType = (e.dataTransfer.getData('widgetType') as LayoutNodeType) || null;
+    let widgetLabel = e.dataTransfer.getData('widgetLabel');
 
     if (!widgetType) {
-      widgetType = (e.dataTransfer.getData('widgetType') as LayoutNodeType) || null;
-      widgetLabel = e.dataTransfer.getData('widgetLabel');
+      const rawData = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+      if (rawData) {
+        try {
+          const parsed = JSON.parse(rawData);
+          if (parsed.widgetType) {
+            widgetType = parsed.widgetType;
+            widgetLabel = parsed.widgetLabel;
+          }
+        } catch {}
+      }
     }
 
     if (widgetType) {
       actions.addNode(node.id, widgetType, widgetLabel);
-    } else if (draggedNodeId && draggedNodeId !== node.id) {
-      actions.reparentNode(draggedNodeId, node.id);
+      return;
+    }
+
+    if (draggedNodeId && draggedNodeId !== node.id) {
+      if (pos === 'inside' && isContainer) {
+        actions.reparentNode(draggedNodeId, node.id);
+      } else if (pos === 'before') {
+        actions.reparentNode(draggedNodeId, node.id, 0);
+      } else {
+        actions.reparentNode(draggedNodeId, node.id);
+      }
     }
   };
 
@@ -178,6 +211,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
       <div
         draggable={!isRoot}
         onDragStart={handleDragStart}
+        onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -186,9 +220,9 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
         onMouseEnter={() => actions.setHoveredNode(node.id)}
         onMouseLeave={() => actions.setHoveredNode(null)}
         style={{ paddingLeft: `${depth * 14 + 4}px` }}
-        className={`group flex items-center justify-between py-1 px-1.5 rounded cursor-pointer transition-colors text-xs select-none ${
-          isDragOver
-            ? 'bg-emerald-600/30 border border-emerald-500'
+        className={`group relative flex items-center justify-between py-1 px-1.5 rounded cursor-pointer transition-colors text-xs select-none ${
+          dropPosition === 'inside'
+            ? 'bg-emerald-600/30 border border-emerald-500 shadow-sm'
             : isSelected
             ? 'bg-blue-600/30 text-white border-l-2 border-blue-500 font-medium'
             : isHovered
@@ -196,6 +230,14 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
             : 'text-zinc-300 hover:bg-[#25252a]'
         }`}
       >
+        {/* Drop Insertion Indicators */}
+        {dropPosition === 'before' && (
+          <div className="absolute top-0 left-0 right-0 h-0.5 bg-emerald-400 z-30 shadow-[0_0_4px_#34d399]" />
+        )}
+        {dropPosition === 'after' && (
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-400 z-30 shadow-[0_0_4px_#34d399]" />
+        )}
+
         {/* Left Side: Expand button + Icon + Responsive Name */}
         <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-1">
           {hasChildren ? (
@@ -246,21 +288,10 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
             </button>
             <button
               onClick={handleDuplicate}
-              title="Duplicate"
+              title="Duplicate (Ctrl+D)"
               className="p-0.5 hover:text-white text-zinc-400 rounded hover:bg-[#34343d]"
             >
               <Copy className="w-3 h-3" />
-            </button>
-            <button
-              onClick={handleToggleHide}
-              title={node.isHidden ? 'Show' : 'Hide'}
-              className="p-0.5 hover:text-white text-zinc-400 rounded hover:bg-[#34343d]"
-            >
-              {node.isHidden ? (
-                <EyeOff className="w-3 h-3 text-amber-500" />
-              ) : (
-                <Eye className="w-3 h-3" />
-              )}
             </button>
             {isRoot ? (
               <button
@@ -300,7 +331,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
 };
 
 export const Hierarchy: React.FC = () => {
-  const { rootNode, selectedNodeId, actions } = useEditorStore();
+  const { rootNode, actions } = useEditorStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: LayoutNode } | null>(null);
 
   const handleRowContextMenu = (e: React.MouseEvent, node: LayoutNode) => {
@@ -360,17 +391,6 @@ export const Hierarchy: React.FC = () => {
         className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar"
       >
         <TreeNodeItem node={rootNode} depth={0} onContextMenu={handleRowContextMenu} />
-      </div>
-
-      {/* Selected Indicator */}
-      <div className="p-1.5 border-t border-[#27272a] bg-[#1a1a1d] flex items-center justify-between text-[10px] text-zinc-400">
-        <span>Selected:</span>
-        <button
-          onClick={() => actions.selectNode(rootNode.id)}
-          className="text-blue-400 hover:underline font-mono truncate max-w-[140px]"
-        >
-          {selectedNodeId ? `#${selectedNodeId}` : 'none'}
-        </button>
       </div>
 
       {/* Context Menu */}

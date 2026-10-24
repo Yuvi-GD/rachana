@@ -11,7 +11,9 @@ import {
   Monitor,
   Flame,
   UploadCloud,
-  Code2
+  PanelLeft,
+  PanelBottom,
+  PanelRight
 } from 'lucide-react';
 import { useEditorStore, DEVICE_PRESETS } from '../../store/editorStore';
 import { LAYOUT_PRESETS } from '../../core/presets';
@@ -28,7 +30,9 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
     devicePreset,
     showOverlays,
     showRulers,
-    showMetrics,
+    showLeftPanel,
+    showBottomPanel,
+    showRightPanel,
     historyIndex,
     history,
     maxHistorySteps,
@@ -207,20 +211,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           <Ruler className="w-3.5 h-3.5" />
         </button>
 
-        {/* Live YAML Script Drawer Toggle */}
-        <button
-          onClick={actions.toggleMetrics}
-          title="Toggle Live YAML Script Drawer"
-          className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-medium transition-colors ${
-            showMetrics
-              ? 'bg-amber-600/20 border-amber-500 text-amber-300 shadow-sm'
-              : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
-          }`}
-        >
-          <Code2 className="w-3.5 h-3.5 text-amber-400" />
-          <span>Live YAML</span>
-        </button>
-
         {/* Import Layout Modal */}
         <button
           onClick={onOpenImport}
@@ -240,6 +230,45 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           <Download className="w-3.5 h-3.5" />
           <span>Export</span>
         </button>
+
+        <div className="h-4 w-[1px] bg-[#333338] mx-0.5" />
+
+        {/* VS Code Style 3-Panel Layout Toggles */}
+        <div className="flex items-center bg-[#242427] rounded border border-[#333338] p-0.5 gap-0.5">
+          <button
+            onClick={actions.toggleLeftPanel}
+            title={showLeftPanel ? 'Hide Primary Sidebar (Palette & Hierarchy)' : 'Show Primary Sidebar (Palette & Hierarchy)'}
+            className={`p-1 rounded transition-colors ${
+              showLeftPanel
+                ? 'bg-blue-600/30 text-blue-300'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <PanelLeft className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={actions.toggleBottomPanel}
+            title={showBottomPanel ? 'Hide Bottom Panel (Script Editor)' : 'Show Bottom Panel (Script Editor)'}
+            className={`p-1 rounded transition-colors ${
+              showBottomPanel
+                ? 'bg-blue-600/30 text-blue-300'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <PanelBottom className="w-3.5 h-3.5" />
+          </button>
+          <button
+            onClick={actions.toggleRightPanel}
+            title={showRightPanel ? 'Hide Secondary Sidebar (Details Inspector)' : 'Show Secondary Sidebar (Details Inspector)'}
+            className={`p-1 rounded transition-colors ${
+              showRightPanel
+                ? 'bg-blue-600/30 text-blue-300'
+                : 'text-zinc-500 hover:text-zinc-300'
+            }`}
+          >
+            <PanelRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
       </div>
     </header>
   );

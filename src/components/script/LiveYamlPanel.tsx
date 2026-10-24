@@ -1,136 +1,252 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { exportLayoutEngineYaml, parseTetherYaml } from '../../core/layoutSerializer';
+import { 
+  exportLayoutEngineYaml, 
+  parseTetherYaml, 
+  exportLayoutEngineGoldenTest, 
+  parseJsonLayout, 
+  exportToHtmlCss, 
+  parseHtmlLayout 
+} from '../../core/layoutSerializer';
 import { LayoutNode } from '../../types/layout';
 import { 
   FileCode2, 
   Copy, 
   Check, 
-  RotateCcw, 
-  ChevronDown,
-  AlertCircle
+  RotateCw, 
+  Download, 
+  Upload, 
+  AlertCircle, 
+  FileJson, 
+  Code
 } from 'lucide-react';
 
-// Enhanced YAML Syntax Highlighter
-const renderYamlLines = (yamlText: string) => {
-  return yamlText.split('\n').map((line, idx) => {
-    let highlighted: React.ReactNode = line;
+export type ScriptFormat = 'yaml' | 'json' | 'html';
 
-    const trimmed = line.trim();
+// -------------------------------------------------------------
+// VS Code Dark+ Token Highlighting for YAML
+// -------------------------------------------------------------
+const renderYamlLine = (line: string): React.ReactNode => {
+  const trimmed = line.trim();
+  if (trimmed.startsWith('#')) {
+    return <span style={{ color: '#6a9955', fontStyle: 'italic' }}>{line}</span>;
+  }
 
-    // 1. Comments
-    if (trimmed.startsWith('#')) {
-      highlighted = <span className="text-zinc-500 italic">{line}</span>;
-    } 
-    // 2. Dash Item / Object indicator: "- Panel:" or "- Text:"
-    else {
-      const kvMatch = line.match(/^(\s*)(-\s*)?([a-zA-Z0-9_-]+):(.*)$/);
-      if (kvMatch) {
-        const indent = kvMatch[1] || '';
-        const dash = kvMatch[2] || '';
-        const key = kvMatch[3];
-        const rest = kvMatch[4] || '';
+  const kvMatch = line.match(/^(\s*)(-\s*)?([a-zA-Z0-9_-]+):(.*)$/);
+  if (!kvMatch) {
+    if (trimmed.startsWith('- ')) {
+      return (
+        <>
+          <span style={{ color: '#6a9955' }}>{line.slice(0, line.indexOf('-'))}</span>
+          <span style={{ color: '#d4d4d4', fontWeight: 'bold' }}>- </span>
+          <span style={{ color: '#ce9178' }}>{line.slice(line.indexOf('-') + 2)}</span>
+        </>
+      );
+    }
+    return <span style={{ color: '#d4d4d4' }}>{line}</span>;
+  }
 
-        const trimmedRest = rest.trim();
-        let styledRest: React.ReactNode = rest;
+  const indent = kvMatch[1] || '';
+  const dash = kvMatch[2] || '';
+  const key = kvMatch[3];
+  const rest = kvMatch[4] || '';
+  const trimmedRest = rest.trim();
 
-        // Quoted strings
-        if (trimmedRest.startsWith('"') && trimmedRest.endsWith('"')) {
-          styledRest = <span className="text-emerald-400 font-medium">{rest}</span>;
-        } else if (trimmedRest.startsWith("'") && trimmedRest.endsWith("'")) {
-          styledRest = <span className="text-emerald-400 font-medium">{rest}</span>;
-        }
-        // Bracketed array: e.g. [0, 15] or [255, 255, 255, 255]
-        else if (trimmedRest.startsWith('[') && trimmedRest.endsWith(']')) {
-          styledRest = <span className="text-amber-300 font-bold">{rest}</span>;
-        }
-        // Booleans
-        else if (trimmedRest === 'true' || trimmedRest === 'false') {
-          styledRest = <span className="text-purple-400 font-bold">{rest}</span>;
-        }
-        // Numbers
-        else if (!isNaN(parseFloat(trimmedRest)) && !trimmedRest.includes(' ')) {
-          styledRest = <span className="text-sky-300 font-bold">{rest}</span>;
-        }
-        // Flow Enums
-        else if (['ROW', 'COLUMN', 'NONE', 'START', 'CENTER', 'END', 'SPACE_BETWEEN'].includes(trimmedRest)) {
-          styledRest = <span className="text-yellow-400 font-bold">{rest}</span>;
-        }
+  let styledRest: React.ReactNode = <span style={{ color: '#d4d4d4' }}>{rest}</span>;
 
-        const isWidgetType = [
-          'Panel', 'Text', 'Button', 'Image', 'Heading', 'Input', 
-          'Badge', 'Card', 'Scroll', 'Spacer', 'Divider', 'children', 'content'
-        ].includes(key);
+  if ((trimmedRest.startsWith('"') && trimmedRest.endsWith('"')) ||
+      (trimmedRest.startsWith("'") && trimmedRest.endsWith("'"))) {
+    styledRest = <span style={{ color: '#ce9178' }}>{rest}</span>;
+  } else if (trimmedRest.startsWith('[') && trimmedRest.endsWith(']')) {
+    styledRest = <span style={{ color: '#ffd700' }}>{rest}</span>;
+  } else if (trimmedRest === 'true' || trimmedRest === 'false' || trimmedRest === 'null') {
+    styledRest = <span style={{ color: '#569cd6', fontWeight: 600 }}>{rest}</span>;
+  } else if (!isNaN(parseFloat(trimmedRest)) && !trimmedRest.includes(' ')) {
+    styledRest = <span style={{ color: '#b5cea8' }}>{rest}</span>;
+  } else if (['ROW', 'COLUMN', 'NONE', 'START', 'CENTER', 'END', 'SPACE_BETWEEN'].includes(trimmedRest)) {
+    styledRest = <span style={{ color: '#4fc1ff', fontWeight: 600 }}>{rest}</span>;
+  }
 
-        highlighted = (
-          <>
-            <span className="text-zinc-600">{indent}</span>
-            {dash && <span className="text-amber-500 font-bold">{dash}</span>}
-            <span className={isWidgetType ? 'text-amber-400 font-bold' : 'text-blue-400 font-medium'}>
-              {key}:
-            </span>
-            {styledRest}
-          </>
-        );
-      }
+  const isWidgetType = [
+    'Panel', 'Text', 'Button', 'Image', 'Heading', 'Input', 
+    'Badge', 'Card', 'Scroll', 'Spacer', 'Divider', 'children', 'content'
+  ].includes(key);
+
+  return (
+    <>
+      <span>{indent}</span>
+      {dash && <span style={{ color: '#d4d4d4', fontWeight: 'bold' }}>{dash}</span>}
+      <span style={{ color: isWidgetType ? '#4ec9b0' : '#9cdcfe', fontWeight: isWidgetType ? 600 : 400 }}>
+        {key}:
+      </span>
+      {styledRest}
+    </>
+  );
+};
+
+// -------------------------------------------------------------
+// VS Code Dark+ Token Highlighting for JSON
+// -------------------------------------------------------------
+const renderJsonLine = (line: string): React.ReactNode => {
+  const parts: React.ReactNode[] = [];
+  // Tokenize regex for JSON: strings, numbers, booleans, null, symbols
+  const tokenRegex = /("(?:\\.|[^"\\])*")|(-?\d+(?:\.\d+)?)|(true|false|null)|([{}[\],:])|([^"\d{}\[\],:\s]+)/g;
+
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tokenRegex.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={lastIndex} style={{ color: '#d4d4d4' }}>{line.substring(lastIndex, match.index)}</span>);
+    }
+    const [raw, str, num, boolNull, punct] = match;
+    const key = match.index;
+
+    if (str) {
+      const isKey = line.substring(match.index + raw.length).trim().startsWith(':');
+      parts.push(
+        <span key={key} style={{ color: isKey ? '#9cdcfe' : '#ce9178' }}>
+          {raw}
+        </span>
+      );
+    } else if (num) {
+      parts.push(<span key={key} style={{ color: '#b5cea8' }}>{raw}</span>);
+    } else if (boolNull) {
+      parts.push(<span key={key} style={{ color: '#569cd6', fontWeight: 600 }}>{raw}</span>);
+    } else if (punct) {
+      parts.push(<span key={key} style={{ color: punct === ':' ? '#d4d4d4' : '#ffd700' }}>{raw}</span>);
+    } else {
+      parts.push(<span key={key} style={{ color: '#d4d4d4' }}>{raw}</span>);
     }
 
-    return (
-      <div key={idx} className="h-5 leading-5 whitespace-pre">
-        {highlighted || ' '}
-      </div>
-    );
-  });
+    lastIndex = match.index + raw.length;
+  }
+
+  if (lastIndex < line.length) {
+    parts.push(<span key={lastIndex} style={{ color: '#d4d4d4' }}>{line.substring(lastIndex)}</span>);
+  }
+
+  return parts.length > 0 ? parts : ' ';
+};
+
+// -------------------------------------------------------------
+// VS Code Dark+ Token Highlighting for HTML/CSS
+// -------------------------------------------------------------
+const renderHtmlLine = (line: string): React.ReactNode => {
+  const trimmed = line.trim();
+  if (trimmed.startsWith('<!--') || trimmed.endsWith('-->')) {
+    return <span style={{ color: '#6a9955', fontStyle: 'italic' }}>{line}</span>;
+  }
+
+  // Tokenize HTML tags and attributes
+  const parts: React.ReactNode[] = [];
+  const tokenRegex = /(<\/?[a-zA-Z0-9_-]+)|(\/?>)|([a-zA-Z0-9_-]+(?==))|(".*?")|([^<>"=]+)/g;
+
+  let lastIndex = 0;
+  let match;
+
+  while ((match = tokenRegex.exec(line)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push(<span key={lastIndex} style={{ color: '#d4d4d4' }}>{line.substring(lastIndex, match.index)}</span>);
+    }
+    const [raw, tag, closeTag, attr, attrVal] = match;
+    const key = match.index;
+
+    if (tag) {
+      parts.push(<span key={key} style={{ color: '#569cd6' }}>{raw}</span>);
+    } else if (closeTag) {
+      parts.push(<span key={key} style={{ color: '#569cd6' }}>{raw}</span>);
+    } else if (attr) {
+      parts.push(<span key={key} style={{ color: '#9cdcfe' }}>{raw}</span>);
+    } else if (attrVal) {
+      parts.push(<span key={key} style={{ color: '#ce9178' }}>{raw}</span>);
+    } else {
+      parts.push(<span key={key} style={{ color: '#d4d4d4' }}>{raw}</span>);
+    }
+
+    lastIndex = match.index + raw.length;
+  }
+
+  if (lastIndex < line.length) {
+    parts.push(<span key={lastIndex} style={{ color: '#d4d4d4' }}>{line.substring(lastIndex)}</span>);
+  }
+
+  return parts.length > 0 ? parts : ' ';
 };
 
 export const LiveYamlPanel: React.FC = () => {
-  const { rootNode, metricsMap, showMetrics, actions } = useEditorStore();
+  const { rootNode, metricsMap, showBottomPanel, showMetrics, actions } = useEditorStore();
+  const [format, setFormat] = useState<ScriptFormat>('yaml');
   const [code, setCode] = useState('');
   const [isFocused, setIsFocused] = useState(false);
   const [copied, setCopied] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [parseStatus, setParseStatus] = useState<{ valid: boolean; nodeCount: number }>({
-    valid: true,
-    nodeCount: 0,
-  });
+  const [statusMessage, setStatusMessage] = useState<string>('Live Synced');
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Sync from Store -> Code ONLY when editor is NOT focused by user
+  const isVisible = showBottomPanel !== undefined ? showBottomPanel : showMetrics;
+
+  // Generate code based on active format
+  const generateCodeForFormat = (fmt: ScriptFormat, node: LayoutNode): string => {
+    switch (fmt) {
+      case 'yaml':
+        return exportLayoutEngineYaml(node, metricsMap);
+      case 'json':
+        return JSON.stringify(exportLayoutEngineGoldenTest(node, metricsMap), null, 2);
+      case 'html': {
+        const { html, css } = exportToHtmlCss(node);
+        return `<style>\n${css}\n</style>\n\n${html}`;
+      }
+    }
+  };
+
+  // Sync from Store -> Code when editor is NOT actively focused
   useEffect(() => {
     if (!isFocused) {
-      const generated = exportLayoutEngineYaml(rootNode, metricsMap);
+      const generated = generateCodeForFormat(format, rootNode);
       setCode(generated);
       setParseError(null);
-
-      const countNodes = (n: LayoutNode): number => 1 + (n.children ? n.children.reduce((acc, c) => acc + countNodes(c), 0) : 0);
-      setParseStatus({
-        valid: true,
-        nodeCount: countNodes(rootNode),
-      });
+      setStatusMessage('Live Synced');
     }
-  }, [rootNode, metricsMap, isFocused]);
+  }, [rootNode, metricsMap, isFocused, format]);
 
-  const handleParseAndUpdate = (yamlText: string) => {
+  // Handle switching tabs
+  const handleFormatChange = (newFormat: ScriptFormat) => {
+    setFormat(newFormat);
+    const generated = generateCodeForFormat(newFormat, rootNode);
+    setCode(generated);
+    setParseError(null);
+    setStatusMessage('Live Synced');
+  };
+
+  // Parse and sync to canvas
+  const handleParseAndUpdate = (text: string, fmt: ScriptFormat = format) => {
     try {
-      const parsed = parseTetherYaml(yamlText);
-      const countNodes = (n: LayoutNode): number => 1 + (n.children ? n.children.reduce((acc, c) => acc + countNodes(c), 0) : 0);
-      const total = countNodes(parsed);
+      let parsed: LayoutNode;
+      if (fmt === 'yaml') {
+        parsed = parseTetherYaml(text);
+      } else if (fmt === 'json') {
+        parsed = parseJsonLayout(text);
+      } else {
+        parsed = parseHtmlLayout(text);
+      }
 
       setParseError(null);
-      setParseStatus({ valid: true, nodeCount: total });
+      setStatusMessage('Canvas Updated');
       actions.loadCustomRootNode(parsed);
     } catch (e: any) {
-      setParseError(e.message || 'Invalid YAML format');
-      setParseStatus({ valid: false, nodeCount: 0 });
+      setParseError(e.message || `Invalid ${fmt.toUpperCase()} format`);
+      setStatusMessage('Syntax Pending');
     }
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextCode = e.target.value;
     setCode(nextCode);
-    handleParseAndUpdate(nextCode);
+    handleParseAndUpdate(nextCode, format);
   };
 
   // Tab key indentation support (inserts 2 spaces)
@@ -148,7 +264,7 @@ export const LiveYamlPanel: React.FC = () => {
         }
       }, 0);
 
-      handleParseAndUpdate(nextCode);
+      handleParseAndUpdate(nextCode, format);
     }
   };
 
@@ -165,95 +281,196 @@ export const LiveYamlPanel: React.FC = () => {
     setTimeout(() => setCopied(false), 1500);
   };
 
-  const handleReSync = () => {
-    const generated = exportLayoutEngineYaml(rootNode, metricsMap);
-    setCode(generated);
-    setParseError(null);
+  // Single-click Sync button
+  const handleSync = () => {
+    handleParseAndUpdate(code, format);
   };
 
-  if (!showMetrics) return null;
+  // Export current file download
+  const handleExportFile = () => {
+    const ext = format === 'yaml' ? 'yaml' : format === 'json' ? 'json' : 'html';
+    const mime = format === 'yaml' ? 'text/yaml' : format === 'json' ? 'application/json' : 'text/html';
+    const blob = new Blob([code], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `layout_export.${ext}`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
-  const linesCount = code.split('\n').length;
+  // Import from local file without preset clutter
+  const handleFileInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    let detectedFormat: ScriptFormat = 'yaml';
+    if (fileName.endsWith('.json')) detectedFormat = 'json';
+    else if (fileName.endsWith('.html') || fileName.endsWith('.htm')) detectedFormat = 'html';
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const content = event.target?.result as string;
+      if (content) {
+        setFormat(detectedFormat);
+        setCode(content);
+        handleParseAndUpdate(content, detectedFormat);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input
+    e.target.value = '';
+  };
+
+  if (!isVisible) return null;
+
+  const lines = code.split('\n');
 
   return (
     <div className="h-full bg-[#121215] border-t border-[#27272e] flex flex-col select-none text-xs overflow-hidden">
       {/* Title & Action Bar */}
-      <div className="h-7 px-3 bg-[#0f0f12] border-b border-[#242429] flex items-center justify-between text-zinc-300 flex-shrink-0">
+      <div className="h-8 px-2.5 bg-[#0e0e11] border-b border-[#242429] flex items-center justify-between text-zinc-300 flex-shrink-0">
+        {/* Left: Language Tabs & Status */}
         <div className="flex items-center gap-2">
-          <FileCode2 className="w-3.5 h-3.5 text-amber-400 flex-shrink-0" />
-          <span className="font-bold uppercase tracking-wider text-[11px] text-zinc-100 flex-shrink-0">
-            Live YAML Script Editor
-          </span>
-          
-          {/* Status Indicator */}
+          <div className="flex items-center bg-[#18181d] rounded p-0.5 border border-[#2b2b34]">
+            <button
+              onClick={() => handleFormatChange('yaml')}
+              className={`flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                format === 'yaml'
+                  ? 'bg-amber-600/30 text-amber-300 border border-amber-500/50 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <FileCode2 className="w-3 h-3 text-amber-400" />
+              <span>YAML</span>
+            </button>
+
+            <button
+              onClick={() => handleFormatChange('json')}
+              className={`flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                format === 'json'
+                  ? 'bg-blue-600/30 text-blue-300 border border-blue-500/50 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <FileJson className="w-3 h-3 text-blue-400" />
+              <span>JSON</span>
+            </button>
+
+            <button
+              onClick={() => handleFormatChange('html')}
+              className={`flex items-center gap-1 px-2.5 py-0.5 rounded text-[10px] font-semibold transition-all ${
+                format === 'html'
+                  ? 'bg-emerald-600/30 text-emerald-300 border border-emerald-500/50 shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <Code className="w-3 h-3 text-emerald-400" />
+              <span>HTML</span>
+            </button>
+          </div>
+
+          {/* Real-time Status Indicator */}
           <div className="flex items-center gap-1.5 ml-2 font-mono text-[10px]">
-            <div className={`w-2 h-2 rounded-full ${parseStatus.valid ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400'}`} />
-            <span className={parseStatus.valid ? 'text-emerald-300 font-semibold' : 'text-amber-300'}>
-              {parseStatus.valid ? `Live Synced (${parseStatus.nodeCount} nodes)` : 'Editing...'}
+            <div className={`w-2 h-2 rounded-full ${parseError ? 'bg-amber-500' : 'bg-emerald-400 animate-pulse'}`} />
+            <span className={parseError ? 'text-amber-400 font-semibold' : 'text-emerald-300'}>
+              {statusMessage}
             </span>
           </div>
         </div>
 
-        {/* Action Controls */}
+        {/* Right: Actions (Sync, Import, Export, Copy) */}
         <div className="flex items-center gap-1.5">
+          {/* Direct File Picker Input (Hidden) */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".yaml,.yml,.json,.html,.htm"
+            onChange={handleFileInputChange}
+            className="hidden"
+          />
+
+          {/* Sync Button */}
           <button
             type="button"
-            onClick={handleReSync}
-            title="Re-generate and format YAML from active canvas"
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1a1a20] hover:bg-[#25252e] border border-[#2e2e38] text-zinc-300 hover:text-white text-[10px] transition-colors"
+            onClick={handleSync}
+            title="Parse editor code and synchronize to canvas"
+            className="flex items-center gap-1 px-2.5 py-1 rounded bg-blue-600/20 hover:bg-blue-600/30 border border-blue-500/60 text-blue-300 font-semibold text-[10px] transition-colors"
           >
-            <RotateCcw className="w-3 h-3 text-sky-400" />
-            <span>Re-Sync</span>
+            <RotateCw className="w-3 h-3 text-blue-400" />
+            <span>Sync</span>
           </button>
 
+          {/* Import File Button */}
+          <button
+            type="button"
+            onClick={() => fileInputRef.current?.click()}
+            title="Import layout from file (.yaml, .json, .html)"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a20] hover:bg-[#25252e] border border-[#2e2e38] text-zinc-300 hover:text-white text-[10px] transition-colors"
+          >
+            <Upload className="w-3 h-3 text-emerald-400" />
+            <span>Import</span>
+          </button>
+
+          {/* Export File Button */}
+          <button
+            type="button"
+            onClick={handleExportFile}
+            title={`Download as layout.${format === 'yaml' ? 'yaml' : format === 'json' ? 'json' : 'html'}`}
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a20] hover:bg-[#25252e] border border-[#2e2e38] text-zinc-300 hover:text-white text-[10px] transition-colors"
+          >
+            <Download className="w-3 h-3 text-teal-400" />
+            <span>Export</span>
+          </button>
+
+          {/* Copy to Clipboard */}
           <button
             type="button"
             onClick={handleCopy}
-            className="flex items-center gap-1 px-2 py-0.5 rounded bg-[#1a1a20] hover:bg-[#25252e] border border-[#2e2e38] text-zinc-300 hover:text-white text-[10px] transition-colors"
+            className="flex items-center gap-1 px-2 py-1 rounded bg-[#1a1a20] hover:bg-[#25252e] border border-[#2e2e38] text-zinc-300 hover:text-white text-[10px] transition-colors"
           >
             {copied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3 text-amber-400" />}
             <span>{copied ? 'Copied' : 'Copy'}</span>
           </button>
-
-          <div className="h-3 w-[1px] bg-[#2a2a34] mx-0.5" />
-
-          <button
-            type="button"
-            onClick={actions.toggleMetrics}
-            className="text-zinc-500 hover:text-zinc-200 p-0.5"
-            title="Minimize Script Drawer"
-          >
-            <ChevronDown className="w-3.5 h-3.5" />
-          </button>
         </div>
       </div>
 
-      {/* Optional Syntax Pending Banner */}
+      {/* Syntax Error Notification Banner */}
       {parseError && (
-        <div className="px-3 py-1 bg-amber-950/60 border-b border-amber-900/60 text-amber-300 text-[10px] font-mono flex items-center gap-1.5">
+        <div className="px-3 py-1 bg-amber-950/60 border-b border-amber-900/60 text-amber-300 text-[10px] font-mono flex items-center gap-1.5 flex-shrink-0">
           <AlertCircle className="w-3 h-3 text-amber-400 flex-shrink-0" />
-          <span>{parseError}</span>
+          <span className="truncate">{parseError}</span>
         </div>
       )}
 
-      {/* Editor Body: Pixel-Perfect Dual-Layer Syntax Highlighted Editor */}
+      {/* Editor Body: VS Code Dark+ Styled Highlighted Workspace */}
       <div className="flex-1 relative flex overflow-hidden font-mono text-[11px] bg-[#121215]">
         {/* Line Numbers Gutter */}
-        <div className="w-10 py-2.5 bg-[#0d0d10] border-r border-[#1e1e24] text-zinc-600 select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono text-[11px] leading-5">
-          {Array.from({ length: Math.max(linesCount, 1) }).map((_, i) => (
+        <div className="w-10 py-2 bg-[#0c0c0e] border-r border-[#1e1e24] text-zinc-600 select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono text-[11px] leading-5">
+          {Array.from({ length: Math.max(lines.length, 1) }).map((_, i) => (
             <div key={i} className="h-5 leading-5">{i + 1}</div>
           ))}
         </div>
 
-        {/* Dual Layer Workspace with Identical Box Model */}
+        {/* Dual Layer Workspace: Syntax Highlighted Layer Behind + Transparent Textarea in Front */}
         <div className="relative flex-1 h-full overflow-hidden">
-          {/* Syntax Highlighted Background */}
+          {/* Syntax Highlighted Background (<pre>) */}
           <pre
             ref={preRef}
             aria-hidden="true"
-            className="absolute inset-0 p-2.5 m-0 bg-transparent text-transparent font-mono text-[11px] leading-5 overflow-hidden pointer-events-none whitespace-pre select-none"
+            className="absolute inset-0 p-2 m-0 bg-transparent font-mono text-[11px] leading-5 overflow-hidden pointer-events-none whitespace-pre select-none"
+            style={{ tabSize: 2 }}
           >
-            {renderYamlLines(code)}
+            {lines.map((line, idx) => (
+              <div key={idx} className="h-5 leading-5 whitespace-pre">
+                {format === 'yaml'
+                  ? renderYamlLine(line)
+                  : format === 'json'
+                  ? renderJsonLine(line)
+                  : renderHtmlLine(line)}
+              </div>
+            ))}
           </pre>
 
           {/* Foreground Editable Transparent Textarea */}
@@ -266,8 +483,13 @@ export const LiveYamlPanel: React.FC = () => {
             onBlur={() => setIsFocused(false)}
             onScroll={handleScroll}
             spellCheck={false}
-            className="absolute inset-0 p-2.5 m-0 bg-transparent text-zinc-100 font-mono text-[11px] leading-5 resize-none outline-none overflow-auto custom-scrollbar whitespace-pre caret-white selection:bg-blue-600/40"
-            placeholder="# Layout Engine YAML Editor&#10;Panel:&#10;  id: &quot;root&quot;&#10;  flow: COLUMN"
+            className="absolute inset-0 p-2 m-0 bg-transparent font-mono text-[11px] leading-5 resize-none outline-none overflow-auto custom-scrollbar whitespace-pre selection:bg-[#264f78]"
+            style={{
+              color: 'transparent',
+              caretColor: '#ffffff',
+              tabSize: 2,
+            }}
+            placeholder={`Paste or type ${format.toUpperCase()} layout script here...`}
           />
         </div>
       </div>

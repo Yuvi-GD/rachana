@@ -1,6 +1,8 @@
 import React from 'react';
 import { ComputedMetrics } from '../../types/layout';
 
+export type ResizeHandleDirection = 'n' | 's' | 'e' | 'w' | 'ne' | 'nw' | 'se' | 'sw';
+
 interface BoxModelOverlayProps {
   metrics: ComputedMetrics;
   canvasRect: DOMRect | null;
@@ -8,7 +10,7 @@ interface BoxModelOverlayProps {
   isHovered?: boolean;
   onResizeStart?: (
     e: React.MouseEvent,
-    handle: 'right' | 'bottom' | 'corner',
+    handle: ResizeHandleDirection,
     currentWidth: number,
     currentHeight: number
   ) => void;
@@ -93,38 +95,80 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
             : 'border-2 border-blue-500 shadow-[0_0_0_1px_rgba(0,0,0,0.5)]'
         }`}
       >
-        {/* Interactive Resize Handles */}
+        {/* Interactive Resize Handles (All 8 Directions) */}
         {!isHovered && onResizeStart && (
           <div className="pointer-events-auto">
-            {/* Right edge handle */}
+            {/* Top edge handle (N) */}
             <div
-              onMouseDown={(e) => onResizeStart(e, 'right', relWidth, relHeight)}
-              title="Drag to resize Width"
-              className="absolute top-0 -right-2 bottom-0 w-3 cursor-ew-resize flex items-center justify-center group"
+              onMouseDown={(e) => onResizeStart(e, 'n', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Height (Top)"
+              className="absolute -top-1.5 left-2 right-2 h-3 cursor-ns-resize flex items-center justify-center group z-20"
             >
-              <div className="w-1.5 h-4 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+              <div className="h-1 w-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
             </div>
 
-            {/* Bottom edge handle */}
+            {/* Bottom edge handle (S) */}
             <div
-              onMouseDown={(e) => onResizeStart(e, 'bottom', relWidth, relHeight)}
-              title="Drag to resize Height"
-              className="absolute -bottom-2 left-0 right-0 h-3 cursor-ns-resize flex items-center justify-center group"
+              onMouseDown={(e) => onResizeStart(e, 's', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Height (Bottom)"
+              className="absolute -bottom-1.5 left-2 right-2 h-3 cursor-ns-resize flex items-center justify-center group z-20"
             >
-              <div className="h-1.5 w-4 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+              <div className="h-1 w-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
             </div>
 
-            {/* Bottom-right corner handle */}
+            {/* Left edge handle (W) */}
             <div
-              onMouseDown={(e) => onResizeStart(e, 'corner', relWidth, relHeight)}
-              title="Drag to resize Width & Height"
-              className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 cursor-nwse-resize bg-blue-600 hover:bg-blue-400 border-2 border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+              onMouseDown={(e) => onResizeStart(e, 'w', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Width (Left)"
+              className="absolute top-2 -left-1.5 bottom-2 w-3 cursor-ew-resize flex items-center justify-center group z-20"
+            >
+              <div className="w-1 h-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+            </div>
+
+            {/* Right edge handle (E) */}
+            <div
+              onMouseDown={(e) => onResizeStart(e, 'e', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Width (Right)"
+              className="absolute top-2 -right-1.5 bottom-2 w-3 cursor-ew-resize flex items-center justify-center group z-20"
+            >
+              <div className="w-1 h-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+            </div>
+
+            {/* Top-Left Corner (NW) */}
+            <div
+              onMouseDown={(e) => onResizeStart(e, 'nw', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Top-Left"
+              className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 cursor-nwse-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
             />
 
-            {/* Corner visual anchors */}
-            <div className="absolute -top-1 -left-1 w-2 h-2 bg-blue-500 border border-white rounded-xs" />
-            <div className="absolute -top-1 -right-1 w-2 h-2 bg-blue-500 border border-white rounded-xs" />
-            <div className="absolute -bottom-1 -left-1 w-2 h-2 bg-blue-500 border border-white rounded-xs" />
+            {/* Top-Right Corner (NE) */}
+            <div
+              onMouseDown={(e) => onResizeStart(e, 'ne', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Top-Right"
+              className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 cursor-nesw-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+            />
+
+            {/* Bottom-Left Corner (SW) */}
+            <div
+              onMouseDown={(e) => onResizeStart(e, 'sw', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Bottom-Left"
+              className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 cursor-nesw-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+            />
+
+            {/* Bottom-Right Corner (SE) */}
+            <div
+              onMouseDown={(e) => onResizeStart(e, 'se', relWidth, relHeight)}
+              onClick={(e) => e.stopPropagation()}
+              title="Drag to resize Bottom-Right"
+              className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 cursor-nwse-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+            />
           </div>
         )}
       </div>

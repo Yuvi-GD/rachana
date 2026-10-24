@@ -245,14 +245,6 @@ export const Palette: React.FC = () => {
           </div>
         </div>
       )}
-
-      {/* Target Status */}
-      <div className="p-1.5 border-t border-[#27272a] bg-[#1a1a1d] text-[10px] text-zinc-400 flex items-center justify-between flex-shrink-0">
-        <span>Target:</span>
-        <span className="font-mono text-blue-400 truncate max-w-[140px]">
-          {selectedNodeId ? `#${selectedNodeId}` : 'Root Canvas'}
-        </span>
-      </div>
     </div>
   );
 };

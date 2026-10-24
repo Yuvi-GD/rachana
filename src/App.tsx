@@ -16,12 +16,17 @@ export const App: React.FC = () => {
   const { 
     selectedNodeId, 
     showMetrics, 
+    showLeftPanel,
+    showBottomPanel,
+    showRightPanel,
     leftPanelWidth, 
     paletteHeight, 
     rightPanelWidth, 
     bottomPanelHeight, 
     actions 
   } = useEditorStore();
+
+  const isBottomVisible = showBottomPanel !== undefined ? showBottomPanel : showMetrics;
 
   // Keyboard Shortcuts (Unreal Engine style)
   useEffect(() => {
@@ -77,43 +82,47 @@ export const App: React.FC = () => {
         {/* ======================================================== */}
         {/* Left Studio Pane (Palette & Hierarchy)                   */}
         {/* ======================================================== */}
-        <div
-          style={{ width: `${leftPanelWidth}px` }}
-          className="flex-shrink-0 flex flex-col overflow-hidden bg-[#1e1e22]"
-        >
-          {/* Top: Palette */}
-          <div
-            style={{ height: `${paletteHeight}px` }}
-            className="overflow-hidden flex-shrink-0"
-          >
-            <Palette />
-          </div>
+        {showLeftPanel && (
+          <>
+            <div
+              style={{ width: `${leftPanelWidth}px` }}
+              className="flex-shrink-0 flex flex-col overflow-hidden bg-[#1e1e22]"
+            >
+              {/* Top: Palette */}
+              <div
+                style={{ height: `${paletteHeight}px` }}
+                className="overflow-hidden flex-shrink-0"
+              >
+                <Palette />
+              </div>
 
-          {/* Palette / Hierarchy Splitter */}
-          <Splitter
-            direction="vertical"
-            currentSize={paletteHeight}
-            onUpdateSize={actions.setPaletteHeight}
-            min={36}
-            max={650}
-            onDoubleClick={() => actions.setPaletteHeight(typeof window !== 'undefined' ? Math.max(260, Math.round((window.innerHeight - 60) * 0.5)) : 360)}
-          />
+              {/* Palette / Hierarchy Splitter */}
+              <Splitter
+                direction="vertical"
+                currentSize={paletteHeight}
+                onUpdateSize={actions.setPaletteHeight}
+                min={36}
+                max={650}
+                onDoubleClick={() => actions.setPaletteHeight(typeof window !== 'undefined' ? Math.max(260, Math.round((window.innerHeight - 60) * 0.5)) : 360)}
+              />
 
-          {/* Bottom: Hierarchy Tree */}
-          <div className="flex-1 overflow-hidden">
-            <Hierarchy />
-          </div>
-        </div>
+              {/* Bottom: Hierarchy Tree */}
+              <div className="flex-1 overflow-hidden">
+                <Hierarchy />
+              </div>
+            </div>
 
-        {/* Left Panel <-> Viewport Splitter */}
-        <Splitter
-          direction="horizontal"
-          currentSize={leftPanelWidth}
-          onUpdateSize={actions.setLeftPanelWidth}
-          min={120}
-          max={600}
-          onDoubleClick={() => actions.setLeftPanelWidth(240)}
-        />
+            {/* Left Panel <-> Viewport Splitter */}
+            <Splitter
+              direction="horizontal"
+              currentSize={leftPanelWidth}
+              onUpdateSize={actions.setLeftPanelWidth}
+              min={120}
+              max={600}
+              onDoubleClick={() => actions.setLeftPanelWidth(240)}
+            />
+          </>
+        )}
 
         {/* ======================================================== */}
         {/* Center Canvas Pane (Viewport & Resizable Metrics Drawer) */}
@@ -125,7 +134,7 @@ export const App: React.FC = () => {
           </div>
 
           {/* Viewport <-> Bottom Metrics Splitter */}
-          {showMetrics && (
+          {isBottomVisible && (
             <Splitter
               direction="vertical"
               invert={true}
@@ -137,8 +146,8 @@ export const App: React.FC = () => {
             />
           )}
 
-          {/* Bottom Live YAML Script Panel */}
-          {showMetrics && (
+          {/* Bottom Live Script Panel */}
+          {isBottomVisible && (
             <div
               style={{ height: `${bottomPanelHeight}px` }}
               className="flex-shrink-0 overflow-hidden"
@@ -148,26 +157,30 @@ export const App: React.FC = () => {
           )}
         </div>
 
-        {/* Viewport <-> Right Details Splitter */}
-        <Splitter
-          direction="horizontal"
-          invert={true}
-          currentSize={rightPanelWidth}
-          onUpdateSize={actions.setRightPanelWidth}
-          min={240}
-          max={650}
-          onDoubleClick={() => actions.setRightPanelWidth(340)}
-        />
-
         {/* ======================================================== */}
         {/* Right Studio Pane (Details / Properties Inspector)       */}
         {/* ======================================================== */}
-        <div
-          style={{ width: `${rightPanelWidth}px` }}
-          className="flex-shrink-0 overflow-hidden bg-[#1e1e22]"
-        >
-          <DetailsPanel />
-        </div>
+        {showRightPanel && (
+          <>
+            {/* Viewport <-> Right Details Splitter */}
+            <Splitter
+              direction="horizontal"
+              invert={true}
+              currentSize={rightPanelWidth}
+              onUpdateSize={actions.setRightPanelWidth}
+              min={240}
+              max={650}
+              onDoubleClick={() => actions.setRightPanelWidth(340)}
+            />
+
+            <div
+              style={{ width: `${rightPanelWidth}px` }}
+              className="flex-shrink-0 overflow-hidden bg-[#1e1e22]"
+            >
+              <DetailsPanel />
+            </div>
+          </>
+        )}
       </div>
 
       {/* Dedicated Export Modal */}

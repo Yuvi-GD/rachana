@@ -16,7 +16,35 @@ body {
   overflow: hidden;
 }
 
-/* Custom Sleek Dark Scrollbars */
+/* Global Sleek Dark Scrollbars (Chromium, Firefox, Safari) */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #3b3b47 transparent;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #33333d;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #4e4e5c;
+}
+
+::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+/* Explicit class for elements that want dark track background */
 .custom-scrollbar::-webkit-scrollbar {
   width: 6px;
   height: 6px;

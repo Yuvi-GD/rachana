@@ -13,6 +13,10 @@ export type LayoutNodeType =
   | 'divider'
   | 'spacer';
 
+export const isContainerNodeType = (type: LayoutNodeType): boolean => {
+  return type === 'container' || type === 'flex' || type === 'grid' || type === 'card' || type === 'scroll';
+};
+
 export interface SpacingSides {
   top: string;
   right: string;

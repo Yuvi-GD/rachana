@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { LayoutNode, LayoutNodeType } from '../../types/layout';
+import { LayoutNode, LayoutNodeType, isContainerNodeType } from '../../types/layout';
 import { useEditorStore } from '../../store/editorStore';
 import { exportLayoutEngineYaml } from '../../core/layoutSerializer';
 import { 
@@ -122,7 +122,8 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
 
       {/* Menu Actions */}
       <div className="py-1">
-        {/* 1. Add Child Submenu */}
+        {/* 1. Add Child Submenu (Only on containers) */}
+        {isContainerNodeType(node.type) && (
         <div
           onMouseEnter={() => setActiveSubmenu('add')}
           className="relative group px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded-xs mx-1"
@@ -238,6 +239,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
             </div>
           )}
         </div>
+        )}
 
         {/* 2. Replace Type Submenu (Works for ROOT & all nodes!) */}
         <div
@@ -383,3 +385,4 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
     </div>
   );
 };
+

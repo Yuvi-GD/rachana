@@ -1,8 +1,8 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { useEditorStore } from '../../store/editorStore';
-import { LayoutNode, ComputedMetrics, LayoutNodeType } from '../../types/layout';
+import { LayoutNode, ComputedMetrics, LayoutNodeType, isContainerNodeType } from '../../types/layout';
 import { nodeStyleToCss } from '../../core/layoutSerializer';
-import { BoxModelOverlay } from './BoxModelOverlay';
+import { BoxModelOverlay, ResizeHandleDirection } from './BoxModelOverlay';
 import { InfiniteRuler } from './InfiniteRuler';
 import { ContextMenu } from '../common/ContextMenu';
 
@@ -25,6 +25,7 @@ export const Viewport: React.FC = () => {
 
   const containerRef = useRef<HTMLDivElement>(null);
   const rootElementRef = useRef<HTMLElement | null>(null);
+  const wasInteractingRef = useRef(false);
 
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -36,7 +37,7 @@ export const Viewport: React.FC = () => {
 
   // Resize State for any selected element (including root)
   const [isResizingElement, setIsResizingElement] = useState(false);
-  const [elementResizeHandle, setElementResizeHandle] = useState<'right' | 'bottom' | 'corner' | null>(null);
+  const [elementResizeHandle, setElementResizeHandle] = useState<ResizeHandleDirection | null>(null);
   const [startElementPos, setStartElementPos] = useState({ x: 0, y: 0, w: 0, h: 0 });
 
   // Drag & drop drop target
@@ -194,6 +195,7 @@ export const Viewport: React.FC = () => {
     if (e.button === 1 || e.button === 2 || e.target === containerRef.current) {
       e.preventDefault();
       setIsPanning(true);
+      wasInteractingRef.current = true;
       setStartPan({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
     }
   };
@@ -211,6 +213,10 @@ export const Viewport: React.FC = () => {
 
   // Deselect when clicking empty viewport/canvas background
   const handleContainerClick = (e: React.MouseEvent) => {
+    if (wasInteractingRef.current) {
+      wasInteractingRef.current = false;
+      return;
+    }
     if (e.button === 0) {
       actions.selectNode(null);
     }
@@ -219,13 +225,14 @@ export const Viewport: React.FC = () => {
   // Start Resizing any Element (including Root)
   const handleElementResizeStart = (
     e: React.MouseEvent,
-    handle: 'right' | 'bottom' | 'corner',
+    handle: ResizeHandleDirection,
     curW: number,
     curH: number
   ) => {
     e.stopPropagation();
     e.preventDefault();
     setIsResizingElement(true);
+    wasInteractingRef.current = true;
     setElementResizeHandle(handle);
     setStartElementPos({
       x: e.clientX,
@@ -247,23 +254,38 @@ export const Viewport: React.FC = () => {
         const deltaX = (e.clientX - startElementPos.x) / zoom;
         const deltaY = (e.clientY - startElementPos.y) / zoom;
 
+        let newW = startElementPos.w;
+        let newH = startElementPos.h;
+
+        // X-axis adjustments
+        if (elementResizeHandle === 'e' || elementResizeHandle === 'se' || elementResizeHandle === 'ne') {
+          newW = Math.round(startElementPos.w + deltaX);
+        } else if (elementResizeHandle === 'w' || elementResizeHandle === 'sw' || elementResizeHandle === 'nw') {
+          newW = Math.round(startElementPos.w - deltaX);
+        }
+
+        // Y-axis adjustments
+        if (elementResizeHandle === 's' || elementResizeHandle === 'se' || elementResizeHandle === 'sw') {
+          newH = Math.round(startElementPos.h + deltaY);
+        } else if (elementResizeHandle === 'n' || elementResizeHandle === 'ne' || elementResizeHandle === 'nw') {
+          newH = Math.round(startElementPos.h - deltaY);
+        }
+
         const isRoot = selectedNodeId === rootNode.id;
-        const newW = Math.max(isRoot ? 200 : 16, Math.round(startElementPos.w + deltaX));
-        const newH = Math.max(isRoot ? 150 : 16, Math.round(startElementPos.h + deltaY));
+        newW = Math.max(isRoot ? 200 : 16, newW);
+        newH = Math.max(isRoot ? 150 : 16, newH);
 
         const updates: any = {};
-        if (elementResizeHandle === 'right' || elementResizeHandle === 'corner') {
+        if (['e', 'w', 'se', 'sw', 'ne', 'nw'].includes(elementResizeHandle)) {
           updates.width = `${newW}px`;
+          updates.flexBasis = `${newW}px`;
         }
-        if (elementResizeHandle === 'bottom' || elementResizeHandle === 'corner') {
+        if (['s', 'n', 'se', 'sw', 'ne', 'nw'].includes(elementResizeHandle)) {
           updates.height = `${newH}px`;
         }
 
         if (isRoot) {
-          actions.setScreenSize(
-            elementResizeHandle === 'bottom' ? startElementPos.w : newW,
-            elementResizeHandle === 'right' ? startElementPos.h : newH
-          );
+          actions.setScreenSize(newW, newH);
         } else {
           actions.updateNodeStyle(selectedNodeId, updates);
         }
@@ -271,9 +293,14 @@ export const Viewport: React.FC = () => {
     };
 
     const handleWindowMouseUp = () => {
-      setIsPanning(false);
-      setIsResizingElement(false);
-      setElementResizeHandle(null);
+      if (isPanning || isResizingElement) {
+        setIsPanning(false);
+        setIsResizingElement(false);
+        setElementResizeHandle(null);
+        setTimeout(() => {
+          wasInteractingRef.current = false;
+        }, 120);
+      }
     };
 
     window.addEventListener('mousemove', handleWindowMouseMove);
@@ -332,11 +359,13 @@ export const Viewport: React.FC = () => {
     return { widgetType, widgetLabel };
   };
 
-  const handleNodeDragOver = (e: React.DragEvent, nodeId: string) => {
+  const handleNodeDragOver = (e: React.DragEvent, node: LayoutNode) => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
-    if (dropTargetId !== nodeId) setDropTargetId(nodeId);
+    if (isContainerNodeType(node.type) && dropTargetId !== node.id) {
+      setDropTargetId(node.id);
+    }
   };
 
   const handleNodeDragLeave = (e: React.DragEvent, nodeId: string) => {
@@ -377,7 +406,7 @@ export const Viewport: React.FC = () => {
       id: `node-dom-${node.id}`,
       onClick: handleClick,
       onContextMenu: (e: React.MouseEvent) => handleNodeContextMenu(e, node),
-      onDragOver: (e: React.DragEvent) => handleNodeDragOver(e, node.id),
+      onDragOver: (e: React.DragEvent) => handleNodeDragOver(e, node),
       onDragLeave: (e: React.DragEvent) => handleNodeDragLeave(e, node.id),
       onDrop: (e: React.DragEvent) => handleNodeDrop(e, node.id),
       style: cssStyle,

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { ComputedMetrics, LayoutNode, LayoutNodeStyle, LayoutNodeType } from '../types/layout';
+import { ComputedMetrics, LayoutNode, LayoutNodeStyle, LayoutNodeType, isContainerNodeType } from '../types/layout';
 import { LAYOUT_PRESETS } from '../core/presets';
 import { createWidgetPreset } from '../core/defaultStyles';
 
@@ -19,7 +19,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
   { name: 'Small Box (500×400)', width: 500, height: 400 },
 ];
 
-interface EditorState {
+export interface EditorState {
   rootNode: LayoutNode;
   selectedNodeId: string | null;
   hoveredNodeId: string | null;
@@ -31,6 +31,9 @@ interface EditorState {
   showOverlays: boolean;
   showRulers: boolean;
   showMetrics: boolean;
+  showLeftPanel: boolean;
+  showBottomPanel: boolean;
+  showRightPanel: boolean;
   activeTab: 'details' | 'metrics' | 'export';
   metricsMap: Record<string, ComputedMetrics>;
   history: LayoutNode[];
@@ -58,6 +61,9 @@ let state: EditorState = {
   showOverlays: true,
   showRulers: true,
   showMetrics: true,
+  showLeftPanel: true,
+  showBottomPanel: true,
+  showRightPanel: true,
   activeTab: 'details',
   metricsMap: {},
   history: [JSON.parse(JSON.stringify(LAYOUT_PRESETS[0].rootNode))],
@@ -141,6 +147,17 @@ function removeNode(parent: LayoutNode, id: string): LayoutNode | null {
   for (const child of parent.children) {
     const res = removeNode(child, id);
     if (res) return res;
+  }
+  return null;
+}
+
+function findParentOfNode(root: LayoutNode, targetId: string): { parent: LayoutNode; index: number } | null {
+  for (let i = 0; i < root.children.length; i++) {
+    if (root.children[i].id === targetId) {
+      return { parent: root, index: i };
+    }
+    const found = findParentOfNode(root.children[i], targetId);
+    if (found) return found;
   }
   return null;
 }
@@ -256,7 +273,22 @@ export const editorStore = {
   },
 
   toggleMetrics: () => {
-    state = { ...state, showMetrics: !state.showMetrics };
+    state = { ...state, showMetrics: !state.showMetrics, showBottomPanel: !state.showMetrics };
+    emitChange();
+  },
+
+  toggleLeftPanel: () => {
+    state = { ...state, showLeftPanel: !state.showLeftPanel };
+    emitChange();
+  },
+
+  toggleBottomPanel: () => {
+    state = { ...state, showBottomPanel: !state.showBottomPanel, showMetrics: !state.showBottomPanel };
+    emitChange();
+  },
+
+  toggleRightPanel: () => {
+    state = { ...state, showRightPanel: !state.showRightPanel };
     emitChange();
   },
 
@@ -292,25 +324,31 @@ export const editorStore = {
   addNode: (parentId: string, widgetType: LayoutNodeType, customName?: string, index?: number) => {
     const rootCopy = clone(state.rootNode);
     const newNode = createWidgetPreset(widgetType, customName);
-    let added = false;
 
     // Resolve target: check if parentId exists in tree; fallback to root if not
-    const targetId = (parentId && findNodeById(rootCopy, parentId)) ? parentId : rootCopy.id;
+    let targetNode = (parentId && findNodeById(rootCopy, parentId)) ? findNodeById(rootCopy, parentId)! : rootCopy;
+    let targetIndex = index;
 
-    updateNodeInTree(rootCopy, targetId, (parent) => {
-      if (typeof index === 'number' && index >= 0 && index <= parent.children.length) {
-        parent.children.splice(index, 0, newNode);
+    // If targetNode is NOT a container, insert as sibling into target's parent container
+    if (!isContainerNodeType(targetNode.type) && targetNode.id !== rootCopy.id) {
+      const parentInfo = findParentOfNode(rootCopy, targetNode.id);
+      if (parentInfo) {
+        targetNode = parentInfo.parent;
+        targetIndex = typeof index === 'number' ? index : parentInfo.index + 1;
       } else {
-        parent.children.push(newNode);
+        targetNode = rootCopy;
       }
-      parent.isExpanded = true;
-      added = true;
-    });
-
-    if (added) {
-      state.selectedNodeId = newNode.id;
-      pushHistory(rootCopy);
     }
+
+    if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex <= targetNode.children.length) {
+      targetNode.children.splice(targetIndex, 0, newNode);
+    } else {
+      targetNode.children.push(newNode);
+    }
+    targetNode.isExpanded = true;
+
+    state.selectedNodeId = newNode.id;
+    pushHistory(rootCopy);
   },
 
   reparentNode: (draggedId: string, targetParentId: string, targetIndex?: number) => {
@@ -322,27 +360,32 @@ export const editorStore = {
     if (!draggedNode) return;
     if (findNodeById(draggedNode, targetParentId)) return;
 
-    // Resolve target: if targetParentId is invalid, reparent to root
-    const resolvedTargetId = findNodeById(rootCopy, targetParentId) ? targetParentId : rootCopy.id;
+    let targetNode = findNodeById(rootCopy, targetParentId) || rootCopy;
+    let actualIndex = targetIndex;
+
+    // If targetNode is NOT a container, insert as sibling in its parent container
+    if (!isContainerNodeType(targetNode.type) && targetNode.id !== rootCopy.id) {
+      const parentInfo = findParentOfNode(rootCopy, targetNode.id);
+      if (parentInfo) {
+        targetNode = parentInfo.parent;
+        actualIndex = typeof targetIndex === 'number' ? targetIndex : parentInfo.index + 1;
+      } else {
+        targetNode = rootCopy;
+      }
+    }
 
     const removed = removeNode(rootCopy, draggedId);
     if (!removed) return;
 
-    let inserted = false;
-    updateNodeInTree(rootCopy, resolvedTargetId, (parent) => {
-      if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex <= parent.children.length) {
-        parent.children.splice(targetIndex, 0, removed);
-      } else {
-        parent.children.push(removed);
-      }
-      parent.isExpanded = true;
-      inserted = true;
-    });
-
-    if (inserted) {
-      state.selectedNodeId = removed.id;
-      pushHistory(rootCopy);
+    if (typeof actualIndex === 'number' && actualIndex >= 0 && actualIndex <= targetNode.children.length) {
+      targetNode.children.splice(actualIndex, 0, removed);
+    } else {
+      targetNode.children.push(removed);
     }
+    targetNode.isExpanded = true;
+
+    state.selectedNodeId = removed.id;
+    pushHistory(rootCopy);
   },
 
   deleteNode: (id: string) => {
