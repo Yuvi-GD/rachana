@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   ChevronRight, 
   ChevronDown, 
@@ -68,11 +68,18 @@ interface TreeNodeItemProps {
   node: LayoutNode;
   depth: number;
   onContextMenu: (e: React.MouseEvent, node: LayoutNode) => void;
+  activeDrop: { id: string; pos: 'inside' | 'before' | 'after' } | null;
+  setActiveDrop: (target: { id: string; pos: 'inside' | 'before' | 'after' } | null) => void;
 }
 
-const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu }) => {
+const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ 
+  node, 
+  depth, 
+  onContextMenu, 
+  activeDrop, 
+  setActiveDrop 
+}) => {
   const { rootNode, selectedNodeId, hoveredNodeId, actions } = useEditorStore();
-  const [dropPosition, setDropPosition] = useState<'inside' | 'before' | 'after' | null>(null);
 
   const isSelected = selectedNodeId === node.id;
   const isHovered = hoveredNodeId === node.id;
@@ -80,6 +87,9 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
   const isExpanded = node.isExpanded !== false;
   const isRoot = node.id === rootNode.id;
   const isContainer = isContainerNodeType(node.type);
+
+  const isDropTarget = activeDrop?.id === node.id;
+  const dropPosition = isDropTarget ? activeDrop.pos : null;
 
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -111,7 +121,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
 
   const handleDragEnd = () => {
     globalDraggedId = null;
-    setDropPosition(null);
+    setActiveDrop(null);
   };
 
   const handleDragOver = (e: React.DragEvent) => {
@@ -126,21 +136,22 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
     const relY = e.clientY - rect.top;
     const height = rect.height;
 
+    let pos: 'inside' | 'before' | 'after';
     if (isContainer) {
       if (relY < height * 0.25 && !isRoot) {
-        setDropPosition('before');
+        pos = 'before';
       } else if (relY > height * 0.75 && !isRoot) {
-        setDropPosition('after');
+        pos = 'after';
       } else {
-        setDropPosition('inside');
+        pos = 'inside';
       }
     } else {
       // Leaf elements cannot receive children: drop before or after
-      if (relY < height * 0.5) {
-        setDropPosition('before');
-      } else {
-        setDropPosition('after');
-      }
+      pos = relY < height * 0.5 ? 'before' : 'after';
+    }
+
+    if (activeDrop?.id !== node.id || activeDrop?.pos !== pos) {
+      setActiveDrop({ id: node.id, pos });
     }
   };
 
@@ -153,15 +164,17 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
       e.clientY <= rect.top ||
       e.clientY >= rect.bottom
     ) {
-      setDropPosition(null);
+      if (activeDrop?.id === node.id) {
+        setActiveDrop(null);
+      }
     }
   };
 
   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    const pos = dropPosition;
-    setDropPosition(null);
+    const pos = activeDrop?.id === node.id ? activeDrop.pos : null;
+    setActiveDrop(null);
 
     const draggedNodeId = globalDraggedId || e.dataTransfer.getData('draggedNodeId') || null;
     globalDraggedId = null;
@@ -319,13 +332,15 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
       </div>
 
       {hasChildren && isExpanded && (
-        <div>
+        <div className="space-y-0.5">
           {node.children.map((child) => (
             <TreeNodeItem 
               key={child.id} 
               node={child} 
               depth={depth + 1} 
               onContextMenu={onContextMenu}
+              activeDrop={activeDrop}
+              setActiveDrop={setActiveDrop}
             />
           ))}
         </div>
@@ -337,6 +352,22 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
 export const Hierarchy: React.FC = () => {
   const { rootNode, actions } = useEditorStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: LayoutNode } | null>(null);
+  const [activeDrop, setActiveDrop] = useState<{ id: string; pos: 'inside' | 'before' | 'after' } | null>(null);
+
+  // Global dragend/drop cleaner to ensure insertion lines never get stuck
+  useEffect(() => {
+    const handleGlobalDragEnd = () => {
+      setActiveDrop(null);
+      (window as any).__draggedPaletteWidget = null;
+      globalDraggedId = null;
+    };
+    window.addEventListener('dragend', handleGlobalDragEnd);
+    window.addEventListener('drop', handleGlobalDragEnd);
+    return () => {
+      window.removeEventListener('dragend', handleGlobalDragEnd);
+      window.removeEventListener('drop', handleGlobalDragEnd);
+    };
+  }, []);
 
   const handleRowContextMenu = (e: React.MouseEvent, node: LayoutNode) => {
     e.preventDefault();
@@ -353,6 +384,7 @@ export const Hierarchy: React.FC = () => {
 
   const handleContainerDrop = (e: React.DragEvent) => {
     e.preventDefault();
+    setActiveDrop(null);
     let draggedNodeId = e.dataTransfer.getData('draggedNodeId') || null;
 
     const rawData = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
@@ -395,7 +427,13 @@ export const Hierarchy: React.FC = () => {
         onContextMenu={(e) => handleRowContextMenu(e, rootNode)}
         className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar"
       >
-        <TreeNodeItem node={rootNode} depth={0} onContextMenu={handleRowContextMenu} />
+        <TreeNodeItem 
+          node={rootNode} 
+          depth={0} 
+          onContextMenu={handleRowContextMenu}
+          activeDrop={activeDrop}
+          setActiveDrop={setActiveDrop}
+        />
       </div>
 
       {/* Context Menu */}

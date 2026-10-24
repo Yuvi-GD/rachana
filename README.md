@@ -2,11 +2,23 @@
 
 Rachana is a high-precision visual layout testbed, geometry inspector, and test case generator designed for authors of custom layout engines (such as Flexbox, CSS Grid, Yoga, Taffy, and game engine UI frameworks like Unreal Engine UMG). It bridges high-level declarative layout schemas with ground-truth browser layout computation, providing sub-pixel verification of layout algorithms.
 
+Repository: [https://github.com/Yuvi-GD/rachana.git](https://github.com/Yuvi-GD/rachana.git)
+
 ---
 
 ## Technical Overview
 
 Developing a custom layout engine requires reference vectors against which algorithmic output can be tested. Rachana provides an interactive visual environment to author complex UI trees, visually inspect computed box model layers, and export standardized test vectors containing the exact bounding rects, content offsets, and intrinsic dimensions computed by the layout engine.
+
+---
+
+## Tether UI Library Compatibility
+
+Rachana is built in tandem with [Tether](https://github.com/Yuvi-GD/Tether), an open-source, lightweight declarative UI layout library with native YAML-based layout tree support. Rachana serves as the primary visual editor, inspector, and ground-truth validation suite for Tether compositions:
+
+- First-Class YAML Support: Native serialization and parsing of Tether layout specifications including `flow` (ROW, COLUMN, NONE), `fill_ratio`, `content_align` (START, CENTER, END, SPACE_BETWEEN), `anchor_min`, and `anchor_max`.
+- Bidirectional AST Sync: Real-time roundtrip between Tether YAML files and interactive canvas nodes without layout degradation.
+- Engine Test Vectors: Generates automated golden test snapshots combining Tether markup with browser-computed bounding rects for layout regression testing.
 
 ---
 
@@ -54,7 +66,7 @@ Developing a custom layout engine requires reference vectors against which algor
 
 ```bash
 # Clone the repository
-git clone https://github.com/your-username/rachana.git
+git clone https://github.com/Yuvi-GD/rachana.git
 cd rachana
 
 # Install dependencies
@@ -78,8 +90,18 @@ npm run preview
 
 ---
 
-## Architecture and Design Principles
+## Contributing
 
-- Strict Type Safety: Written entirely in TypeScript with strong typings for layout nodes, computed metrics, and CSS property subsets.
-- Modular Component Hierarchy: Separation between state management (central store with history stack), AST serialization routines, and rendering subsystems.
-- Isolated Measurement: Layout nodes render in a dedicated viewport shell monitored by ResizeObserver and requestAnimationFrame measurement passes to prevent UI interference.
+Contributions to Rachana are welcome:
+
+1. Fork the repository at [https://github.com/Yuvi-GD/rachana.git](https://github.com/Yuvi-GD/rachana.git).
+2. Create a feature branch: `git checkout -b feature/layout-enhancement`.
+3. Verify changes with `npm run build` to confirm zero TypeScript compilation errors.
+4. Commit changes with clear, descriptive commit messages.
+5. Submit a Pull Request describing the improvement, motivation, and verification steps.
+
+---
+
+## License
+
+This project is open-source software licensed under the [MIT License](LICENSE).
