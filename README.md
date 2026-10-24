@@ -2,8 +2,6 @@
 
 Rachana is a high-precision visual layout testbed, geometry inspector, and test case generator designed for authors of custom layout engines (such as Flexbox, CSS Grid, Yoga, Taffy, and game engine UI frameworks like Unreal Engine UMG). It bridges high-level declarative layout schemas with ground-truth browser layout computation, providing sub-pixel verification of layout algorithms.
 
-Repository: [https://github.com/Yuvi-GD/rachana.git](https://github.com/Yuvi-GD/rachana.git)
-
 ---
 
 ## Technical Overview
@@ -53,6 +51,12 @@ Rachana is built in tandem with [Tether](https://github.com/Yuvi-GD/Tether), an 
 - Resizable docking panes: Unreal Engine Slate-inspired three-column workspace layout with Primary Sidebar, Center Canvas, and Secondary Sidebar.
 - Focus code mode: Full-height code editor toggle that expands the script workspace across the center column while preserving left and right tooling panels.
 - Panel visibility controls: Independent toggles for Primary Sidebar, Bottom Drawer, and Secondary Sidebar.
+
+### 6. Live Preview Simulation (Widget Play Mode)
+- Unreal Engine UMG-style live runtime simulation: Toggle between visual design editing and live interactive preview with the `F5` shortcut or the Toolbar Simulate button.
+- Live widget responsiveness: Buttons trigger active click states and log interaction events; text input fields support native focus and typing with live state tracking; scroll containers handle native mouse wheel scrolling without canvas zoom interference.
+- Distraction-free preview canvas: Automatically hides editing handles, 8-directional gizmos, box model calipers, rulers, and drop indicator lines during simulation.
+- Interaction event stream: Real-time event logger capturing button clicks, input updates, and focus events in a collapsible floating HUD inspector.
 
 ---
 

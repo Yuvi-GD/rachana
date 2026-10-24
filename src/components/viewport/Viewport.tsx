@@ -5,6 +5,7 @@ import { nodeStyleToCss } from '../../core/layoutSerializer';
 import { BoxModelOverlay, ResizeHandleDirection } from './BoxModelOverlay';
 import { InfiniteRuler } from './InfiniteRuler';
 import { ContextMenu } from '../common/ContextMenu';
+import { Square, Activity, Terminal, ChevronDown, ChevronUp, Trash2, X } from 'lucide-react';
 
 export const Viewport: React.FC = () => {
   const {
@@ -21,6 +22,8 @@ export const Viewport: React.FC = () => {
     showRulers,
     metricsMap,
     scriptError,
+    isSimulating,
+    simulationLogs,
     actions,
   } = useEditorStore();
 
@@ -43,6 +46,10 @@ export const Viewport: React.FC = () => {
 
   // Drag & drop drop target (id and position)
   const [dropTarget, setDropTarget] = useState<{ id: string; position: 'before' | 'after' | 'inside' } | null>(null);
+
+  // Simulation mode local input values & event log toggle
+  const [simulationValues, setSimulationValues] = useState<Record<string, string>>({});
+  const [showSimulationLog, setShowSimulationLog] = useState(false);
 
   const parsePx = (val: string): number => {
     const num = parseFloat(val);
@@ -164,6 +171,21 @@ export const Viewport: React.FC = () => {
 
   // Zoom centered on cursor location (Figma / CAD style) with normalized scrolling sensitivity
   const handleWheel = (e: React.WheelEvent) => {
+    // If simulating, allow scrollable elements inside the viewport canvas to scroll naturally
+    if (isSimulating) {
+      let target = e.target as HTMLElement | null;
+      while (target && target !== containerRef.current) {
+        const style = window.getComputedStyle(target);
+        const isScrollable =
+          (style.overflowY === 'auto' || style.overflowY === 'scroll') &&
+          target.scrollHeight > target.clientHeight;
+        if (isScrollable) {
+          return;
+        }
+        target = target.parentElement;
+      }
+    }
+
     e.preventDefault();
     if (!containerRef.current) return;
 
@@ -214,6 +236,7 @@ export const Viewport: React.FC = () => {
 
   // Deselect when clicking empty viewport/canvas background
   const handleContainerClick = (e: React.MouseEvent) => {
+    if (isSimulating) return;
     if (wasInteractingRef.current) {
       wasInteractingRef.current = false;
       return;
@@ -323,6 +346,7 @@ export const Viewport: React.FC = () => {
   ]);
 
   const handleNodeContextMenu = (e: React.MouseEvent, node: LayoutNode) => {
+    if (isSimulating) return;
     e.preventDefault();
     e.stopPropagation();
     actions.selectNode(node.id);
@@ -330,6 +354,7 @@ export const Viewport: React.FC = () => {
   };
 
   const handleContainerContextMenu = (e: React.MouseEvent) => {
+    if (isSimulating) return;
     e.preventDefault();
     actions.selectNode(rootNode.id);
     setContextMenu({ x: e.clientX, y: e.clientY, node: rootNode });
@@ -367,6 +392,7 @@ export const Viewport: React.FC = () => {
   };
 
   const handleNodeDragOver = (e: React.DragEvent, node: LayoutNode) => {
+    if (isSimulating) return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
@@ -408,6 +434,7 @@ export const Viewport: React.FC = () => {
   };
 
   const handleNodeDragLeave = (e: React.DragEvent, nodeId: string) => {
+    if (isSimulating) return;
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
     if (
@@ -423,6 +450,7 @@ export const Viewport: React.FC = () => {
   };
 
   const handleNodeDrop = (e: React.DragEvent, targetNode: LayoutNode) => {
+    if (isSimulating) return;
     e.preventDefault();
     e.stopPropagation();
 
@@ -457,13 +485,113 @@ export const Viewport: React.FC = () => {
   const renderNode = (node: LayoutNode) => {
     if (node.isHidden) return null;
 
+    const cssStyle = nodeStyleToCss(node.style);
+
+    // ==========================================
+    // SIMULATION MODE RENDERING (Live Widget Test)
+    // ==========================================
+    if (isSimulating) {
+      if (node.type === 'button') {
+        return (
+          <button
+            key={node.id}
+            id={`node-dom-${node.id}`}
+            style={cssStyle}
+            onClick={(e) => {
+              e.stopPropagation();
+              actions.addSimulationLog(`Button clicked: "${node.textContent || node.name}"`, 'click');
+            }}
+            className="relative active:scale-[0.98] hover:brightness-110 transition-all cursor-pointer select-none"
+          >
+            {node.children.length > 0 ? node.children.map(renderNode) : (node.textContent || 'Button')}
+          </button>
+        );
+      }
+
+      if (node.type === 'input') {
+        const val = simulationValues[node.id] !== undefined ? simulationValues[node.id] : (node.textContent || '');
+        return (
+          <div key={node.id} className="relative inline-block">
+            <input
+              id={`node-dom-${node.id}`}
+              style={cssStyle}
+              value={val}
+              placeholder={node.placeholder || 'Enter text...'}
+              onChange={(e) => {
+                const newVal = e.target.value;
+                setSimulationValues((prev) => ({ ...prev, [node.id]: newVal }));
+                actions.addSimulationLog(`Input [${node.name}]: "${newVal}"`, 'input');
+              }}
+              onFocus={() => {
+                actions.addSimulationLog(`Input focused: "${node.name}"`, 'focus');
+              }}
+              className="outline-none focus:ring-2 focus:ring-blue-500/60 transition-all cursor-text"
+            />
+          </div>
+        );
+      }
+
+      if (node.type === 'text') {
+        return (
+          <p key={node.id} id={`node-dom-${node.id}`} style={cssStyle} className="m-0 select-text">
+            {node.textContent || ''}
+          </p>
+        );
+      }
+
+      if (node.type === 'heading') {
+        return (
+          <h3 key={node.id} id={`node-dom-${node.id}`} style={cssStyle} className="m-0 font-bold select-text">
+            {node.textContent || 'Heading'}
+          </h3>
+        );
+      }
+
+      if (node.type === 'badge') {
+        return (
+          <span key={node.id} id={`node-dom-${node.id}`} style={cssStyle} className="select-none">
+            {node.textContent || 'Badge'}
+          </span>
+        );
+      }
+
+      if (node.type === 'divider') {
+        return <div key={node.id} id={`node-dom-${node.id}`} style={cssStyle} />;
+      }
+
+      if (node.type === 'image') {
+        return (
+          <div
+            key={node.id}
+            id={`node-dom-${node.id}`}
+            style={cssStyle}
+            className="overflow-hidden flex items-center justify-center"
+          >
+            {node.src ? (
+              <img src={node.src} alt={node.alt || ''} className="w-full h-full object-cover" />
+            ) : (
+              <div className="text-[10px] text-zinc-500 font-mono select-none">Image Box</div>
+            )}
+          </div>
+        );
+      }
+
+      // Default container / flex / grid / card / scroll
+      return (
+        <div key={node.id} id={`node-dom-${node.id}`} style={cssStyle} className="relative">
+          {node.children.map(renderNode)}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // DESIGN MODE RENDERING (With Gizmos & Drop Lines)
+    // ==========================================
     const isHovered = hoveredNodeId === node.id;
     const isTarget = dropTarget?.id === node.id;
     const isInsideDrop = isTarget && dropTarget.position === 'inside';
     const isBeforeDrop = isTarget && dropTarget.position === 'before';
     const isAfterDrop = isTarget && dropTarget.position === 'after';
-
-    const cssStyle = nodeStyleToCss(node.style);
 
     const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
@@ -604,7 +732,7 @@ export const Viewport: React.FC = () => {
       }}
     >
       {/* Infinite 2D Rulers (X-Axis & Y-Axis) */}
-      {showRulers && (
+      {!isSimulating && showRulers && (
         <InfiniteRuler
           panOffset={panOffset}
           zoom={zoom}
@@ -612,6 +740,119 @@ export const Viewport: React.FC = () => {
           height={containerSize.height}
           mousePos={mousePos}
         />
+      )}
+
+      {/* Simulation Mode Floating HUD Bar (Unreal Engine Play/Simulate Style) */}
+      {isSimulating && (
+        <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50 flex flex-col items-center">
+          <div className="bg-[#18181b]/95 backdrop-blur-md border border-emerald-500/40 rounded-full px-4 py-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.6)] flex items-center gap-3 select-none">
+            {/* Status indicator */}
+            <div className="flex items-center gap-2">
+              <span className="relative flex h-2.5 w-2.5">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+              </span>
+              <span className="text-[11px] font-semibold text-emerald-400 uppercase tracking-wider">
+                Simulation Running
+              </span>
+            </div>
+
+            <div className="h-3.5 w-[1px] bg-zinc-700" />
+
+            {/* Canvas Preset Info */}
+            <span className="text-[11px] font-mono text-zinc-400">
+              {screenWidth}×{screenHeight} px
+            </span>
+
+            <div className="h-3.5 w-[1px] bg-zinc-700" />
+
+            {/* Event Log Inspector Button */}
+            <button
+              onClick={() => setShowSimulationLog((prev) => !prev)}
+              className={`flex items-center gap-1.5 text-[11px] px-2.5 py-0.5 rounded-full border transition-colors cursor-pointer ${
+                showSimulationLog
+                  ? 'bg-blue-600/30 border-blue-500 text-blue-200'
+                  : 'bg-[#242427] border-[#38383e] text-zinc-300 hover:bg-[#2b2b30]'
+              }`}
+            >
+              <Terminal className="w-3 h-3 text-cyan-400" />
+              <span>{simulationLogs.length} Events</span>
+              {showSimulationLog ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />}
+            </button>
+
+            <div className="h-3.5 w-[1px] bg-zinc-700" />
+
+            {/* Stop Run Button */}
+            <button
+              onClick={() => actions.setSimulating(false)}
+              className="flex items-center gap-1.5 bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/50 text-rose-300 text-[11px] font-medium px-2.5 py-0.5 rounded-full transition-colors cursor-pointer"
+              title="Stop Simulation (Esc)"
+            >
+              <Square className="w-3 h-3 fill-rose-400 text-rose-400" />
+              <span>Stop (Esc)</span>
+            </button>
+          </div>
+
+          {/* Floating Event Log Drawer / Dropdown */}
+          {showSimulationLog && (
+            <div className="mt-2 w-[420px] max-h-64 bg-[#18181c]/95 backdrop-blur-md border border-[#2e2e38] rounded-lg shadow-2xl flex flex-col overflow-hidden text-xs">
+              <div className="px-3 py-2 bg-[#1f1f26] border-b border-[#2e2e38] flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-emerald-400" />
+                  <span className="font-semibold text-zinc-200 text-[11px]">Widget Interaction Stream</span>
+                  <span className="text-[10px] text-zinc-500 font-mono">({simulationLogs.length})</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  {simulationLogs.length > 0 && (
+                    <button
+                      onClick={actions.clearSimulationLogs}
+                      title="Clear events"
+                      className="text-[10px] text-zinc-400 hover:text-zinc-200 flex items-center gap-1 bg-[#282830] px-1.5 py-0.5 rounded border border-[#383842] cursor-pointer"
+                    >
+                      <Trash2 className="w-2.5 h-2.5" />
+                      <span>Clear</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => setShowSimulationLog(false)}
+                    className="text-zinc-500 hover:text-zinc-300 p-0.5 cursor-pointer"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto p-2 space-y-1 font-mono text-[11px] custom-scrollbar max-h-52">
+                {simulationLogs.length === 0 ? (
+                  <div className="text-zinc-500 text-center py-4 italic font-sans text-xs">
+                    No interaction events yet. Click buttons or type into inputs to test widgets live!
+                  </div>
+                ) : (
+                  simulationLogs.map((log) => (
+                    <div
+                      key={log.id}
+                      className="flex items-start gap-2 bg-[#202028]/60 px-2 py-1 rounded border border-[#2a2a34]"
+                    >
+                      <span className="text-zinc-500 text-[10px] flex-shrink-0 select-none">{log.time}</span>
+                      <span
+                        className={`text-[9px] font-bold uppercase px-1 py-0.2 rounded flex-shrink-0 select-none ${
+                          log.type === 'click'
+                            ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                            : log.type === 'input'
+                            ? 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                            : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                        }`}
+                      >
+                        {log.type}
+                      </span>
+                      <span className="text-zinc-300 truncate flex-1">{log.text}</span>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
 
       {/* GPU-Accelerated Transform Stage */}
@@ -624,24 +865,26 @@ export const Viewport: React.FC = () => {
         className="absolute pointer-events-auto"
       >
         {/* Top Screen Canvas Dimension Badge */}
-        <div className="absolute -top-7 left-0 flex items-center gap-2 text-[10px] font-mono text-zinc-400 select-none pointer-events-none">
-          <span className="font-semibold text-zinc-200 bg-[#222228] px-2 py-0.5 rounded border border-[#33333d]">
-            Root Canvas
-          </span>
-          <span className="text-blue-400 font-bold">
-            {screenWidth} × {screenHeight} px
-          </span>
-          <span className="text-zinc-500 font-normal">
-            [{devicePreset.name}]
-          </span>
-        </div>
+        {!isSimulating && (
+          <div className="absolute -top-7 left-0 flex items-center gap-2 text-[10px] font-mono text-zinc-400 select-none pointer-events-none">
+            <span className="font-semibold text-zinc-200 bg-[#222228] px-2 py-0.5 rounded border border-[#33333d]">
+              Root Canvas
+            </span>
+            <span className="text-blue-400 font-bold">
+              {screenWidth} × {screenHeight} px
+            </span>
+            <span className="text-zinc-500 font-normal">
+              [{devicePreset.name}]
+            </span>
+          </div>
+        )}
 
         {/* The Root Node is its OWN top-level container (No artificial wrapper box!) */}
         <div className="relative overflow-visible">
           {renderNode(rootNode)}
 
           {/* Unified Selection Box & DevTools Calipers Overlay */}
-          {showOverlays && selectedMetrics && canvasRect && (
+          {!isSimulating && showOverlays && selectedMetrics && canvasRect && (
             <BoxModelOverlay
               metrics={selectedMetrics}
               canvasRect={canvasRect}

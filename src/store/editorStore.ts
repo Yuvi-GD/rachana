@@ -48,6 +48,8 @@ export interface EditorState {
   rightPanelWidth: number;
   bottomPanelHeight: number;
   isCodeMaximized: boolean;
+  isSimulating: boolean;
+  simulationLogs: Array<{ id: string; time: string; text: string; type: 'click' | 'input' | 'focus' }>;
 }
 
 // Initial state
@@ -79,6 +81,8 @@ let state: EditorState = {
   rightPanelWidth: 340,
   bottomPanelHeight: 180,
   isCodeMaximized: false,
+  isSimulating: false,
+  simulationLogs: [],
 };
 
 type Listener = () => void;
@@ -310,6 +314,28 @@ export const editorStore = {
 
   setCodeMaximized: (val: boolean) => {
     state = { ...state, isCodeMaximized: val };
+    emitChange();
+  },
+
+  toggleSimulation: () => {
+    state = { ...state, isSimulating: !state.isSimulating };
+    emitChange();
+  },
+
+  setSimulating: (val: boolean) => {
+    state = { ...state, isSimulating: val };
+    emitChange();
+  },
+
+  addSimulationLog: (text: string, type: 'click' | 'input' | 'focus' = 'click') => {
+    const time = new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit', second: '2-digit' });
+    const newLog = { id: `sim-${Date.now()}-${Math.random().toString(36).substr(2, 4)}`, time, text, type };
+    state = { ...state, simulationLogs: [newLog, ...state.simulationLogs.slice(0, 49)] };
+    emitChange();
+  },
+
+  clearSimulationLogs: () => {
+    state = { ...state, simulationLogs: [] };
     emitChange();
   },
 

@@ -20,6 +20,7 @@ export const App: React.FC = () => {
     showBottomPanel,
     showRightPanel,
     isCodeMaximized,
+    isSimulating,
     leftPanelWidth, 
     paletteHeight, 
     rightPanelWidth, 
@@ -37,8 +38,13 @@ export const App: React.FC = () => {
         return;
       }
 
+      // Toggle Simulation: F5
+      if (e.key === 'F5') {
+        e.preventDefault();
+        actions.toggleSimulation();
+      }
       // Undo: Ctrl+Z
-      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
+      else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !e.shiftKey) {
         e.preventDefault();
         actions.undo();
       }
@@ -60,15 +66,19 @@ export const App: React.FC = () => {
         e.preventDefault();
         if (selectedNodeId) actions.deleteNode(selectedNodeId);
       }
-      // Escape: Deselect
+      // Escape: Stop simulation if running, or deselect
       else if (e.key === 'Escape') {
-        actions.selectNode(null);
+        if (isSimulating) {
+          actions.setSimulating(false);
+        } else {
+          actions.selectNode(null);
+        }
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedNodeId, actions]);
+  }, [selectedNodeId, isSimulating, actions]);
 
   return (
     <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#121214] text-zinc-300">

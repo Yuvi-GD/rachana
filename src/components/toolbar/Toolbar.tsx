@@ -11,7 +11,9 @@ import {
   Flame,
   PanelLeft,
   PanelBottom,
-  PanelRight
+  PanelRight,
+  Play,
+  Square
 } from 'lucide-react';
 import { useEditorStore, DEVICE_PRESETS } from '../../store/editorStore';
 import { LAYOUT_PRESETS } from '../../core/presets';
@@ -31,6 +33,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
     showLeftPanel,
     showBottomPanel,
     showRightPanel,
+    isSimulating,
     historyIndex,
     history,
     maxHistorySteps,
@@ -167,8 +170,33 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         </div>
       </div>
 
-      {/* Right: Overlays & Standalone Full-size Panel Toggles */}
+      {/* Right: Overlays, Simulation & Standalone Panel Toggles */}
       <div className="flex items-center gap-1.5 flex-shrink-0">
+        {/* Preview Simulation / Play Mode Toggle */}
+        <button
+          onClick={actions.toggleSimulation}
+          title={isSimulating ? "Stop Preview Simulation (Esc or F5)" : "Run Preview Simulation & Test Widget (F5)"}
+          className={`h-7 px-2.5 flex items-center gap-1.5 rounded border text-[11px] font-semibold transition-all ${
+            isSimulating
+              ? 'bg-rose-600/30 border-rose-500 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
+              : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/60 text-emerald-300 shadow-sm'
+          }`}
+        >
+          {isSimulating ? (
+            <>
+              <Square className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
+              <span>Stop Run</span>
+            </>
+          ) : (
+            <>
+              <Play className="w-3.5 h-3.5 fill-emerald-400 text-emerald-400" />
+              <span>Simulate</span>
+            </>
+          )}
+        </button>
+
+        <div className="h-4 w-[1px] bg-[#333338] mx-0.5" />
+
         {/* Box Model Overlay Toggle */}
         <button
           onClick={actions.toggleOverlays}
