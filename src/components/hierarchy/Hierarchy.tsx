@@ -14,10 +14,10 @@ import {
   Minus,
   Image, 
   MoveHorizontal,
-  Trash2,
-  Copy,
   ArrowUp,
   ArrowDown,
+  Eye,
+  EyeOff,
   Layers
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
@@ -89,16 +89,6 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
     actions.selectNode(node.id);
-  };
-
-  const handleDelete = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    actions.deleteNode(node.id);
-  };
-
-  const handleDuplicate = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    actions.duplicateNode(node.id);
   };
 
   const handleMoveUp = (e: React.MouseEvent) => {
@@ -177,6 +167,11 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
     let widgetType = (e.dataTransfer.getData('widgetType') as LayoutNodeType) || null;
     let widgetLabel = e.dataTransfer.getData('widgetLabel');
 
+    if (!widgetType && (window as any).__draggedPaletteWidget) {
+      widgetType = (window as any).__draggedPaletteWidget.type;
+      widgetLabel = (window as any).__draggedPaletteWidget.label;
+    }
+
     if (!widgetType) {
       const rawData = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
       if (rawData) {
@@ -190,8 +185,10 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
       }
     }
 
+    (window as any).__draggedPaletteWidget = null;
+
     if (widgetType) {
-      if (pos === 'before' || pos === 'after') {
+      if ((pos === 'before' || pos === 'after') && !isRoot) {
         actions.addNodeAround(node.id, widgetType, widgetLabel, pos);
       } else {
         actions.addNode(node.id, widgetType, widgetLabel);
@@ -232,7 +229,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
             : isHovered
             ? 'bg-[#2a2a30] text-zinc-100'
             : 'text-zinc-300 hover:bg-[#25252a]'
-        }`}
+        } ${node.isHidden ? 'opacity-50 italic' : ''}`}
       >
         {/* Drop Insertion Indicators */}
         {dropPosition === 'before' && (
@@ -273,49 +270,47 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth, onContextMenu 
           </span>
         </div>
 
-        {/* Right Side: Action buttons visible on hover or selection */}
-        {(isSelected || isHovered) && (
-          <div className="flex items-center gap-0.5 flex-shrink-0">
-            <button
-              onClick={handleMoveUp}
-              title="Move Up"
-              className="p-0.5 hover:text-white text-zinc-400 rounded hover:bg-[#34343d]"
-            >
-              <ArrowUp className="w-3 h-3" />
-            </button>
-            <button
-              onClick={handleMoveDown}
-              title="Move Down"
-              className="p-0.5 hover:text-white text-zinc-400 rounded hover:bg-[#34343d]"
-            >
-              <ArrowDown className="w-3 h-3" />
-            </button>
-            <button
-              onClick={handleDuplicate}
-              title="Duplicate (Ctrl+D)"
-              className="p-0.5 hover:text-white text-zinc-400 rounded hover:bg-[#34343d]"
-            >
-              <Copy className="w-3 h-3" />
-            </button>
-            {isRoot ? (
+        {/* Right Side: Row Action Buttons */}
+        <div className="flex items-center gap-0.5 flex-shrink-0">
+          {/* Reorder Up/Down for non-root elements on hover or selection */}
+          {!isRoot && (isSelected || isHovered) && (
+            <>
               <button
-                onClick={handleDelete}
-                title="Clear Canvas (Remove all widgets)"
-                className="p-0.5 hover:text-amber-400 text-zinc-500 rounded hover:bg-[#34343d]"
+                type="button"
+                onClick={handleMoveUp}
+                title="Move Up"
+                className="p-0.5 hover:text-white text-zinc-400 rounded hover:bg-[#34343d] transition-colors"
               >
-                <Trash2 className="w-3 h-3" />
+                <ArrowUp className="w-3 h-3" />
               </button>
-            ) : (
               <button
-                onClick={handleDelete}
-                title="Delete Widget (Del / Backspace)"
-                className="p-0.5 hover:text-red-400 text-zinc-400 rounded hover:bg-[#34343d]"
+                type="button"
+                onClick={handleMoveDown}
+                title="Move Down"
+                className="p-0.5 hover:text-white text-zinc-400 rounded hover:bg-[#34343d] transition-colors"
               >
-                <Trash2 className="w-3 h-3" />
+                <ArrowDown className="w-3 h-3" />
               </button>
-            )}
-          </div>
-        )}
+            </>
+          )}
+
+          {/* Visibility Eye Icon (Always shown if hidden, or on hover/select) */}
+          {(isSelected || isHovered || node.isHidden) && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                actions.updateNodeProps(node.id, { isHidden: !node.isHidden });
+              }}
+              title={node.isHidden ? "Hidden - Click to Show" : "Visible - Click to Hide"}
+              className={`p-0.5 rounded hover:bg-[#34343d] transition-colors ${
+                node.isHidden ? "text-amber-400 hover:text-amber-300" : "text-zinc-400 hover:text-white"
+              }`}
+            >
+              {node.isHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+            </button>
+          )}
+        </div>
       </div>
 
       {hasChildren && isExpanded && (

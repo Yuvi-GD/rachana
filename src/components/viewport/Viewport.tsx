@@ -20,6 +20,7 @@ export const Viewport: React.FC = () => {
     showOverlays,
     showRulers,
     metricsMap,
+    scriptError,
     actions,
   } = useEditorStore();
 
@@ -40,8 +41,8 @@ export const Viewport: React.FC = () => {
   const [elementResizeHandle, setElementResizeHandle] = useState<ResizeHandleDirection | null>(null);
   const [startElementPos, setStartElementPos] = useState({ x: 0, y: 0, w: 0, h: 0 });
 
-  // Drag & drop drop target
-  const [dropTargetId, setDropTargetId] = useState<string | null>(null);
+  // Drag & drop drop target (id and position)
+  const [dropTarget, setDropTarget] = useState<{ id: string; position: 'before' | 'after' | 'inside' } | null>(null);
 
   const parsePx = (val: string): number => {
     const num = parseFloat(val);
@@ -338,6 +339,12 @@ export const Viewport: React.FC = () => {
     let widgetType: LayoutNodeType | null = null;
     let widgetLabel: string | undefined;
 
+    if ((window as any).__draggedPaletteWidget) {
+      widgetType = (window as any).__draggedPaletteWidget.type;
+      widgetLabel = (window as any).__draggedPaletteWidget.label;
+      return { widgetType, widgetLabel };
+    }
+
     const raw = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
     if (raw) {
       try {
@@ -363,28 +370,86 @@ export const Viewport: React.FC = () => {
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect = 'copy';
-    if (isContainerNodeType(node.type) && dropTargetId !== node.id) {
-      setDropTargetId(node.id);
+
+    const isRoot = node.id === rootNode.id;
+    if (isRoot) {
+      setDropTarget({ id: node.id, position: 'inside' });
+      return;
     }
+
+    const rect = e.currentTarget.getBoundingClientRect();
+    const isContainer = isContainerNodeType(node.type);
+    const relY = e.clientY - rect.top;
+    const relX = e.clientX - rect.left;
+    const isWide = rect.width > rect.height * 1.5;
+
+    let position: 'before' | 'after' | 'inside';
+
+    if (isContainer) {
+      if (isWide) {
+        if (relX < rect.width * 0.25) position = 'before';
+        else if (relX > rect.width * 0.75) position = 'after';
+        else position = 'inside';
+      } else {
+        if (relY < rect.height * 0.25) position = 'before';
+        else if (relY > rect.height * 0.75) position = 'after';
+        else position = 'inside';
+      }
+    } else {
+      // Leaf element cannot receive children; drop before or after
+      if (isWide) {
+        position = relX < rect.width * 0.5 ? 'before' : 'after';
+      } else {
+        position = relY < rect.height * 0.5 ? 'before' : 'after';
+      }
+    }
+
+    setDropTarget({ id: node.id, position });
   };
 
   const handleNodeDragLeave = (e: React.DragEvent, nodeId: string) => {
     e.stopPropagation();
-    if (dropTargetId === nodeId) setDropTargetId(null);
+    const rect = e.currentTarget.getBoundingClientRect();
+    if (
+      e.clientX <= rect.left ||
+      e.clientX >= rect.right ||
+      e.clientY <= rect.top ||
+      e.clientY >= rect.bottom
+    ) {
+      if (dropTarget?.id === nodeId) {
+        setDropTarget(null);
+      }
+    }
   };
 
-  const handleNodeDrop = (e: React.DragEvent, targetNodeId: string) => {
+  const handleNodeDrop = (e: React.DragEvent, targetNode: LayoutNode) => {
     e.preventDefault();
     e.stopPropagation();
-    setDropTargetId(null);
+
+    const currentDrop = dropTarget;
+    setDropTarget(null);
 
     const { widgetType, widgetLabel } = extractDraggedWidget(e);
     const draggedTreeId = e.dataTransfer.getData('draggedNodeId');
+    (window as any).__draggedPaletteWidget = null;
+
+    const pos = currentDrop?.id === targetNode.id ? currentDrop.position : 'inside';
 
     if (widgetType) {
-      actions.addNode(targetNodeId, widgetType, widgetLabel);
-    } else if (draggedTreeId && draggedTreeId !== targetNodeId) {
-      actions.reparentNode(draggedTreeId, targetNodeId);
+      if ((pos === 'before' || pos === 'after') && targetNode.id !== rootNode.id) {
+        actions.addNodeAround(targetNode.id, widgetType, widgetLabel, pos);
+      } else {
+        actions.addNode(targetNode.id, widgetType, widgetLabel);
+      }
+      return;
+    }
+
+    if (draggedTreeId && draggedTreeId !== targetNode.id) {
+      if ((pos === 'before' || pos === 'after') && targetNode.id !== rootNode.id) {
+        actions.reparentNodeAround(draggedTreeId, targetNode.id, pos);
+      } else {
+        actions.reparentNode(draggedTreeId, targetNode.id);
+      }
     }
   };
 
@@ -393,13 +458,28 @@ export const Viewport: React.FC = () => {
     if (node.isHidden) return null;
 
     const isHovered = hoveredNodeId === node.id;
-    const isDropTarget = dropTargetId === node.id;
+    const isTarget = dropTarget?.id === node.id;
+    const isInsideDrop = isTarget && dropTarget.position === 'inside';
+    const isBeforeDrop = isTarget && dropTarget.position === 'before';
+    const isAfterDrop = isTarget && dropTarget.position === 'after';
+
     const cssStyle = nodeStyleToCss(node.style);
 
     const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
       actions.selectNode(node.id);
     };
+
+    const renderDropLines = () => (
+      <>
+        {isBeforeDrop && (
+          <div className="absolute -top-1 left-0 right-0 h-1 bg-emerald-400 rounded-full z-40 pointer-events-none shadow-[0_0_8px_#34d399]" />
+        )}
+        {isAfterDrop && (
+          <div className="absolute -bottom-1 left-0 right-0 h-1 bg-emerald-400 rounded-full z-40 pointer-events-none shadow-[0_0_8px_#34d399]" />
+        )}
+      </>
+    );
 
     // Note: Do NOT add duplicate outline here; BoxModelOverlay renders the unified selection outline!
     const commonProps = {
@@ -408,10 +488,10 @@ export const Viewport: React.FC = () => {
       onContextMenu: (e: React.MouseEvent) => handleNodeContextMenu(e, node),
       onDragOver: (e: React.DragEvent) => handleNodeDragOver(e, node),
       onDragLeave: (e: React.DragEvent) => handleNodeDragLeave(e, node.id),
-      onDrop: (e: React.DragEvent) => handleNodeDrop(e, node.id),
+      onDrop: (e: React.DragEvent) => handleNodeDrop(e, node),
       style: cssStyle,
       className: `relative transition-[box-shadow] duration-75 cursor-pointer ${
-        isDropTarget
+        isInsideDrop
           ? 'ring-2 ring-emerald-400 bg-emerald-500/10'
           : isHovered
           ? 'ring-1 ring-cyan-400/50'
@@ -422,6 +502,7 @@ export const Viewport: React.FC = () => {
     if (node.type === 'button') {
       return (
         <button key={node.id} {...commonProps}>
+          {renderDropLines()}
           {node.textContent || 'Button'}
         </button>
       );
@@ -430,6 +511,7 @@ export const Viewport: React.FC = () => {
     if (node.type === 'text') {
       return (
         <p key={node.id} {...commonProps} className={`${commonProps.className} m-0`}>
+          {renderDropLines()}
           {node.textContent || ''}
         </p>
       );
@@ -438,6 +520,7 @@ export const Viewport: React.FC = () => {
     if (node.type === 'heading') {
       return (
         <h3 key={node.id} {...commonProps} className={`${commonProps.className} m-0 font-bold`}>
+          {renderDropLines()}
           {node.textContent || 'Heading'}
         </h3>
       );
@@ -445,32 +528,40 @@ export const Viewport: React.FC = () => {
 
     if (node.type === 'input') {
       return (
-        <input
-          key={node.id}
-          {...commonProps}
-          readOnly
-          value={node.textContent || ''}
-          placeholder={node.placeholder || 'Enter text...'}
-          className={`${commonProps.className} outline-none cursor-pointer`}
-        />
+        <div key={node.id} className="relative inline-block">
+          {renderDropLines()}
+          <input
+            {...commonProps}
+            readOnly
+            value={node.textContent || ''}
+            placeholder={node.placeholder || 'Enter text...'}
+            className={`${commonProps.className} outline-none cursor-pointer`}
+          />
+        </div>
       );
     }
 
     if (node.type === 'badge') {
       return (
         <span key={node.id} {...commonProps} className={`${commonProps.className} select-none`}>
+          {renderDropLines()}
           {node.textContent || 'Badge'}
         </span>
       );
     }
 
     if (node.type === 'divider') {
-      return <div key={node.id} {...commonProps} />;
+      return (
+        <div key={node.id} {...commonProps}>
+          {renderDropLines()}
+        </div>
+      );
     }
 
     if (node.type === 'image') {
       return (
         <div key={node.id} {...commonProps} className={`${commonProps.className} overflow-hidden flex items-center justify-center`}>
+          {renderDropLines()}
           {node.src ? (
             <img src={node.src} alt={node.alt || ''} className="w-full h-full object-cover pointer-events-none" />
           ) : (
@@ -482,9 +573,10 @@ export const Viewport: React.FC = () => {
 
     return (
       <div key={node.id} {...commonProps}>
-        {isDropTarget && (
+        {renderDropLines()}
+        {isInsideDrop && (
           <div className="absolute top-1 right-1 z-30 bg-emerald-600 text-white text-[9px] px-1.5 py-0.5 rounded font-mono shadow pointer-events-none">
-            + Drop here
+            + Drop inside
           </div>
         )}
         {node.children.map(renderNode)}
@@ -560,6 +652,14 @@ export const Viewport: React.FC = () => {
           )}
         </div>
       </div>
+
+      {/* Non-intrusive Script Syntax Warning in Viewport */}
+      {scriptError && (
+        <div className="absolute top-8 right-4 z-40 bg-amber-950/90 text-amber-300 border border-amber-800/80 rounded px-2.5 py-1.5 shadow-xl text-xs backdrop-blur flex items-center gap-2 max-w-sm pointer-events-none">
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse flex-shrink-0" />
+          <span className="font-mono text-[11px] truncate">Script error: {scriptError} (Canvas sync paused)</span>
+        </div>
+      )}
 
       {/* Right Click Context Menu */}
       {contextMenu && (

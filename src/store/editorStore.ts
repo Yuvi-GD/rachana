@@ -40,6 +40,7 @@ export interface EditorState {
   historyIndex: number;
   maxHistorySteps: number;
   scrollSensitivity: number;
+  scriptError: string | null;
 
   // Panel layout sizes (Unreal Engine Docking)
   leftPanelWidth: number;
@@ -70,6 +71,7 @@ let state: EditorState = {
   historyIndex: 0,
   maxHistorySteps: 64,
   scrollSensitivity: 1.0,
+  scriptError: null,
 
   leftPanelWidth: 260,
   paletteHeight: typeof window !== 'undefined' ? Math.max(260, Math.round((window.innerHeight - 60) * 0.5)) : 360,
@@ -194,6 +196,13 @@ export const editorStore = {
     const clamped = Math.max(0.2, Math.min(scrollSensitivity, 3.0));
     state = { ...state, scrollSensitivity: clamped };
     emitChange();
+  },
+
+  setScriptError: (scriptError: string | null) => {
+    if (state.scriptError !== scriptError) {
+      state = { ...state, scriptError };
+      emitChange();
+    }
   },
 
   setScreenSize: (width: number, height: number) => {

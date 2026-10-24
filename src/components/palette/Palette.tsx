@@ -153,12 +153,17 @@ export const Palette: React.FC = () => {
   };
 
   const handleDragStart = (e: React.DragEvent, item: PaletteItem) => {
+    (window as any).__draggedPaletteWidget = { type: item.type, label: item.label };
     const payload = JSON.stringify({ widgetType: item.type, widgetLabel: item.label });
     e.dataTransfer.setData('text/plain', payload);
     e.dataTransfer.setData('application/json', payload);
     e.dataTransfer.setData('widgetType', item.type);
     e.dataTransfer.setData('widgetLabel', item.label);
     e.dataTransfer.effectAllowed = 'copy';
+  };
+
+  const handleDragEnd = () => {
+    (window as any).__draggedPaletteWidget = null;
   };
 
   const categories = ['Containers', 'Primitives'] as const;
@@ -187,6 +192,7 @@ export const Palette: React.FC = () => {
                   key={item.label}
                   draggable={true}
                   onDragStart={(e) => handleDragStart(e, item)}
+                  onDragEnd={handleDragEnd}
                   onClick={() => handleAddWidget(item)}
                   onMouseEnter={(e) => {
                     const rect = e.currentTarget.getBoundingClientRect();

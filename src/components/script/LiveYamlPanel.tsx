@@ -178,10 +178,11 @@ export const LiveYamlPanel: React.FC = () => {
   const { rootNode, metricsMap, showBottomPanel, showMetrics, actions } = useEditorStore();
   const [format, setFormat] = useState<ScriptFormat>('yaml');
   const [code, setCode] = useState('');
+  const [autoSync, setAutoSync] = useState(true);
   const [isFocused, setIsFocused] = useState(false);
   const [copied, setCopied] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
-  const [statusMessage, setStatusMessage] = useState<string>('Live Synced');
+  const [statusMessage, setStatusMessage] = useState<string>('Synced');
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const preRef = useRef<HTMLPreElement>(null);
@@ -210,7 +211,8 @@ export const LiveYamlPanel: React.FC = () => {
       const generated = generateCodeForFormat(format, rootNode);
       setCode(generated);
       setParseError(null);
-      setStatusMessage('Live Synced');
+      actions.setScriptError(null);
+      setStatusMessage('Synced');
     }
   }, [rootNode, metricsMap, isFocused, format]);
 
@@ -220,7 +222,8 @@ export const LiveYamlPanel: React.FC = () => {
     const generated = generateCodeForFormat(newFormat, rootNode);
     setCode(generated);
     setParseError(null);
-    setStatusMessage('Live Synced');
+    actions.setScriptError(null);
+    setStatusMessage('Synced');
   };
 
   // Parse and sync to canvas
@@ -236,10 +239,13 @@ export const LiveYamlPanel: React.FC = () => {
       }
 
       setParseError(null);
-      setStatusMessage('Canvas Updated');
+      actions.setScriptError(null);
+      setStatusMessage('Synced');
       actions.loadCustomRootNode(parsed);
     } catch (e: any) {
-      setParseError(e.message || `Invalid ${fmt.toUpperCase()} format`);
+      const msg = e.message || `Invalid ${fmt.toUpperCase()} syntax`;
+      setParseError(msg);
+      actions.setScriptError(msg);
       setStatusMessage('Syntax Pending');
     }
   };
@@ -247,11 +253,21 @@ export const LiveYamlPanel: React.FC = () => {
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     const nextCode = e.target.value;
     setCode(nextCode);
-    handleParseAndUpdate(nextCode, format);
+    if (autoSync) {
+      handleParseAndUpdate(nextCode, format);
+    } else {
+      setStatusMessage('Draft Modified');
+    }
   };
 
-  // Tab key indentation support (inserts 2 spaces)
+  // Tab key indentation support (inserts 2 spaces) and Ctrl+S to sync
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') {
+      e.preventDefault();
+      handleParseAndUpdate(code, format);
+      return;
+    }
+
     if (e.key === 'Tab') {
       e.preventDefault();
       const start = e.currentTarget.selectionStart;
@@ -375,10 +391,25 @@ export const LiveYamlPanel: React.FC = () => {
             </button>
           </div>
 
+          {/* Auto-Sync Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setAutoSync(!autoSync)}
+            title={autoSync ? "Auto-sync is ON: Canvas updates automatically on edit" : "Auto-sync is OFF: Click Sync or press Ctrl+S to apply"}
+            className={`flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-semibold border transition-colors ${
+              autoSync
+                ? 'bg-emerald-950/60 text-emerald-300 border-emerald-600/50'
+                : 'bg-[#18181d] text-zinc-400 border-[#2b2b34] hover:text-zinc-200'
+            }`}
+          >
+            <span className={`w-1.5 h-1.5 rounded-full ${autoSync ? 'bg-emerald-400' : 'bg-zinc-500'}`} />
+            <span>Auto-sync</span>
+          </button>
+
           {/* Real-time Status Indicator */}
-          <div className="flex items-center gap-1.5 ml-2 font-mono text-[10px]">
-            <div className={`w-2 h-2 rounded-full ${parseError ? 'bg-amber-500' : 'bg-emerald-400 animate-pulse'}`} />
-            <span className={parseError ? 'text-amber-400 font-semibold' : 'text-emerald-300'}>
+          <div className="flex items-center gap-1.5 font-mono text-[10px]">
+            <div className={`w-2 h-2 rounded-full ${parseError ? 'bg-amber-500' : 'bg-emerald-400'}`} />
+            <span className={parseError ? 'text-amber-400 font-semibold' : 'text-zinc-300'}>
               {statusMessage}
             </span>
           </div>

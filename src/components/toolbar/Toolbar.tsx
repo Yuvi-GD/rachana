@@ -38,36 +38,26 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
   } = useEditorStore();
 
   return (
-    <header className="h-12 bg-[#18181b] border-b border-[#27272a] flex items-center justify-between px-3.5 z-30 select-none text-xs flex-shrink-0 overflow-x-auto custom-scrollbar min-w-0 gap-2">
+    <header className="h-12 bg-[#18181b] border-b border-[#27272a] flex items-center justify-between px-3.5 z-30 select-none text-xs flex-shrink-0 overflow-x-auto custom-scrollbar min-w-0 gap-3">
       {/* Left: Brand & Preset Selector */}
       <div className="flex items-center gap-3 flex-shrink-0">
-        <div className="flex items-center gap-2 font-bold text-white tracking-wide">
-          <div className="w-7 h-7 rounded-md bg-gradient-to-br from-amber-500 via-orange-600 to-indigo-700 flex items-center justify-center text-white shadow-md font-bold text-sm select-none">
-            र
-          </div>
-          <div className="flex items-baseline gap-1.5">
-            <span className="font-bold text-slate-100 tracking-tight text-base">
-              Rachana
-            </span>
-            <span className="text-[10px] text-amber-400/90 font-semibold tracking-widest uppercase font-mono hidden sm:inline">
-              रचना
-            </span>
-          </div>
-        </div>
+        <span className="font-bold text-slate-100 tracking-wide text-sm font-sans">
+          Rachana
+        </span>
 
         <div className="h-4 w-[1px] bg-[#333338]" />
 
         {/* Preset Selector */}
-        <div className="flex items-center gap-1.5">
+        <div className="h-7 flex items-center gap-1.5 bg-[#242427] px-2 rounded border border-[#333338]">
           <Flame className="w-3.5 h-3.5 text-amber-500 flex-shrink-0" />
           <span className="text-[11px] text-zinc-400 font-medium hidden sm:inline">Preset:</span>
           <select
-            className="bg-[#242427] hover:bg-[#2c2c30] text-zinc-200 text-xs rounded border border-[#3f3f46] px-2 py-1 outline-none cursor-pointer font-medium transition-colors max-w-[160px] sm:max-w-[220px] truncate"
+            className="bg-transparent text-zinc-200 text-xs outline-none cursor-pointer font-medium max-w-[160px] sm:max-w-[200px] truncate"
             onChange={(e) => actions.loadPreset(e.target.value)}
             defaultValue={LAYOUT_PRESETS[0].id}
           >
             {LAYOUT_PRESETS.map((preset) => (
-              <option key={preset.id} value={preset.id}>
+              <option key={preset.id} value={preset.id} className="bg-[#242427]">
                 [{preset.category}] {preset.title}
               </option>
             ))}
@@ -78,7 +68,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
       {/* Middle: Canvas Viewport & Zoom controls */}
       <div className="flex items-center gap-2 flex-shrink-0">
         {/* Device Resolution */}
-        <div className="flex items-center gap-1.5 bg-[#242427] px-2 py-1 rounded border border-[#333338]">
+        <div className="h-7 flex items-center gap-1.5 bg-[#242427] px-2 rounded border border-[#333338]">
           <Monitor className="w-3.5 h-3.5 text-zinc-400" />
           <select
             className="bg-transparent text-zinc-200 text-[11px] outline-none cursor-pointer font-mono max-w-[110px] sm:max-w-none"
@@ -97,7 +87,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         </div>
 
         {/* Zoom */}
-        <div className="flex items-center bg-[#242427] rounded border border-[#333338] px-1 py-0.5">
+        <div className="h-7 flex items-center bg-[#242427] rounded border border-[#333338] px-1">
           <button
             onClick={() => actions.setZoom(zoom - 0.1)}
             title="Zoom Out (Ctrl -)"
@@ -129,7 +119,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         </div>
 
         {/* Scroll Sensitivity */}
-        <div className="hidden lg:flex items-center gap-1 bg-[#242427] px-2 py-0.5 rounded border border-[#333338]" title="Mouse Wheel / Trackpad Zoom Sensitivity">
+        <div className="h-7 hidden lg:flex items-center gap-1 bg-[#242427] px-2 rounded border border-[#333338]" title="Mouse Wheel / Trackpad Zoom Sensitivity">
           <span className="text-[10px] text-zinc-500 font-medium">Sens:</span>
           <select
             value={scrollSensitivity || 1.0}
@@ -144,7 +134,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         </div>
 
         {/* Undo / Redo with Steps Capacity Selector */}
-        <div className="flex items-center bg-[#242427] rounded border border-[#333338] px-1 py-0.5 gap-0.5">
+        <div className="h-7 flex items-center bg-[#242427] rounded border border-[#333338] px-1 gap-0.5">
           <button
             onClick={actions.undo}
             disabled={historyIndex <= 0}
@@ -183,7 +173,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         <button
           onClick={actions.toggleOverlays}
           title="Toggle Visual Box-Model Overlays (Content, Padding, Border, Margin)"
-          className={`p-1.5 rounded border text-[11px] transition-colors ${
+          className={`h-7 w-7 flex items-center justify-center rounded border text-[11px] transition-colors ${
             showOverlays
               ? 'bg-blue-600/20 border-blue-500 text-blue-300 shadow-sm'
               : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
@@ -196,7 +186,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
         <button
           onClick={actions.toggleRulers}
           title="Toggle Coordinate Rulers & Grid"
-          className={`p-1.5 rounded border text-[11px] transition-colors ${
+          className={`h-7 w-7 flex items-center justify-center rounded border text-[11px] transition-colors ${
             showRulers
               ? 'bg-blue-600/20 border-blue-500 text-blue-300'
               : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
@@ -205,14 +195,14 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
           <Ruler className="w-3.5 h-3.5" />
         </button>
 
-        <div className="h-4 w-[1px] bg-[#333338] mx-1" />
+        <div className="h-4 w-[1px] bg-[#333338] mx-0.5" />
 
         {/* VS Code Style 3-Panel Layout Toggles */}
-        <div className="flex items-center bg-[#242427] rounded border border-[#333338] p-0.5 gap-0.5">
+        <div className="h-7 flex items-center bg-[#242427] rounded border border-[#333338] p-0.5 gap-0.5">
           <button
             onClick={actions.toggleLeftPanel}
             title={showLeftPanel ? 'Hide Primary Sidebar (Palette & Hierarchy)' : 'Show Primary Sidebar (Palette & Hierarchy)'}
-            className={`p-1 rounded transition-colors ${
+            className={`h-5.5 w-5.5 flex items-center justify-center rounded transition-colors ${
               showLeftPanel
                 ? 'bg-blue-600/30 text-blue-300'
                 : 'text-zinc-500 hover:text-zinc-300'
@@ -223,7 +213,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
           <button
             onClick={actions.toggleBottomPanel}
             title={showBottomPanel ? 'Hide Bottom Panel (Script Editor)' : 'Show Bottom Panel (Script Editor)'}
-            className={`p-1 rounded transition-colors ${
+            className={`h-5.5 w-5.5 flex items-center justify-center rounded transition-colors ${
               showBottomPanel
                 ? 'bg-blue-600/30 text-blue-300'
                 : 'text-zinc-500 hover:text-zinc-300'
@@ -234,7 +224,7 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
           <button
             onClick={actions.toggleRightPanel}
             title={showRightPanel ? 'Hide Secondary Sidebar (Details Inspector)' : 'Show Secondary Sidebar (Details Inspector)'}
-            className={`p-1 rounded transition-colors ${
+            className={`h-5.5 w-5.5 flex items-center justify-center rounded transition-colors ${
               showRightPanel
                 ? 'bg-blue-600/30 text-blue-300'
                 : 'text-zinc-500 hover:text-zinc-300'
