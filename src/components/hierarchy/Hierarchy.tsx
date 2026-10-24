@@ -242,7 +242,15 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
                 <Eye className="w-3 h-3" />
               )}
             </button>
-            {!isRoot && (
+            {isRoot ? (
+              <button
+                onClick={handleDelete}
+                title="Clear Canvas (Remove all widgets)"
+                className="p-0.5 hover:text-amber-400 text-zinc-500 rounded hover:bg-[#34343d]"
+              >
+                <Trash2 className="w-3 h-3" />
+              </button>
+            ) : (
               <button
                 onClick={handleDelete}
                 title="Delete Widget (Del / Backspace)"

@@ -9,7 +9,6 @@ export const Viewport: React.FC = () => {
   const {
     rootNode,
     selectedNodeId,
-    selectedNode,
     hoveredNodeId,
     zoom,
     scrollSensitivity,
@@ -435,22 +434,6 @@ export const Viewport: React.FC = () => {
           height={containerSize.height}
           mousePos={mousePos}
         />
-      )}
-
-      {/* Top-Right HUD Badge (Clean non-intrusive node inspection) */}
-      {selectedMetrics && selectedNode && (
-        <div className="absolute top-4 right-4 z-30 pointer-events-none flex items-center gap-2 px-2.5 py-1 rounded bg-[#18181c]/90 border border-[#33333d] shadow-lg backdrop-blur-xs text-[11px] font-mono">
-          <span className="text-zinc-300 font-semibold truncate max-w-[120px]">{selectedNode.name}</span>
-          <span className="text-blue-400 font-bold">#{selectedNode.id}</span>
-          <span className="text-zinc-600">|</span>
-          <span className="text-emerald-400 font-bold">
-            {Math.round(selectedMetrics.boundingRect.width)} × {Math.round(selectedMetrics.boundingRect.height)} px
-          </span>
-          <span className="text-zinc-600">|</span>
-          <span className="text-zinc-400 uppercase text-[9px] px-1 py-0.2 rounded bg-[#242429]">
-            {selectedNode.style.display}
-          </span>
-        </div>
       )}
 
       {/* GPU-Accelerated Transform Stage */}

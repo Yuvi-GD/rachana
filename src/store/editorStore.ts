@@ -346,8 +346,15 @@ export const editorStore = {
   },
 
   deleteNode: (id: string) => {
-    if (!id || id === state.rootNode.id) return;
+    if (!id) return;
     const rootCopy = clone(state.rootNode);
+    if (id === rootCopy.id) {
+      // Clear root children (Reset / Clear canvas)
+      rootCopy.children = [];
+      state.selectedNodeId = rootCopy.id;
+      pushHistory(rootCopy);
+      return;
+    }
     if (deleteNodeFromTree(rootCopy, id)) {
       state.selectedNodeId = rootCopy.id;
       pushHistory(rootCopy);

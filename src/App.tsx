@@ -4,7 +4,7 @@ import { Palette } from './components/palette/Palette';
 import { Hierarchy } from './components/hierarchy/Hierarchy';
 import { Viewport } from './components/viewport/Viewport';
 import { DetailsPanel } from './components/details/DetailsPanel';
-import { MetricsPanel } from './components/metrics/MetricsPanel';
+import { LiveYamlPanel } from './components/script/LiveYamlPanel';
 import { ExportTestModal } from './components/modals/ExportTestModal';
 import { ImportModal } from './components/modals/ImportModal';
 import { Splitter } from './components/common/Splitter';
@@ -137,13 +137,13 @@ export const App: React.FC = () => {
             />
           )}
 
-          {/* Bottom Metrics Panel */}
+          {/* Bottom Live YAML Script Panel */}
           {showMetrics && (
             <div
               style={{ height: `${bottomPanelHeight}px` }}
               className="flex-shrink-0 overflow-hidden"
             >
-              <MetricsPanel />
+              <LiveYamlPanel />
             </div>
           )}
         </div>

@@ -5,13 +5,13 @@ import {
   RotateCcw, 
   Layers, 
   Ruler, 
-  BarChart3, 
   Download, 
   Undo2, 
   Redo2, 
   Monitor,
   Flame,
-  UploadCloud
+  UploadCloud,
+  Code2
 } from 'lucide-react';
 import { useEditorStore, DEVICE_PRESETS } from '../../store/editorStore';
 import { LAYOUT_PRESETS } from '../../core/presets';
@@ -40,14 +40,19 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
       {/* Brand & Preset Selector */}
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 font-bold text-white tracking-wide">
-          <div className="w-6 h-6 rounded bg-gradient-to-br from-blue-600 to-indigo-700 flex items-center justify-center text-white shadow-sm font-black text-xs">
-            U
+          <div className="w-6 h-6 rounded bg-gradient-to-br from-amber-500 via-orange-600 to-indigo-700 flex items-center justify-center text-white shadow-sm font-black text-xs">
+            LF
           </div>
-          <span className="hidden md:inline font-semibold text-slate-200">
-            UI Editor
-          </span>
-          <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 rounded bg-blue-950/80 text-blue-400 border border-blue-800/60 font-semibold">
-            v1.0 Engine
+          <div className="flex items-baseline gap-1.5">
+            <span className="hidden md:inline font-bold text-slate-100 tracking-tight text-sm">
+              LayoutForge
+            </span>
+            <span className="text-[10px] text-amber-400 font-semibold tracking-wider uppercase font-mono">
+              Studio
+            </span>
+          </div>
+          <span className="text-[9px] uppercase font-mono px-1.5 py-0.2 rounded bg-blue-950/80 text-blue-400 border border-blue-800/60 font-semibold">
+            v1.0
           </span>
         </div>
 
@@ -202,18 +207,18 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           <Ruler className="w-3.5 h-3.5" />
         </button>
 
-        {/* Metrics Toggle */}
+        {/* Live YAML Script Drawer Toggle */}
         <button
           onClick={actions.toggleMetrics}
-          title="Toggle Layout Engine Computed Metrics Drawer"
-          className={`flex items-center gap-1 px-2 py-1 rounded border text-[11px] transition-colors ${
+          title="Toggle Live YAML Script Drawer"
+          className={`flex items-center gap-1.5 px-2.5 py-1 rounded border text-[11px] font-medium transition-colors ${
             showMetrics
-              ? 'bg-emerald-600/20 border-emerald-500 text-emerald-300'
+              ? 'bg-amber-600/20 border-amber-500 text-amber-300 shadow-sm'
               : 'bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-200'
           }`}
         >
-          <BarChart3 className="w-3.5 h-3.5" />
-          <span>Metrics</span>
+          <Code2 className="w-3.5 h-3.5 text-amber-400" />
+          <span>Live YAML</span>
         </button>
 
         {/* Import Layout Modal */}
