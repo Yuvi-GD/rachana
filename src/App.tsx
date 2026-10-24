@@ -49,8 +49,8 @@ export const App: React.FC = () => {
         e.preventDefault();
         if (selectedNodeId) actions.duplicateNode(selectedNodeId);
       }
-      // Delete: Delete key
-      else if (e.key === 'Delete') {
+      // Delete: Delete or Backspace key
+      else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         if (selectedNodeId) actions.deleteNode(selectedNodeId);
       }
@@ -96,7 +96,7 @@ export const App: React.FC = () => {
             onUpdateSize={actions.setPaletteHeight}
             min={36}
             max={650}
-            onDoubleClick={() => actions.setPaletteHeight(180)}
+            onDoubleClick={() => actions.setPaletteHeight(typeof window !== 'undefined' ? Math.max(260, Math.round((window.innerHeight - 60) * 0.5)) : 360)}
           />
 
           {/* Bottom: Hierarchy Tree */}

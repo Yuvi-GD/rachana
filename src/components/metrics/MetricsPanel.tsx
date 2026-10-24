@@ -17,40 +17,18 @@ export const MetricsPanel: React.FC = () => {
   const activeId = selectedNodeId || rootNode.id;
   const currentMetric = metricsMap[activeId] || (Object.keys(metricsMap).length > 0 ? Object.values(metricsMap)[0] : null);
 
-  // Collect all nodes in tree for quick inspection pill list
-  const nodePills: { id: string; name: string }[] = [];
-  const collectNodes = (n: typeof rootNode) => {
-    nodePills.push({ id: n.id, name: n.name });
-    n.children.forEach(collectNodes);
-  };
-  collectNodes(rootNode);
-
   return (
     <div className="h-full bg-[#161619] border-t border-[#27272e] flex flex-col select-none text-xs overflow-hidden">
       {/* Title Bar */}
       <div className="h-7 px-3 bg-[#131316] border-b border-[#242429] flex items-center justify-between text-zinc-300 flex-shrink-0">
-        <div className="flex items-center gap-2 overflow-x-auto custom-scrollbar mr-2">
+        <div className="flex items-center gap-2 mr-2 min-w-0">
           <Terminal className="w-3.5 h-3.5 text-emerald-400 flex-shrink-0" />
           <span className="font-semibold uppercase tracking-wider text-[11px] text-zinc-200 flex-shrink-0">
             Layout Engine Computed Geometry
           </span>
-
-          {/* Quick Node Selector Pills */}
-          <div className="flex items-center gap-1 ml-2">
-            {nodePills.map((pill) => (
-              <button
-                key={pill.id}
-                onClick={() => actions.selectNode(pill.id)}
-                className={`px-1.5 py-0.2 rounded text-[10px] font-mono whitespace-nowrap border transition-colors ${
-                  activeId === pill.id
-                    ? 'bg-blue-600/40 border-blue-500 text-blue-300 font-bold'
-                    : 'bg-[#1f1f24] border-[#2e2e36] text-zinc-400 hover:text-white'
-                }`}
-              >
-                #{pill.id}
-              </button>
-            ))}
-          </div>
+          <span className="text-zinc-500 text-[10px] truncate">
+            Target: <span className="font-mono text-blue-400 font-semibold">#{activeId}</span>
+          </span>
         </div>
 
         <button

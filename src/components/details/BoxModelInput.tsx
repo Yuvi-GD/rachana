@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { SpacingSides } from '../../types/layout';
 import { Link2, Unlink2, Eye, Edit3, Move } from 'lucide-react';
+import { UnitInput } from '../common/UnitInput';
 
 interface BoxModelInputProps {
   label: string;
@@ -40,8 +41,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
 
   const cleanVal = (val: string) => (val || '0px').replace(/px$/, '');
 
-  const handleMarginChange = (side: keyof SpacingSides, rawVal: string) => {
-    const formatted = rawVal.trim() === '' ? '0px' : rawVal.endsWith('px') || rawVal.endsWith('%') || rawVal === 'auto' ? rawVal : `${rawVal}px`;
+  const handleMarginChange = (side: keyof SpacingSides, formatted: string) => {
     if (marginLinked) {
       onMarginChange({ top: formatted, right: formatted, bottom: formatted, left: formatted });
     } else {
@@ -49,8 +49,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
     }
   };
 
-  const handlePaddingChange = (side: keyof SpacingSides, rawVal: string) => {
-    const formatted = rawVal.trim() === '' ? '0px' : rawVal.endsWith('px') || rawVal.endsWith('%') || rawVal === 'auto' ? rawVal : `${rawVal}px`;
+  const handlePaddingChange = (side: keyof SpacingSides, formatted: string) => {
     if (paddingLinked) {
       onPaddingChange({ top: formatted, right: formatted, bottom: formatted, left: formatted });
     } else {
@@ -58,8 +57,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
     }
   };
 
-  const handleBorderChange = (side: keyof SpacingSides, rawVal: string) => {
-    const formatted = rawVal.trim() === '' ? '0px' : rawVal.endsWith('px') || rawVal.endsWith('%') || rawVal === 'auto' ? rawVal : `${rawVal}px`;
+  const handleBorderChange = (side: keyof SpacingSides, formatted: string) => {
     if (borderLinked) {
       onBorderChange({ top: formatted, right: formatted, bottom: formatted, left: formatted });
     } else {
@@ -67,9 +65,8 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
     }
   };
 
-  const handleGapChange = (type: 'column' | 'row', rawVal: string) => {
+  const handleGapChange = (type: 'column' | 'row', formatted: string) => {
     if (!onGapChange) return;
-    const formatted = rawVal.trim() === '' ? '0px' : rawVal.endsWith('px') || rawVal.endsWith('%') ? rawVal : `${rawVal}px`;
     if (gapLinked) {
       onGapChange({ columnGap: formatted, rowGap: formatted, gap: formatted });
     } else {
@@ -90,6 +87,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
       <div className="flex items-center justify-between border-b border-[#2d2d35] pb-1.5">
         <div className="flex items-center gap-1 bg-[#1a1a1e] p-0.5 rounded border border-[#2e2e38]">
           <button
+            type="button"
             onClick={() => setActiveTab('edit')}
             className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
               activeTab === 'edit'
@@ -102,6 +100,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
           </button>
 
           <button
+            type="button"
             onClick={() => setActiveTab('inspect')}
             className={`flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-medium transition-colors ${
               activeTab === 'inspect'
@@ -124,7 +123,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
         /* EDIT CONTROLS (Gap, Margin, Padding, Border)              */
         /* ======================================================== */
         <div className="space-y-3">
-          {/* Gap Editor (First-Class Spacing in Modern & Tether UI) */}
+          {/* Gap Editor (Unified Single Source for Gap Spacing) */}
           {onGapChange && (
             <div className="bg-[#1a1a1e] p-2 rounded border border-[#3b3226] space-y-1.5">
               <div className="flex items-center justify-between">
@@ -136,12 +135,14 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                 </div>
                 <div className="flex items-center gap-1">
                   <button
+                    type="button"
                     onClick={() => onGapChange({ columnGap: '0px', rowGap: '0px', gap: '0px' })}
                     className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
                   >
                     0px
                   </button>
                   <button
+                    type="button"
                     onClick={() => setGapLinked(!gapLinked)}
                     className={`p-1 rounded text-[10px] ${
                       gapLinked ? 'text-amber-400 bg-amber-950/40' : 'text-zinc-500 hover:text-zinc-300'
@@ -153,54 +154,46 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                 </div>
               </div>
 
-              {/* Quick Tether UI presets */}
-              <div className="flex items-center gap-1 overflow-x-auto pb-0.5 custom-scrollbar">
-                {[
-                  { label: '[0, 8]', x: '0px', y: '8px' },
-                  { label: '[0, 15]', x: '0px', y: '15px' },
-                  { label: '[12, 0]', x: '12px', y: '0px' },
-                  { label: '[15, 0]', x: '15px', y: '0px' },
-                  { label: '[0, 30]', x: '0px', y: '30px' },
-                  { label: '8px', x: '8px', y: '8px' },
-                  { label: '12px', x: '12px', y: '12px' },
-                  { label: '16px', x: '16px', y: '16px' },
-                ].map((p) => (
-                  <button
-                    key={p.label}
-                    onClick={() => onGapChange({ columnGap: p.x, rowGap: p.y, gap: p.x === p.y ? p.x : `${p.y} ${p.x}` })}
-                    className="px-1.5 py-0.5 rounded bg-[#25252e] hover:bg-[#32323c] text-[9px] text-amber-300 font-mono shrink-0 border border-[#3b352b]"
-                  >
-                    {p.label}
-                  </button>
-                ))}
-              </div>
-
-              <div className="grid grid-cols-2 gap-2 font-mono text-[11px] pt-0.5">
+              {gapLinked ? (
                 <div>
-                  <label className="text-[9px] text-zinc-400 block text-center mb-0.5">
-                    Gap X (Column)
+                  <label className="text-[9px] text-zinc-400 block mb-0.5">
+                    Gap (X & Y Linked)
                   </label>
-                  <input
-                    type="text"
+                  <UnitInput
                     value={effectiveGapX}
-                    onChange={(e) => handleGapChange('column', e.target.value)}
-                    className="w-full text-center bg-[#23232a] border border-amber-900/50 hover:border-amber-700/60 focus:border-amber-500 rounded px-1 py-0.5 text-amber-300 outline-none text-xs"
-                    placeholder="0px"
+                    onChange={(val) => {
+                      onGapChange({ columnGap: val, rowGap: val, gap: val });
+                    }}
+                    units={['px', '%', 'rem']}
+                    placeholder="0"
                   />
                 </div>
-                <div>
-                  <label className="text-[9px] text-zinc-400 block text-center mb-0.5">
-                    Gap Y (Row)
-                  </label>
-                  <input
-                    type="text"
-                    value={effectiveGapY}
-                    onChange={(e) => handleGapChange('row', e.target.value)}
-                    className="w-full text-center bg-[#23232a] border border-amber-900/50 hover:border-amber-700/60 focus:border-amber-500 rounded px-1 py-0.5 text-amber-300 outline-none text-xs"
-                    placeholder="0px"
-                  />
+              ) : (
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                  <div>
+                    <label className="text-[9px] text-zinc-400 block mb-0.5">
+                      Gap X (Column)
+                    </label>
+                    <UnitInput
+                      value={effectiveGapX}
+                      onChange={(val) => handleGapChange('column', val)}
+                      units={['px', '%', 'rem']}
+                      placeholder="0"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-zinc-400 block mb-0.5">
+                      Gap Y (Row)
+                    </label>
+                    <UnitInput
+                      value={effectiveGapY}
+                      onChange={(val) => handleGapChange('row', val)}
+                      units={['px', '%', 'rem']}
+                      placeholder="0"
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           )}
 
@@ -212,6 +205,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
               </span>
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => onMarginChange({ top: 'auto', right: 'auto', bottom: 'auto', left: 'auto' })}
                   className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
                   title="Set all margins to auto (centering)"
@@ -219,6 +213,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                   Auto
                 </button>
                 <button
+                  type="button"
                   onClick={() => onMarginChange({ top: '0px', right: '0px', bottom: '0px', left: '0px' })}
                   className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
                   title="Reset margins to 0px"
@@ -226,18 +221,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                   0px
                 </button>
                 <button
-                  onClick={() => onMarginChange({ top: '8px', right: '8px', bottom: '8px', left: '8px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  8px
-                </button>
-                <button
-                  onClick={() => onMarginChange({ top: '16px', right: '16px', bottom: '16px', left: '16px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  16px
-                </button>
-                <button
+                  type="button"
                   onClick={() => setMarginLinked(!marginLinked)}
                   className={`p-1 rounded text-[10px] ${
                     marginLinked ? 'text-orange-400 bg-orange-950/40' : 'text-zinc-500 hover:text-zinc-300'
@@ -249,21 +233,35 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-1 font-mono text-[11px]">
-              {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-                <div key={side}>
-                  <label className="text-[9px] text-zinc-500 uppercase block text-center mb-0.5">
-                    {side[0]}
-                  </label>
-                  <input
-                    type="text"
-                    value={margin[side]}
-                    onChange={(e) => handleMarginChange(side, e.target.value)}
-                    className="w-full text-center bg-[#23232a] border border-orange-900/40 hover:border-orange-700/60 focus:border-orange-500 rounded px-1 py-0.5 text-orange-300 outline-none text-xs"
-                  />
-                </div>
-              ))}
-            </div>
+            {marginLinked ? (
+              <div>
+                <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">All Sides</label>
+                <UnitInput
+                  value={margin.top}
+                  onChange={(val) => onMarginChange({ top: val, right: val, bottom: val, left: val })}
+                  units={['px', '%', 'rem']}
+                  allowAuto={true}
+                  placeholder="0"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+                  <div key={side}>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">
+                      {side}
+                    </label>
+                    <UnitInput
+                      value={margin[side]}
+                      onChange={(val) => handleMarginChange(side, val)}
+                      units={['px', '%', 'rem']}
+                      allowAuto={true}
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Padding Editor */}
@@ -274,30 +272,14 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
               </span>
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => onPaddingChange({ top: '0px', right: '0px', bottom: '0px', left: '0px' })}
                   className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
                 >
                   0px
                 </button>
                 <button
-                  onClick={() => onPaddingChange({ top: '8px', right: '8px', bottom: '8px', left: '8px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  8px
-                </button>
-                <button
-                  onClick={() => onPaddingChange({ top: '15px', right: '15px', bottom: '15px', left: '15px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  15px
-                </button>
-                <button
-                  onClick={() => onPaddingChange({ top: '40px', right: '40px', bottom: '40px', left: '40px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  40px
-                </button>
-                <button
+                  type="button"
                   onClick={() => setPaddingLinked(!paddingLinked)}
                   className={`p-1 rounded text-[10px] ${
                     paddingLinked ? 'text-emerald-400 bg-emerald-950/40' : 'text-zinc-500 hover:text-zinc-300'
@@ -309,21 +291,33 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-1 font-mono text-[11px]">
-              {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-                <div key={side}>
-                  <label className="text-[9px] text-zinc-500 uppercase block text-center mb-0.5">
-                    {side[0]}
-                  </label>
-                  <input
-                    type="text"
-                    value={padding[side]}
-                    onChange={(e) => handlePaddingChange(side, e.target.value)}
-                    className="w-full text-center bg-[#23232a] border border-emerald-900/40 hover:border-emerald-700/60 focus:border-emerald-500 rounded px-1 py-0.5 text-emerald-300 outline-none text-xs"
-                  />
-                </div>
-              ))}
-            </div>
+            {paddingLinked ? (
+              <div>
+                <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">All Sides</label>
+                <UnitInput
+                  value={padding.top}
+                  onChange={(val) => onPaddingChange({ top: val, right: val, bottom: val, left: val })}
+                  units={['px', '%', 'rem']}
+                  placeholder="0"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+                  <div key={side}>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">
+                      {side}
+                    </label>
+                    <UnitInput
+                      value={padding[side]}
+                      onChange={(val) => handlePaddingChange(side, val)}
+                      units={['px', '%', 'rem']}
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Border Width Editor */}
@@ -334,30 +328,14 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
               </span>
               <div className="flex items-center gap-1">
                 <button
+                  type="button"
                   onClick={() => onBorderChange({ top: '0px', right: '0px', bottom: '0px', left: '0px' })}
                   className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
                 >
                   0px
                 </button>
                 <button
-                  onClick={() => onBorderChange({ top: '1px', right: '1px', bottom: '1px', left: '1px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  1px
-                </button>
-                <button
-                  onClick={() => onBorderChange({ top: '2px', right: '2px', bottom: '2px', left: '2px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  2px
-                </button>
-                <button
-                  onClick={() => onBorderChange({ top: '5px', right: '5px', bottom: '5px', left: '5px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
-                >
-                  5px
-                </button>
-                <button
+                  type="button"
                   onClick={() => setBorderLinked(!borderLinked)}
                   className={`p-1 rounded text-[10px] ${
                     borderLinked ? 'text-yellow-400 bg-yellow-950/40' : 'text-zinc-500 hover:text-zinc-300'
@@ -369,21 +347,33 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-4 gap-1 font-mono text-[11px]">
-              {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-                <div key={side}>
-                  <label className="text-[9px] text-zinc-500 uppercase block text-center mb-0.5">
-                    {side[0]}
-                  </label>
-                  <input
-                    type="text"
-                    value={borderWidth[side]}
-                    onChange={(e) => handleBorderChange(side, e.target.value)}
-                    className="w-full text-center bg-[#23232a] border border-yellow-900/40 hover:border-yellow-700/60 focus:border-yellow-500 rounded px-1 py-0.5 text-yellow-300 outline-none text-xs"
-                  />
-                </div>
-              ))}
-            </div>
+            {borderLinked ? (
+              <div>
+                <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">All Sides</label>
+                <UnitInput
+                  value={borderWidth.top}
+                  onChange={(val) => onBorderChange({ top: val, right: val, bottom: val, left: val })}
+                  units={['px']}
+                  placeholder="0"
+                />
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-1.5">
+                {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+                  <div key={side}>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">
+                      {side}
+                    </label>
+                    <UnitInput
+                      value={borderWidth[side]}
+                      onChange={(val) => handleBorderChange(side, val)}
+                      units={['px']}
+                      placeholder="0"
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       ) : (

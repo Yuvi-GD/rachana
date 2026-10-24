@@ -91,11 +91,11 @@ const PALETTE_ITEMS: PaletteItem[] = [
 ];
 
 export const Palette: React.FC = () => {
-  const { selectedNodeId, actions } = useEditorStore();
+  const { selectedNodeId, rootNode, actions } = useEditorStore();
   const [hoveredItem, setHoveredItem] = useState<{ item: PaletteItem; top: number } | null>(null);
 
   const handleAddWidget = (item: PaletteItem) => {
-    const targetParentId = selectedNodeId || 'root';
+    const targetParentId = selectedNodeId || rootNode.id;
     actions.addNode(targetParentId, item.type, item.label);
   };
 

@@ -52,13 +52,14 @@ interface TreeNodeItemProps {
 }
 
 const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
-  const { selectedNodeId, hoveredNodeId, actions } = useEditorStore();
+  const { rootNode, selectedNodeId, hoveredNodeId, actions } = useEditorStore();
   const [isDragOver, setIsDragOver] = useState(false);
 
   const isSelected = selectedNodeId === node.id;
   const isHovered = hoveredNodeId === node.id;
   const hasChildren = node.children && node.children.length > 0;
   const isExpanded = node.isExpanded !== false;
+  const isRoot = node.id === rootNode.id;
 
   const handleToggleExpand = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -96,7 +97,11 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
   };
 
   const handleDragStart = (e: React.DragEvent) => {
+    if (isRoot) return;
+    const payload = JSON.stringify({ draggedNodeId: node.id });
     e.dataTransfer.setData('draggedNodeId', node.id);
+    e.dataTransfer.setData('application/json', payload);
+    e.dataTransfer.setData('text/plain', payload);
     e.dataTransfer.effectAllowed = 'move';
   };
 
@@ -119,14 +124,18 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
 
     let widgetType: LayoutNodeType | null = null;
     let widgetLabel: string | undefined;
+    let draggedNodeId = e.dataTransfer.getData('draggedNodeId') || null;
 
-    const rawData = e.dataTransfer.getData('text/plain') || e.dataTransfer.getData('application/json');
+    const rawData = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
     if (rawData) {
       try {
         const parsed = JSON.parse(rawData);
         if (parsed.widgetType) {
           widgetType = parsed.widgetType;
           widgetLabel = parsed.widgetLabel;
+        }
+        if (parsed.draggedNodeId) {
+          draggedNodeId = parsed.draggedNodeId;
         }
       } catch {
         // Not JSON
@@ -135,9 +144,8 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
 
     if (!widgetType) {
       widgetType = (e.dataTransfer.getData('widgetType') as LayoutNodeType) || null;
+      widgetLabel = e.dataTransfer.getData('widgetLabel');
     }
-
-    const draggedNodeId = e.dataTransfer.getData('draggedNodeId');
 
     if (widgetType) {
       actions.addNode(node.id, widgetType, widgetLabel);
@@ -149,7 +157,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
   return (
     <div>
       <div
-        draggable={node.id !== 'root'}
+        draggable={!isRoot}
         onDragStart={handleDragStart}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
@@ -168,7 +176,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
             : 'text-zinc-300 hover:bg-[#25252a]'
         }`}
       >
-        {/* Left Side: Expand button + Icon + Responsive Name + Display Tag */}
+        {/* Left Side: Expand button + Icon + Responsive Name */}
         <div className="flex items-center gap-1.5 min-w-0 flex-1 mr-1">
           {hasChildren ? (
             <button
@@ -185,19 +193,17 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
             <span className="w-3.5 flex-shrink-0" />
           )}
 
-          {/* Icon (always fixed size and visible) */}
-          <div className="flex-shrink-0 w-4 h-4 flex items-center justify-center">
+          {/* Icon with hover tooltip indicating type and display mode */}
+          <div 
+            title={`${node.type} (${node.style.display || 'block'})`}
+            className="flex-shrink-0 w-4 h-4 flex items-center justify-center cursor-help"
+          >
             {getNodeIcon(node.type, node.style)}
           </div>
 
-          {/* Full Name taking all available width */}
+          {/* Full Name taking available width */}
           <span className="flex-1 min-w-0 truncate text-[11px] font-medium text-zinc-200">
             {node.name}
-          </span>
-
-          {/* Display Mode Tag */}
-          <span className="text-[9px] text-zinc-500 font-mono flex-shrink-0 px-1 py-0.2 rounded bg-[#18181b]">
-            {node.style.display}
           </span>
         </div>
 
@@ -236,10 +242,10 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
                 <Eye className="w-3 h-3" />
               )}
             </button>
-            {node.id !== 'root' && (
+            {!isRoot && (
               <button
                 onClick={handleDelete}
-                title="Delete"
+                title="Delete Widget (Del / Backspace)"
                 className="p-0.5 hover:text-red-400 text-zinc-400 rounded hover:bg-[#34343d]"
               >
                 <Trash2 className="w-3 h-3" />
@@ -263,6 +269,38 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({ node, depth }) => {
 export const Hierarchy: React.FC = () => {
   const { rootNode, selectedNodeId, actions } = useEditorStore();
 
+  const handleContainerDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+  };
+
+  const handleContainerDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    let draggedNodeId = e.dataTransfer.getData('draggedNodeId') || null;
+
+    const rawData = e.dataTransfer.getData('application/json') || e.dataTransfer.getData('text/plain');
+    if (rawData) {
+      try {
+        const parsed = JSON.parse(rawData);
+        if (parsed.widgetType) {
+          actions.addNode(rootNode.id, parsed.widgetType, parsed.widgetLabel);
+          return;
+        }
+        if (parsed.draggedNodeId) {
+          draggedNodeId = parsed.draggedNodeId;
+        }
+      } catch {}
+    }
+
+    const widgetType = e.dataTransfer.getData('widgetType') as LayoutNodeType;
+    const widgetLabel = e.dataTransfer.getData('widgetLabel');
+    if (widgetType) {
+      actions.addNode(rootNode.id, widgetType, widgetLabel);
+    } else if (draggedNodeId && draggedNodeId !== rootNode.id) {
+      actions.reparentNode(draggedNodeId, rootNode.id);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-[#1e1e22] text-zinc-300 border-r border-[#27272a] select-none">
       {/* Header */}
@@ -273,8 +311,12 @@ export const Hierarchy: React.FC = () => {
         <span className="text-[10px] text-zinc-500 font-mono">Tree View</span>
       </div>
 
-      {/* Tree Content */}
-      <div className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar">
+      {/* Tree Content with drop-to-root support on empty space */}
+      <div 
+        onDragOver={handleContainerDragOver}
+        onDrop={handleContainerDrop}
+        className="flex-1 overflow-y-auto p-1.5 space-y-0.5 custom-scrollbar"
+      >
         <TreeNodeItem node={rootNode} depth={0} />
       </div>
 

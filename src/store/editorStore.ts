@@ -48,7 +48,7 @@ interface EditorState {
 // Initial state
 let state: EditorState = {
   rootNode: JSON.parse(JSON.stringify(LAYOUT_PRESETS[0].rootNode)),
-  selectedNodeId: 'flex-main-container',
+  selectedNodeId: LAYOUT_PRESETS[0].rootNode.id,
   hoveredNodeId: null,
   zoom: 1,
   panOffset: { x: 50, y: 50 },
@@ -66,7 +66,7 @@ let state: EditorState = {
   scrollSensitivity: 1.0,
 
   leftPanelWidth: 260,
-  paletteHeight: 230,
+  paletteHeight: typeof window !== 'undefined' ? Math.max(260, Math.round((window.innerHeight - 60) * 0.5)) : 360,
   rightPanelWidth: 340,
   bottomPanelHeight: 180,
 };
@@ -294,7 +294,10 @@ export const editorStore = {
     const newNode = createWidgetPreset(widgetType, customName);
     let added = false;
 
-    updateNodeInTree(rootCopy, parentId, (parent) => {
+    // Resolve target: check if parentId exists in tree; fallback to root if not
+    const targetId = (parentId && findNodeById(rootCopy, parentId)) ? parentId : rootCopy.id;
+
+    updateNodeInTree(rootCopy, targetId, (parent) => {
       if (typeof index === 'number' && index >= 0 && index <= parent.children.length) {
         parent.children.splice(index, 0, newNode);
       } else {
@@ -311,14 +314,22 @@ export const editorStore = {
   },
 
   reparentNode: (draggedId: string, targetParentId: string, targetIndex?: number) => {
-    if (draggedId === targetParentId || draggedId === state.rootNode.id) return;
+    if (!draggedId || !targetParentId || draggedId === targetParentId || draggedId === state.rootNode.id) return;
     const rootCopy = clone(state.rootNode);
+
+    // Prevent cycle: cannot reparent a node into its own descendant
+    const draggedNode = findNodeById(rootCopy, draggedId);
+    if (!draggedNode) return;
+    if (findNodeById(draggedNode, targetParentId)) return;
+
+    // Resolve target: if targetParentId is invalid, reparent to root
+    const resolvedTargetId = findNodeById(rootCopy, targetParentId) ? targetParentId : rootCopy.id;
 
     const removed = removeNode(rootCopy, draggedId);
     if (!removed) return;
 
     let inserted = false;
-    updateNodeInTree(rootCopy, targetParentId, (parent) => {
+    updateNodeInTree(rootCopy, resolvedTargetId, (parent) => {
       if (typeof targetIndex === 'number' && targetIndex >= 0 && targetIndex <= parent.children.length) {
         parent.children.splice(targetIndex, 0, removed);
       } else {
@@ -335,7 +346,7 @@ export const editorStore = {
   },
 
   deleteNode: (id: string) => {
-    if (id === state.rootNode.id) return;
+    if (!id || id === state.rootNode.id) return;
     const rootCopy = clone(state.rootNode);
     if (deleteNodeFromTree(rootCopy, id)) {
       state.selectedNodeId = rootCopy.id;

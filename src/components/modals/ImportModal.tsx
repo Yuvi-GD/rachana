@@ -47,7 +47,7 @@ const SAMPLE_YAML = `Panel:
         content_align: CENTER
         children:
           - Text:
-              string: "Welcome to Tether UI Layout Engine!"
+              string: "UI Editor Dialog Window"
               font_size: 24.0
               color: [30, 32, 36, 255]
           - Button:
@@ -415,11 +415,24 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
           {/* Quick Preset Snippets + Use Current Screen */}
           <div className="flex items-center gap-1.5">
             <button
+              onClick={() => {
+                if (format === 'yaml') setCode(SAMPLE_DASHBOARD_YAML);
+                else if (format === 'json') setCode(SAMPLE_JSON);
+                else setCode(SAMPLE_HTML);
+              }}
+              className="flex items-center gap-1.5 px-3 py-1 rounded bg-blue-600/30 hover:bg-blue-600/50 border border-blue-500 text-blue-200 font-semibold text-[11px] transition-all shadow-xs"
+              title="Load a ready-to-test sample preset into the editor"
+            >
+              <Layers className="w-3.5 h-3.5 text-blue-400" />
+              <span>Import Preset</span>
+            </button>
+
+            <button
               onClick={handleLoadCurrentScreen}
-              className="flex items-center gap-1 px-2.5 py-0.5 rounded bg-emerald-950/60 hover:bg-emerald-900/80 border border-emerald-700/60 text-emerald-300 font-semibold text-[11px] transition-colors"
+              className="flex items-center gap-1.5 px-2.5 py-1 rounded bg-[#24242d] hover:bg-[#2d2d38] border border-[#393946] text-zinc-300 hover:text-white font-medium text-[11px] transition-colors"
               title="Copy the current active screen layout into the editor"
             >
-              <Monitor className="w-3 h-3 text-emerald-400" />
+              <Monitor className="w-3.5 h-3.5 text-emerald-400" />
               <span>Use Current Screen</span>
             </button>
 

@@ -58,8 +58,6 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
     height: Math.max(0, relHeight - b.top - b.bottom),
   };
 
-  const roundedW = Math.round(relWidth);
-  const roundedH = Math.round(relHeight);
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none z-20 overflow-visible font-mono">
@@ -143,66 +141,6 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
           className="absolute border border-dotted border-emerald-500/70 bg-transparent"
         />
       )}
-
-      {/* ======================================================== */}
-      {/* Sleek Minimalist Measurement Lines & Compact Badge       */}
-      {/* ======================================================== */}
-      {!isHovered && (
-        <>
-          {/* Top Width Caliper Line */}
-          <div
-            style={{
-              left: `${borderRect.x}px`,
-              top: `${borderRect.y - 14}px`,
-              width: `${borderRect.width}px`,
-            }}
-            className="absolute flex items-center justify-between pointer-events-none"
-          >
-            <div className="h-2 w-[1px] bg-blue-400" />
-            <div className="flex-1 h-[1px] bg-blue-400/80 mx-1 relative flex items-center justify-center">
-              <span className="bg-[#18181b]/95 text-blue-300 text-[9px] font-bold px-1 rounded border border-blue-500/80 shadow leading-none">
-                {roundedW}px
-              </span>
-            </div>
-            <div className="h-2 w-[1px] bg-blue-400" />
-          </div>
-
-          {/* Right Height Caliper Line */}
-          <div
-            style={{
-              left: `${borderRect.x + borderRect.width + 4}px`,
-              top: `${borderRect.y}px`,
-              height: `${borderRect.height}px`,
-            }}
-            className="absolute flex flex-col items-center justify-between pointer-events-none"
-          >
-            <div className="w-2 h-[1px] bg-blue-400" />
-            <div className="flex-1 w-[1px] bg-blue-400/80 my-1 relative flex items-center justify-center">
-              <span className="bg-[#18181b]/95 text-blue-300 text-[9px] font-bold px-1 rounded border border-blue-500/80 shadow leading-none whitespace-nowrap -rotate-90">
-                {roundedH}px
-              </span>
-            </div>
-            <div className="w-2 h-[1px] bg-blue-400" />
-          </div>
-        </>
-      )}
-
-      {/* Target Tag Compact Pill */}
-      <div
-        style={{
-          left: `${borderRect.x}px`,
-          top: `${Math.max(2, borderRect.y - 30)}px`,
-        }}
-        className="absolute flex items-center gap-1.5 px-1.5 py-0.5 rounded bg-[#161619]/95 text-white border border-[#3f3f48] shadow-md text-[9px] whitespace-nowrap font-medium"
-      >
-        <span className="text-zinc-400 font-mono">#{metrics.id}</span>
-        <span className="text-blue-300 font-bold">
-          {roundedW} × {roundedH}
-        </span>
-        <span className="text-zinc-500 text-[8px] uppercase">
-          {metrics.computedStyle.display}
-        </span>
-      </div>
     </div>
   );
 };

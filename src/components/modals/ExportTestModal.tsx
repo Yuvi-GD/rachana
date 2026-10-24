@@ -292,7 +292,7 @@ ${html}
         <div className="p-2.5 border-t border-[#2d2d38] bg-[#161619] text-[11px] text-zinc-400 flex items-center justify-between">
           <span>
             {activeTab === 'yaml'
-              ? 'Tether UI Native Schema (flow: ROW/COLUMN, gap: [x,y], margin, padding, fill_ratio).'
+              ? 'Layout Engine Schema (flow: ROW/COLUMN, gap: [x,y], margin, padding, fill_ratio).'
               : activeTab === 'json'
               ? 'Nested JSON hierarchy with parentId links, declared styles, and computed geometry for unit testing.'
               : 'Standalone clean HTML & CSS representation with matching IDs and classes.'}

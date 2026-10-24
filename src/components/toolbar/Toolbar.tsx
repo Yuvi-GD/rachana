@@ -216,10 +216,10 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenExport, onOpenImport }) 
           <span>Metrics</span>
         </button>
 
-        {/* Import Tether YAML */}
+        {/* Import Layout Modal */}
         <button
           onClick={onOpenImport}
-          title="Import Tether UI YAML (modal.yaml, dashboard.yaml, index.yaml)"
+          title="Import Layout (YAML, JSON, HTML)"
           className="flex items-center gap-1.5 bg-[#25252b] hover:bg-[#32323a] text-zinc-200 border border-[#3f3f4c] px-2.5 py-1 rounded text-[11px] font-medium transition-colors"
         >
           <UploadCloud className="w-3.5 h-3.5 text-emerald-400" />
