@@ -119,10 +119,10 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, isSimulating, actions]);
 
-  const isHighContrast = preferences?.theme === 'high-contrast';
+  const theme = preferences?.theme || 'grey';
 
   return (
-    <div className={`flex flex-col h-screen w-screen overflow-hidden ${isHighContrast ? 'bg-[#09090b] text-zinc-100' : 'bg-[#121214] text-zinc-300'}`}>
+    <div className={`flex flex-col h-screen w-screen overflow-hidden ${theme === 'white' ? 'bg-[#f8fafc] text-slate-900' : theme === 'amoled-black' ? 'bg-[#000000] text-zinc-200' : 'bg-[#121214] text-zinc-300'}`}>
       {/* 1. Main Studio Toolbar */}
       <Toolbar 
         onOpenExport={() => setIsExportOpen(true)}

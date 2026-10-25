@@ -7,6 +7,78 @@ export const defaultSpacing = (val: string = '0px'): SpacingSides => ({
   left: val,
 });
 
+export const createCleanNodeStyle = (overrides?: Partial<LayoutNodeStyle>): LayoutNodeStyle => ({
+  display: 'block',
+  position: 'relative',
+  boxSizing: 'border-box',
+  overflow: 'visible',
+  overflowX: 'visible',
+  overflowY: 'visible',
+
+  // Tether UI Layout Props
+  flow: 'COLUMN',
+  fillRatio: '0',
+  contentAlign: 'START',
+  anchorMin: '0.0',
+  anchorMax: '1.0',
+  interactable: false,
+
+  width: 'auto',
+  height: 'auto',
+  minWidth: 'auto',
+  minHeight: 'auto',
+  maxWidth: 'none',
+  maxHeight: 'none',
+  aspectRatio: 'auto',
+
+  margin: defaultSpacing('0px'),
+  padding: defaultSpacing('0px'),
+
+  flexDirection: 'row',
+  flexWrap: 'nowrap',
+  justifyContent: 'flex-start',
+  alignItems: 'stretch',
+  alignContent: 'stretch',
+  gap: '0px',
+  rowGap: '0px',
+  columnGap: '0px',
+
+  flexGrow: '0',
+  flexShrink: '1',
+  flexBasis: 'auto',
+  alignSelf: 'auto',
+  order: '0',
+
+  gridTemplateColumns: 'repeat(2, 1fr)',
+  gridTemplateRows: 'auto',
+  gridAutoFlow: 'row',
+  gridAutoRows: 'auto',
+  gridAutoColumns: 'auto',
+
+  gridColumn: 'auto',
+  gridRow: 'auto',
+  gridArea: 'auto',
+
+  top: 'auto',
+  right: 'auto',
+  bottom: 'auto',
+  left: 'auto',
+  zIndex: 'auto',
+
+  backgroundColor: 'transparent',
+  borderWidth: defaultSpacing('0px'),
+  borderColor: 'transparent',
+  borderStyle: 'solid',
+  borderRadius: '0px',
+  opacity: '1',
+  color: '#e2e8f0',
+  fontSize: '14px',
+  fontWeight: '400',
+  textAlign: 'left',
+
+  ...overrides,
+});
+
 export const createDefaultStyle = (overrides?: Partial<LayoutNodeStyle>): LayoutNodeStyle => ({
   display: 'block',
   position: 'relative',
@@ -65,7 +137,7 @@ export const createDefaultStyle = (overrides?: Partial<LayoutNodeStyle>): Layout
   left: 'auto',
   zIndex: 'auto',
 
-  backgroundColor: 'rgba(40, 44, 52, 0.7)',
+  backgroundColor: '#282c34',
   borderWidth: defaultSpacing('1px'),
   borderColor: '#4a5568',
   borderStyle: 'solid',

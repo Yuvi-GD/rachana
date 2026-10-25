@@ -54,13 +54,13 @@ export interface EditorState {
 }
 
 export interface EditorPreferences {
-  theme: 'unreal-dark' | 'high-contrast';
+  theme: 'grey' | 'amoled-black' | 'white';
   codeFontSize: number; // 10 to 18, default 12
   autoSyncScript: boolean; // default true
 }
 
 const DEFAULT_PREFERENCES: EditorPreferences = {
-  theme: 'unreal-dark',
+  theme: 'grey',
   codeFontSize: 12,
   autoSyncScript: true,
 };
@@ -70,7 +70,12 @@ function loadStoredPreferences(): EditorPreferences {
   try {
     const raw = localStorage.getItem('rachana_preferences');
     if (raw) {
-      return { ...DEFAULT_PREFERENCES, ...JSON.parse(raw) };
+      const parsed = JSON.parse(raw);
+      // Migrate legacy theme names if present
+      let theme: 'grey' | 'amoled-black' | 'white' = 'grey';
+      if (parsed.theme === 'amoled-black' || parsed.theme === 'high-contrast') theme = 'amoled-black';
+      else if (parsed.theme === 'white') theme = 'white';
+      return { ...DEFAULT_PREFERENCES, ...parsed, theme };
     }
   } catch {}
   return DEFAULT_PREFERENCES;
@@ -90,7 +95,7 @@ function loadStoredNumber(key: string, defaultVal: number): number {
 
 const initialPreferences = loadStoredPreferences();
 if (typeof document !== 'undefined') {
-  document.documentElement.setAttribute('data-theme', initialPreferences.theme || 'unreal-dark');
+  document.documentElement.setAttribute('data-theme', initialPreferences.theme || 'grey');
 }
 const initialMaxHistory = Math.round(loadStoredNumber('rachana_max_history', 64));
 const initialScrollSens = loadStoredNumber('rachana_scroll_sens', 1.0);

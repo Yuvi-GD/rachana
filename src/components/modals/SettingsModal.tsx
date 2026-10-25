@@ -32,13 +32,13 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
   if (!isOpen) return null;
 
-  const currentTheme = preferences?.theme || 'unreal-dark';
+  const currentTheme = preferences?.theme || 'grey';
   const currentFontSize = preferences?.codeFontSize || 12;
   const currentAutoSync = preferences?.autoSyncScript ?? true;
 
   const resetAllDefaults = () => {
     actions.setPreferences({
-      theme: 'unreal-dark',
+      theme: 'grey',
       codeFontSize: 12,
       autoSyncScript: true,
     });
@@ -47,9 +47,12 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 backdrop-blur-xs p-4 select-none">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-xs p-4 select-none cursor-pointer"
+      onClick={onClose}
+    >
       <div 
-        className="w-full max-w-lg bg-[#16161a] border border-[#2c2c36] rounded-xl shadow-2xl flex flex-col overflow-hidden text-zinc-300 animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-lg bg-[#16161a] border border-[#2c2c36] rounded-xl shadow-2xl flex flex-col overflow-hidden text-zinc-300 animate-in fade-in zoom-in-95 duration-150 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -59,13 +62,14 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
               <Settings className="w-4 h-4" />
             </div>
             <div>
-              <h2 className="text-sm font-semibold text-slate-100">Studio Settings</h2>
-              <p className="text-[10px] text-zinc-500">Configure theme, font sizes, sensitivity, and history limits</p>
+              <h2 className="text-sm font-semibold text-slate-100">Editor Settings</h2>
+              <p className="text-[10px] text-zinc-500">Theme, typography, canvas sensitivity, and history limits</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-[#282834] transition-colors cursor-pointer"
+            title="Close Settings (Esc)"
+            className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-[#282834] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -73,36 +77,53 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         {/* Settings Body - 5 Working Sensible Controls */}
         <div className="p-5 overflow-y-auto custom-scrollbar space-y-4 max-h-[75vh]">
-          {/* 1. Interface Theme */}
+          {/* 1. Interface Theme: 3 Choices (Grey, AMOLED Black, White) */}
           <div className="p-3 bg-[#1a1a20] border border-[#2b2b36] rounded-lg space-y-2">
             <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
               <Palette className="w-4 h-4 text-purple-400" />
               <span>Studio Theme</span>
             </div>
-            <div className="grid grid-cols-2 gap-2 pt-1">
+            <div className="grid grid-cols-3 gap-2 pt-1">
+              {/* Theme 1: Unreal Slate Grey */}
               <button
                 type="button"
-                onClick={() => actions.setPreferences({ theme: 'unreal-dark' })}
+                onClick={() => actions.setPreferences({ theme: 'grey' })}
                 className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
-                  currentTheme === 'unreal-dark'
+                  currentTheme === 'grey'
                     ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm'
                     : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <div className="text-xs font-semibold text-zinc-100">Unreal Slate Dark</div>
-                <div className="text-[10px] text-zinc-500">Standard studio dark tone</div>
+                <div className="text-xs font-semibold text-zinc-100">Slate Grey</div>
+                <div className="text-[10px] text-zinc-500">Uniform studio grey</div>
               </button>
+
+              {/* Theme 2: AMOLED Pitch Black */}
               <button
                 type="button"
-                onClick={() => actions.setPreferences({ theme: 'high-contrast' })}
+                onClick={() => actions.setPreferences({ theme: 'amoled-black' })}
                 className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
-                  currentTheme === 'high-contrast'
+                  currentTheme === 'amoled-black'
                     ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm'
                     : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200'
                 }`}
               >
-                <div className="text-xs font-semibold text-zinc-100">Midnight High Contrast</div>
-                <div className="text-[10px] text-zinc-500">Deep black & bright borders</div>
+                <div className="text-xs font-semibold text-zinc-100">AMOLED Black</div>
+                <div className="text-[10px] text-zinc-500">Pure pitch dark</div>
+              </button>
+
+              {/* Theme 3: Studio White */}
+              <button
+                type="button"
+                onClick={() => actions.setPreferences({ theme: 'white' })}
+                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
+                  currentTheme === 'white'
+                    ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm'
+                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <div className="text-xs font-semibold text-zinc-100">Studio White</div>
+                <div className="text-[10px] text-zinc-500">Clean light mode</div>
               </button>
             </div>
           </div>
@@ -225,13 +246,7 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
             <RotateCcw className="w-3.5 h-3.5" />
             <span>Reset Defaults</span>
           </button>
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
-          >
-            Done
-          </button>
+          <span className="text-[10px] text-zinc-500 font-mono">Changes save automatically</span>
         </div>
       </div>
     </div>

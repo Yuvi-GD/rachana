@@ -13,7 +13,6 @@ import {
   PanelBottom,
   PanelRight,
   Play,
-  Square,
   Settings
 } from 'lucide-react';
 import { useEditorStore, DEVICE_PRESETS } from '../../store/editorStore';
@@ -147,17 +146,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings }) => {
         {/* Preview Simulation / Play Mode Toggle */}
         <button
           onClick={actions.toggleSimulation}
-          title={isSimulating ? "Stop Preview Simulation (Esc or F5)" : "Run Preview Simulation & Test Widget (F5)"}
+          title={isSimulating ? "Simulation Active (Stop via Viewport or Esc)" : "Run Preview Simulation & Test Widget (F5)"}
           className={`h-7 px-2.5 flex items-center gap-1.5 rounded border text-[11px] font-semibold transition-all ${
             isSimulating
-              ? 'bg-rose-600/30 border-rose-500 text-rose-200 shadow-[0_0_12px_rgba(244,63,94,0.3)]'
-              : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/60 text-emerald-300 shadow-sm'
+              ? 'bg-emerald-600/15 border-emerald-500/40 text-emerald-300 pointer-events-none'
+              : 'bg-emerald-600/20 hover:bg-emerald-600/30 border-emerald-500/60 text-emerald-300 shadow-sm cursor-pointer'
           }`}
         >
           {isSimulating ? (
             <>
-              <Square className="w-3.5 h-3.5 fill-rose-400 text-rose-400" />
-              <span>Stop Run</span>
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Simulating...</span>
             </>
           ) : (
             <>

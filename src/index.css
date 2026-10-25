@@ -63,80 +63,226 @@ body {
   background: #4a4a55;
 }
 
-/* ======================================================== */
-/* Theme Definitions: Unreal Dark vs Midnight High Contrast */
-/* ======================================================== */
-
-[data-theme="high-contrast"] body {
-  background-color: #000000;
-  color: #ffffff;
+/* Script Editor Wider Scrollbars */
+.code-scrollbar::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
 }
 
-[data-theme="high-contrast"] .bg-\[\#121214\],
-[data-theme="high-contrast"] .bg-\[\#121215\],
-[data-theme="high-contrast"] .bg-\[\#0c0c0e\],
-[data-theme="high-contrast"] .bg-\[\#0e0e11\],
-[data-theme="high-contrast"] .bg-\[\#101013\],
-[data-theme="high-contrast"] .bg-\[\#141417\],
-[data-theme="high-contrast"] .bg-\[\#0a0a0c\] {
+.code-scrollbar::-webkit-scrollbar-track {
+  background: #101014;
+}
+
+.code-scrollbar::-webkit-scrollbar-thumb {
+  background: #343442;
+  border-radius: 4px;
+  border: 2px solid #101014;
+}
+
+.code-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #505064;
+}
+
+/* ======================================================== */
+/* 3 Unified Studio Themes: Grey, AMOLED Black, White       */
+/* ======================================================== */
+
+/* 1. AMOLED PITCH BLACK THEME */
+[data-theme="amoled-black"] body {
+  background-color: #000000;
+  color: #e4e4e7;
+}
+
+[data-theme="amoled-black"] .bg-\[\#121214\],
+[data-theme="amoled-black"] .bg-\[\#121215\],
+[data-theme="amoled-black"] .bg-\[\#0c0c0e\],
+[data-theme="amoled-black"] .bg-\[\#0e0e11\],
+[data-theme="amoled-black"] .bg-\[\#101013\],
+[data-theme="amoled-black"] .bg-\[\#111114\],
+[data-theme="amoled-black"] .bg-\[\#141417\],
+[data-theme="amoled-black"] .bg-\[\#0d0d10\],
+[data-theme="amoled-black"] .bg-\[\#0a0a0c\] {
   background-color: #000000 !important;
 }
 
-[data-theme="high-contrast"] .bg-\[\#16161a\],
-[data-theme="high-contrast"] .bg-\[\#18181b\],
-[data-theme="high-contrast"] .bg-\[\#18181d\],
-[data-theme="high-contrast"] .bg-\[\#1a1a20\],
-[data-theme="high-contrast"] .bg-\[\#1b1b22\],
-[data-theme="high-contrast"] .bg-\[\#1c1c20\],
-[data-theme="high-contrast"] .bg-\[\#1e1e22\] {
-  background-color: #08080a !important;
+[data-theme="amoled-black"] .bg-\[\#16161a\],
+[data-theme="amoled-black"] .bg-\[\#18181b\],
+[data-theme="amoled-black"] .bg-\[\#18181d\],
+[data-theme="amoled-black"] .bg-\[\#1a1a20\],
+[data-theme="amoled-black"] .bg-\[\#1b1b22\],
+[data-theme="amoled-black"] .bg-\[\#1c1c20\],
+[data-theme="amoled-black"] .bg-\[\#1e1e22\] {
+  background-color: #050507 !important;
 }
 
-[data-theme="high-contrast"] .bg-\[\#202028\],
-[data-theme="high-contrast"] .bg-\[\#242427\],
-[data-theme="high-contrast"] .bg-\[\#242429\],
-[data-theme="high-contrast"] .bg-\[\#25252e\],
-[data-theme="high-contrast"] .bg-\[\#282830\] {
-  background-color: #14141a !important;
+[data-theme="amoled-black"] .bg-\[\#202028\],
+[data-theme="amoled-black"] .bg-\[\#242427\],
+[data-theme="amoled-black"] .bg-\[\#242429\],
+[data-theme="amoled-black"] .bg-\[\#25252e\],
+[data-theme="amoled-black"] .bg-\[\#282830\] {
+  background-color: #0e0e12 !important;
 }
 
-[data-theme="high-contrast"] .border-\[\#202026\],
-[data-theme="high-contrast"] .border-\[\#22222a\],
-[data-theme="high-contrast"] .border-\[\#242429\],
-[data-theme="high-contrast"] .border-\[\#27272a\],
-[data-theme="high-contrast"] .border-\[\#27272e\],
-[data-theme="high-contrast"] .border-\[\#2a2a34\],
-[data-theme="high-contrast"] .border-\[\#2b2b36\],
-[data-theme="high-contrast"] .border-\[\#2c2c36\],
-[data-theme="high-contrast"] .border-\[\#2d2d38\],
-[data-theme="high-contrast"] .border-\[\#2e2e38\],
-[data-theme="high-contrast"] .border-\[\#303038\],
-[data-theme="high-contrast"] .border-\[\#333338\],
-[data-theme="high-contrast"] .border-\[\#33333d\],
-[data-theme="high-contrast"] .border-\[\#383842\],
-[data-theme="high-contrast"] .border-\[\#393946\] {
-  border-color: #484858 !important;
+[data-theme="amoled-black"] .border-\[\#202026\],
+[data-theme="amoled-black"] .border-\[\#222228\],
+[data-theme="amoled-black"] .border-\[\#22222a\],
+[data-theme="amoled-black"] .border-\[\#242429\],
+[data-theme="amoled-black"] .border-\[\#27272a\],
+[data-theme="amoled-black"] .border-\[\#27272e\],
+[data-theme="amoled-black"] .border-\[\#2a2a34\],
+[data-theme="amoled-black"] .border-\[\#2b2b36\],
+[data-theme="amoled-black"] .border-\[\#2c2c36\],
+[data-theme="amoled-black"] .border-\[\#2d2d38\],
+[data-theme="amoled-black"] .border-\[\#2e2e38\],
+[data-theme="amoled-black"] .border-\[\#303038\],
+[data-theme="amoled-black"] .border-\[\#333338\],
+[data-theme="amoled-black"] .border-\[\#33333d\],
+[data-theme="amoled-black"] .border-\[\#383842\],
+[data-theme="amoled-black"] .border-\[\#393946\] {
+  border-color: #1f1f26 !important;
 }
 
-[data-theme="high-contrast"] .text-zinc-400 {
-  color: #c4c4cc !important;
+/* 2. STUDIO CLEAN WHITE THEME */
+[data-theme="white"] body {
+  background-color: #f8fafc;
+  color: #0f172a;
 }
 
-[data-theme="high-contrast"] .text-zinc-500 {
-  color: #9c9ca8 !important;
+[data-theme="white"] .bg-\[\#121214\],
+[data-theme="white"] .bg-\[\#121215\],
+[data-theme="white"] .bg-\[\#0c0c0e\],
+[data-theme="white"] .bg-\[\#0e0e11\],
+[data-theme="white"] .bg-\[\#101013\],
+[data-theme="white"] .bg-\[\#111114\],
+[data-theme="white"] .bg-\[\#141417\],
+[data-theme="white"] .bg-\[\#0d0d10\],
+[data-theme="white"] .bg-\[\#0a0a0c\] {
+  background-color: #f1f5f9 !important;
 }
 
-[data-theme="high-contrast"] .text-zinc-300 {
-  color: #f4f4f6 !important;
+[data-theme="white"] .bg-\[\#16161a\],
+[data-theme="white"] .bg-\[\#18181b\],
+[data-theme="white"] .bg-\[\#18181d\],
+[data-theme="white"] .bg-\[\#1a1a20\],
+[data-theme="white"] .bg-\[\#1b1b22\],
+[data-theme="white"] .bg-\[\#1c1c20\],
+[data-theme="white"] .bg-\[\#1e1e22\] {
+  background-color: #ffffff !important;
 }
 
-[data-theme="high-contrast"] .text-zinc-200 {
+[data-theme="white"] .bg-\[\#202028\],
+[data-theme="white"] .bg-\[\#242427\],
+[data-theme="white"] .bg-\[\#242429\],
+[data-theme="white"] .bg-\[\#25252e\],
+[data-theme="white"] .bg-\[\#282830\] {
+  background-color: #f8fafc !important;
+}
+
+[data-theme="white"] .border-\[\#202026\],
+[data-theme="white"] .border-\[\#222228\],
+[data-theme="white"] .border-\[\#22222a\],
+[data-theme="white"] .border-\[\#242429\],
+[data-theme="white"] .border-\[\#27272a\],
+[data-theme="white"] .border-\[\#27272e\],
+[data-theme="white"] .border-\[\#2a2a34\],
+[data-theme="white"] .border-\[\#2b2b36\],
+[data-theme="white"] .border-\[\#2c2c36\],
+[data-theme="white"] .border-\[\#2d2d38\],
+[data-theme="white"] .border-\[\#2e2e38\],
+[data-theme="white"] .border-\[\#303038\],
+[data-theme="white"] .border-\[\#333338\],
+[data-theme="white"] .border-\[\#33333d\],
+[data-theme="white"] .border-\[\#383842\],
+[data-theme="white"] .border-\[\#393946\] {
+  border-color: #e2e8f0 !important;
+}
+
+[data-theme="white"] .text-zinc-100,
+[data-theme="white"] .text-zinc-200,
+[data-theme="white"] .text-slate-100 {
+  color: #0f172a !important;
+}
+
+[data-theme="white"] .text-zinc-300 {
+  color: #334155 !important;
+}
+
+[data-theme="white"] .text-zinc-400 {
+  color: #64748b !important;
+}
+
+[data-theme="white"] .text-zinc-500 {
+  color: #94a3b8 !important;
+}
+
+[data-theme="white"] kbd {
+  background-color: #f1f5f9 !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="white"] .text-white {
+  color: #0f172a !important;
+}
+
+[data-theme="white"] input,
+[data-theme="white"] select,
+[data-theme="white"] textarea {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+[data-theme="white"] select option {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+[data-theme="white"] .bg-\[\#19191e\],
+[data-theme="white"] .bg-\[\#17171b\]\/40,
+[data-theme="white"] .bg-\[\#1c1c20\],
+[data-theme="white"] .bg-\[\#222227\],
+[data-theme="white"] .bg-\[\#242429\],
+[data-theme="white"] .bg-\[\#25252b\] {
+  background-color: #f1f5f9 !important;
+}
+
+[data-theme="white"] .border-\[\#292932\],
+[data-theme="white"] .border-\[\#34343e\],
+[data-theme="white"] .border-\[\#3c3c47\],
+[data-theme="white"] .border-\[\#303038\],
+[data-theme="white"] .border-\[\#34343d\] {
+  border-color: #cbd5e1 !important;
+}
+
+/* AMOLED dark overrides for inputs & details panel sections */
+[data-theme="amoled-black"] input,
+[data-theme="amoled-black"] select,
+[data-theme="amoled-black"] textarea {
+  background-color: #09090c !important;
+  color: #ffffff !important;
+  border-color: #1e1e26 !important;
+}
+
+[data-theme="amoled-black"] select option {
+  background-color: #09090c !important;
   color: #ffffff !important;
 }
 
-[data-theme="high-contrast"] kbd {
-  border-color: #606075 !important;
-  color: #ffffff !important;
-  background-color: #181820 !important;
+[data-theme="amoled-black"] .bg-\[\#19191e\],
+[data-theme="amoled-black"] .bg-\[\#17171b\]\/40,
+[data-theme="amoled-black"] .bg-\[\#1c1c20\],
+[data-theme="amoled-black"] .bg-\[\#222227\],
+[data-theme="amoled-black"] .bg-\[\#242429\],
+[data-theme="amoled-black"] .bg-\[\#25252b\] {
+  background-color: #07070a !important;
+}
+
+[data-theme="amoled-black"] .border-\[\#292932\],
+[data-theme="amoled-black"] .border-\[\#34343e\],
+[data-theme="amoled-black"] .border-\[\#3c3c47\],
+[data-theme="amoled-black"] .border-\[\#303038\],
+[data-theme="amoled-black"] .border-\[\#34343d\] {
+  border-color: #1a1a22 !important;
 }
 

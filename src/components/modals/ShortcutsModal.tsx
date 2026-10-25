@@ -75,9 +75,12 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 select-none">
+    <div 
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/75 backdrop-blur-xs p-4 select-none cursor-pointer"
+      onClick={onClose}
+    >
       <div 
-        className="w-full max-w-2xl bg-[#16161a] border border-[#2c2c36] rounded-xl shadow-2xl flex flex-col overflow-hidden text-zinc-300 animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl bg-[#16161a] border border-[#2c2c36] rounded-xl shadow-2xl flex flex-col overflow-hidden text-zinc-300 animate-in fade-in zoom-in-95 duration-150 cursor-default"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -93,7 +96,8 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
           </div>
           <button
             onClick={onClose}
-            className="p-1 rounded-md text-zinc-400 hover:text-white hover:bg-[#282834] transition-colors cursor-pointer"
+            title="Close Shortcuts (Esc)"
+            className="p-1.5 rounded-md text-zinc-400 hover:text-white hover:bg-[#282834] transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -129,13 +133,8 @@ export const ShortcutsModal: React.FC<ShortcutsModalProps> = ({ isOpen, onClose 
 
         {/* Footer */}
         <div className="h-10 px-4 bg-[#141418] border-t border-[#252530] flex items-center justify-between text-[11px] text-zinc-500">
-          <span>Press <kbd className="px-1 py-0.2 bg-[#202028] border border-[#30303c] rounded text-zinc-400 font-mono">?</kbd> anytime to open</span>
-          <button
-            onClick={onClose}
-            className="px-3 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded text-xs font-medium transition-colors cursor-pointer"
-          >
-            Close
-          </button>
+          <span>Press <kbd className="px-1.5 py-0.5 bg-[#202028] border border-[#30303c] rounded text-zinc-400 font-mono">?</kbd> or <kbd className="px-1.5 py-0.5 bg-[#202028] border border-[#30303c] rounded text-zinc-400 font-mono">Esc</kbd> anytime to toggle</span>
+          <span className="text-[10px] text-zinc-500 font-mono">Click outside to dismiss</span>
         </div>
       </div>
     </div>

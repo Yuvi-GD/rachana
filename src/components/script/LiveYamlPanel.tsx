@@ -108,17 +108,46 @@ const renderYamlLine = (line: string): React.ReactNode => {
 // -------------------------------------------------------------
 // VS Code Dark+ Token Highlighting for HTML & CSS
 // -------------------------------------------------------------
+// VS Code Dark+ Token Highlighting for HTML & CSS
+// -------------------------------------------------------------
 const renderHtmlLine = (line: string): React.ReactNode => {
   const trimmed = line.trim();
   if (trimmed.startsWith('<!--') || trimmed.endsWith('-->') || trimmed.startsWith('/*') || trimmed.endsWith('*/')) {
     return <span style={{ color: '#6a9955', fontStyle: 'italic' }}>{line}</span>;
   }
 
+  // CSS Selector line (e.g. ".node_1 {", "body {", "*, *::before, *::after {")
+  if (trimmed.endsWith('{') && !trimmed.startsWith('<')) {
+    const braceIdx = line.lastIndexOf('{');
+    const selectorPart = line.substring(0, braceIdx);
+    const bracePart = line.substring(braceIdx);
+
+    const selTokens = selectorPart.split(/([.#]?[a-zA-Z0-9_-]+|::?[a-zA-Z0-9_-]+|\*|,|\s+)/g).filter(Boolean);
+    return (
+      <>
+        {selTokens.map((tok, i) => {
+          if (!tok.trim()) return <span key={i}>{tok}</span>;
+          if (tok.startsWith('.')) return <span key={i} style={{ color: '#d7ba7d', fontWeight: 600 }}>{tok}</span>;
+          if (tok.startsWith('#')) return <span key={i} style={{ color: '#4fc1ff', fontWeight: 600 }}>{tok}</span>;
+          if (tok.startsWith(':')) return <span key={i} style={{ color: '#dcdcaa' }}>{tok}</span>;
+          if (tok === ',') return <span key={i} style={{ color: '#d4d4d4' }}>{tok}</span>;
+          if (tok === '*') return <span key={i} style={{ color: '#569cd6', fontWeight: 600 }}>{tok}</span>;
+          return <span key={i} style={{ color: '#569cd6' }}>{tok}</span>;
+        })}
+        <span style={{ color: '#ffd700' }}>{bracePart}</span>
+      </>
+    );
+  }
+
+  if (trimmed === '}' || trimmed === '{') {
+    return <span style={{ color: '#ffd700' }}>{line}</span>;
+  }
+
   // CSS Property declaration (e.g. "  display: flex;" or "  background-color: #18181b;")
   const cssPropMatch = line.match(/^(\s*)([a-zA-Z-]+)\s*:\s*([^;]+)(;?.*)$/);
-  if (cssPropMatch && !trimmed.startsWith('<') && !trimmed.startsWith('.')) {
+  if (cssPropMatch && !trimmed.startsWith('<')) {
     const [, indent, prop, val, semi] = cssPropMatch;
-    const valTokens = val.split(/(\s+|#[a-fA-F0-9]+|\d+(?:\.\d+)?(?:px|%|rem|em|vh|vw)?|"[^"]*"|'[^']*')/g).filter(Boolean);
+    const valTokens = val.split(/(\s+|#[a-fA-F0-9]+|\d+(?:\.\d+)?(?:px|%|rem|em|vh|vw|fr)?|"[^"]*"|'[^']*'|[a-zA-Z-]+(?=\()|[(),])/g).filter(Boolean);
 
     return (
       <>
@@ -128,35 +157,22 @@ const renderHtmlLine = (line: string): React.ReactNode => {
         {valTokens.map((tok, i) => {
           if (!tok.trim()) return <span key={i}>{tok}</span>;
           if (tok.startsWith('#')) return <span key={i} style={{ color: '#ce9178', fontWeight: 600 }}>{tok}</span>;
-          if (/^\d+(?:\.\d+)?(?:px|%|rem|em|vh|vw)?$/.test(tok)) return <span key={i} style={{ color: '#b5cea8' }}>{tok}</span>;
+          if (/^\d+(?:\.\d+)?(?:px|%|rem|em|vh|vw|fr)?$/.test(tok)) return <span key={i} style={{ color: '#b5cea8' }}>{tok}</span>;
           if (tok.startsWith('"') || tok.startsWith("'")) return <span key={i} style={{ color: '#ce9178' }}>{tok}</span>;
-          if (['flex', 'column', 'row', 'block', 'none', 'auto', 'solid', 'transparent', 'center', 'relative', 'absolute', 'overflow'].includes(tok)) {
+          if (['rgba', 'rgb', 'hsl', 'calc', 'var', 'repeat', 'minmax'].includes(tok)) {
+            return <span key={i} style={{ color: '#dcdcaa' }}>{tok}</span>;
+          }
+          if (['flex', 'grid', 'column', 'row', 'block', 'none', 'auto', 'solid', 'dashed', 'transparent', 'center', 'relative', 'absolute', 'overflow', 'border-box', 'inherit', 'initial', 'nowrap', 'wrap', 'space-between', 'stretch'].includes(tok)) {
             return <span key={i} style={{ color: '#569cd6', fontWeight: 600 }}>{tok}</span>;
+          }
+          if (tok === '(' || tok === ')' || tok === ',') {
+            return <span key={i} style={{ color: '#ffd700' }}>{tok}</span>;
           }
           return <span key={i} style={{ color: '#4fc1ff' }}>{tok}</span>;
         })}
         <span style={{ color: '#d4d4d4' }}>{semi}</span>
       </>
     );
-  }
-
-  // CSS Selector line (e.g. ".node_1 {" or "body {")
-  const cssSelectorMatch = line.match(/^(\s*)([.#]?[a-zA-Z0-9_ -]+)\s*(\{)?\s*$/);
-  if (cssSelectorMatch && !trimmed.startsWith('<')) {
-    const [, indent, selector, brace] = cssSelectorMatch;
-    const isClass = selector.trim().startsWith('.');
-    const isId = selector.trim().startsWith('#');
-    return (
-      <>
-        <span>{indent}</span>
-        <span style={{ color: isClass ? '#d7ba7d' : isId ? '#4fc1ff' : '#569cd6', fontWeight: 600 }}>{selector}</span>
-        {brace && <span style={{ color: '#ffd700' }}> {brace}</span>}
-      </>
-    );
-  }
-
-  if (trimmed === '}' || trimmed === '{') {
-    return <span style={{ color: '#ffd700' }}>{line}</span>;
   }
 
   // HTML tag and attributes tokenizer
@@ -295,6 +311,7 @@ const renderJsonLine = (line: string): React.ReactNode => {
 export const LiveYamlPanel: React.FC = () => {
   const { 
     rootNode, 
+    selectedNodeId,
     metricsMap, 
     showBottomPanel, 
     showMetrics, 
@@ -305,6 +322,7 @@ export const LiveYamlPanel: React.FC = () => {
 
   const [format, setFormat] = useState<ScriptFormat>('yaml');
   const [code, setCode] = useState('');
+  const [highlightedLineIndex, setHighlightedLineIndex] = useState<number | null>(null);
   const [isFocused, setIsFocused] = useState(false);
   const [copied, setCopied] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
@@ -325,6 +343,48 @@ export const LiveYamlPanel: React.FC = () => {
   const currentFormatObj = SCRIPT_FORMATS.find(f => f.id === format) || SCRIPT_FORMATS[0];
   const FormatIcon = currentFormatObj.icon;
 
+  // Auto-scroll to selected element line and highlight line number
+  const codeFontSize = preferences?.codeFontSize || 12;
+  const lineHeightPx = Math.round(codeFontSize * 1.6);
+
+  useEffect(() => {
+    if (!selectedNodeId) {
+      setHighlightedLineIndex(null);
+      return;
+    }
+
+    const lines = code.split('\n');
+    let targetIdx = -1;
+
+    // Search for line matching selectedNodeId or node class
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      if (
+        line.includes(`id: "${selectedNodeId}"`) ||
+        line.includes(`id="${selectedNodeId}"`) ||
+        line.includes(`"id": "${selectedNodeId}"`) ||
+        line.includes(`node-${selectedNodeId.replace(/[^a-zA-Z0-9_-]/g, '_')}`) ||
+        line.includes(selectedNodeId)
+      ) {
+        targetIdx = i;
+        break;
+      }
+    }
+
+    if (targetIdx !== -1) {
+      setHighlightedLineIndex(targetIdx);
+      if (textareaRef.current) {
+        const targetScrollTop = Math.max(0, targetIdx * lineHeightPx - 80);
+        textareaRef.current.scrollTo({
+          top: targetScrollTop,
+          behavior: 'smooth',
+        });
+      }
+    } else {
+      setHighlightedLineIndex(null);
+    }
+  }, [selectedNodeId, code, lineHeightPx]);
+
   // Click outside to close menus
   useEffect(() => {
     const handleOutsideClick = (e: MouseEvent) => {
@@ -343,14 +403,14 @@ export const LiveYamlPanel: React.FC = () => {
     };
   }, [isMenuOpen, isFormatDropdownOpen]);
 
-  // Generate code based on active format
+  // Generate code based on active format (HTML shows markup first, then <style>)
   const generateCodeForFormat = (fmt: ScriptFormat, node: LayoutNode): string => {
     switch (fmt) {
       case 'yaml':
         return exportLayoutEngineYaml(node, metricsMap);
       case 'html': {
         const { html, css } = exportToHtmlCss(node);
-        return `<style>\n${css}\n</style>\n\n${html}`;
+        return `${html}\n\n<style>\n${css}\n</style>`;
       }
       case 'xml':
         return exportToXml(node);
@@ -451,6 +511,44 @@ export const LiveYamlPanel: React.FC = () => {
     }
   };
 
+  // Reverse sync: click anywhere in script editor -> select corresponding element in GUI
+  const handleEditorCursorChange = () => {
+    if (!textareaRef.current) return;
+    const cursorPos = textareaRef.current.selectionStart;
+    const textBefore = code.slice(0, cursorPos);
+    const lineIndex = textBefore.split('\n').length - 1;
+    const allLines = code.split('\n');
+
+    let foundId: string | null = null;
+
+    // First scan from current line upwards
+    for (let i = lineIndex; i >= 0; i--) {
+      const line = allLines[i];
+      const idMatch = line.match(/(?:id[:=]\s*["']([^"']+)["']|"id":\s*["']([^"']+)["']|class="[^"]*node-([a-zA-Z0-9_-]+))/);
+      if (idMatch) {
+        foundId = idMatch[1] || idMatch[2] || idMatch[3];
+        break;
+      }
+      if (lineIndex - i > 35) break;
+    }
+
+    // If not found upwards, scan a few lines downwards (e.g. cursor on "- Button:" before "id: '...'")
+    if (!foundId) {
+      for (let i = lineIndex; i < Math.min(allLines.length, lineIndex + 12); i++) {
+        const line = allLines[i];
+        const idMatch = line.match(/(?:id[:=]\s*["']([^"']+)["']|"id":\s*["']([^"']+)["']|class="[^"]*node-([a-zA-Z0-9_-]+))/);
+        if (idMatch) {
+          foundId = idMatch[1] || idMatch[2] || idMatch[3];
+          break;
+        }
+      }
+    }
+
+    if (foundId && foundId !== selectedNodeId) {
+      actions.selectNode(foundId);
+    }
+  };
+
   const handleScroll = (e: React.UIEvent<HTMLTextAreaElement>) => {
     if (preRef.current) {
       preRef.current.scrollTop = e.currentTarget.scrollTop;
@@ -507,8 +605,6 @@ export const LiveYamlPanel: React.FC = () => {
   if (!isVisible) return null;
 
   const lines = code.split('\n');
-  const codeFontSize = preferences?.codeFontSize || 12;
-  const lineHeightPx = Math.round(codeFontSize * 1.6);
 
   return (
     <div className="h-full bg-[#18181b] border-t border-[#27272a] flex flex-col select-none text-xs overflow-hidden">
@@ -734,12 +830,25 @@ export const LiveYamlPanel: React.FC = () => {
         {/* Line Numbers Gutter */}
         <div 
           ref={lineGutterRef}
-          className="w-10 py-2 bg-[#0d0d10] border-r border-[#222228] text-zinc-600 select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono"
+          className="w-11 py-2 bg-[#0d0d10] border-r border-[#222228] select-none text-right pr-2 overflow-hidden flex-shrink-0 font-mono transition-colors"
           style={{ fontSize: `${codeFontSize}px`, lineHeight: `${lineHeightPx}px` }}
         >
-          {Array.from({ length: Math.max(lines.length, 1) }).map((_, i) => (
-            <div key={i} style={{ height: `${lineHeightPx}px`, lineHeight: `${lineHeightPx}px` }}>{i + 1}</div>
-          ))}
+          {Array.from({ length: Math.max(lines.length, 1) }).map((_, i) => {
+            const isHighlighted = highlightedLineIndex === i;
+            return (
+              <div 
+                key={i} 
+                style={{ height: `${lineHeightPx}px`, lineHeight: `${lineHeightPx}px` }}
+                className={`transition-all select-none ${
+                  isHighlighted 
+                    ? 'text-cyan-300 font-bold bg-cyan-950/80 border-r-2 border-cyan-400 pr-1' 
+                    : 'text-zinc-600'
+                }`}
+              >
+                {i + 1}
+              </div>
+            );
+          })}
         </div>
 
         {/* Dual Layer Workspace: Highlighted Pre + Foreground Textarea */}
@@ -774,11 +883,17 @@ export const LiveYamlPanel: React.FC = () => {
             value={code}
             onChange={handleCodeChange}
             onKeyDown={handleKeyDown}
+            onClick={handleEditorCursorChange}
+            onKeyUp={(e) => {
+              if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) {
+                handleEditorCursorChange();
+              }
+            }}
             onFocus={() => setIsFocused(true)}
             onBlur={() => setIsFocused(false)}
             onScroll={handleScroll}
             spellCheck={false}
-            className="absolute inset-0 p-2 m-0 bg-transparent font-mono resize-none outline-none overflow-auto custom-scrollbar whitespace-pre selection:bg-[#264f78]"
+            className="absolute inset-0 p-2 m-0 bg-transparent font-mono resize-none outline-none overflow-auto code-scrollbar custom-scrollbar whitespace-pre selection:bg-[#264f78]"
             style={{
               fontSize: `${codeFontSize}px`,
               lineHeight: `${lineHeightPx}px`,

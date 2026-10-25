@@ -41,7 +41,7 @@ const UnrealSectionHeader: React.FC<UnrealSectionHeaderProps> = ({
 }) => (
   <div
     onClick={onToggle}
-    className="flex items-center justify-between px-3 py-1.5 bg-[#19191e] hover:bg-[#202026] border-t border-b border-[#292932] cursor-pointer select-none transition-colors"
+    className="flex items-center justify-between px-3 py-1.5 bg-[#141417] hover:bg-[#1a1a1f] border-t border-b border-[#27272a] cursor-pointer select-none transition-colors"
   >
     <div className="flex items-center gap-1.5 min-w-0">
       <ChevronRight
@@ -146,7 +146,7 @@ export const DetailsPanel: React.FC = () => {
 
   if (!selectedNode) {
     return (
-      <div className="h-full bg-[#1e1e22] text-zinc-400 p-4 flex flex-col items-center justify-center text-center select-none">
+      <div className="h-full bg-[#18181b] text-zinc-400 p-4 flex flex-col items-center justify-center text-center select-none">
         <Sliders className="w-8 h-8 text-zinc-600 mb-2" />
         <span className="text-xs font-medium text-zinc-300">No Widget Selected</span>
         <span className="text-[11px] text-zinc-500 mt-1">
@@ -188,13 +188,13 @@ export const DetailsPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full bg-[#1e1e22] text-zinc-300 border-l border-[#27272a] select-none text-xs overflow-hidden">
+    <div className="flex flex-col h-full bg-[#18181b] text-zinc-300 border-l border-[#27272a] select-none text-xs overflow-hidden">
       {/* ======================================================== */}
       {/* 1. STICKY TOP HEADER (Clean Unreal Engine Style) */}
       {/* ======================================================== */}
-      <div className="flex-shrink-0 bg-[#19191c] border-b border-[#27272a]">
+      <div className="flex-shrink-0 bg-[#141417] border-b border-[#27272a]">
         {/* Title and #ID (Reset button removed for root element) */}
-        <div className="h-8 px-3 flex items-center justify-between border-b border-[#232327]">
+        <div className="h-8 px-3 flex items-center justify-between border-b border-[#27272a]">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold text-zinc-100 text-[11px] uppercase tracking-wider">
               {isRoot ? 'Root Canvas' : 'Details'}
