@@ -3,11 +3,12 @@ import { useEditorStore } from '../../store/editorStore';
 import { 
   exportLayoutEngineGoldenTest, 
   exportLayoutEngineYaml, 
-  exportToHtmlCss 
+  exportToHtmlCss,
+  exportToXml
 } from '../../core/layoutSerializer';
-import { X, Copy, Check, Download, FileText, FileJson, Code, DownloadCloud, UploadCloud } from 'lucide-react';
+import { X, Copy, Check, Download, FileText, FileCode, FileJson, Code, DownloadCloud, UploadCloud } from 'lucide-react';
 
-interface ExportTestModalProps {
+interface ExportModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSwitchToImport?: () => void;
@@ -94,9 +95,9 @@ const highlightHtmlCss = (text: string): React.ReactNode => {
   });
 };
 
-export const ExportTestModal: React.FC<ExportTestModalProps> = ({ isOpen, onClose, onSwitchToImport }) => {
+export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onSwitchToImport }) => {
   const { rootNode, metricsMap, screenWidth, screenHeight } = useEditorStore();
-  const [activeTab, setActiveTab] = useState<'yaml' | 'json' | 'html'>('yaml');
+  const [activeTab, setActiveTab] = useState<'yaml' | 'xml' | 'json' | 'html'>('yaml');
   const [copied, setCopied] = useState(false);
 
   if (!isOpen) return null;
@@ -104,15 +105,17 @@ export const ExportTestModal: React.FC<ExportTestModalProps> = ({ isOpen, onClos
   const yamlString = exportLayoutEngineYaml(
     rootNode,
     metricsMap,
-    'CustomLayoutEngineTest',
+    'LayoutExport',
     screenWidth,
     screenHeight
   );
 
+  const xmlString = exportToXml(rootNode);
+
   const goldenTestVector = exportLayoutEngineGoldenTest(
     rootNode,
     metricsMap,
-    'CustomLayoutEngineTest',
+    'LayoutExport',
     screenWidth,
     screenHeight
   );
@@ -123,7 +126,7 @@ export const ExportTestModal: React.FC<ExportTestModalProps> = ({ isOpen, onClos
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>Layout Engine Golden Test Case</title>
+  <title>Layout Document Export</title>
   <style>
 ${css}
   </style>
@@ -137,6 +140,8 @@ ${html}
     switch (activeTab) {
       case 'yaml':
         return yamlString;
+      case 'xml':
+        return xmlString;
       case 'json':
         return jsonString;
       case 'html':
@@ -153,13 +158,16 @@ ${html}
   };
 
   const handleDownload = () => {
-    let filename = 'layout-test-vector.yaml';
+    let filename = 'layout_export.yaml';
     let mime = 'text/yaml';
-    if (activeTab === 'json') {
-      filename = 'layout-test-vector.json';
+    if (activeTab === 'xml') {
+      filename = 'layout_export.xml';
+      mime = 'application/xml';
+    } else if (activeTab === 'json') {
+      filename = 'layout_export.json';
       mime = 'application/json';
     } else if (activeTab === 'html') {
-      filename = 'layout-test.html';
+      filename = 'layout_export.html';
       mime = 'text/html';
     }
 
@@ -181,7 +189,7 @@ ${html}
         <div className="h-11 px-4 border-b border-[#2d2d38] flex items-center justify-between bg-[#161619]">
           <div className="flex items-center gap-2">
             <DownloadCloud className="w-4 h-4 text-sky-400" />
-            <span className="font-bold text-sm text-zinc-100">Export Layout Test Case</span>
+            <span className="font-bold text-sm text-zinc-100">Export Layout Document</span>
             <span className="bg-sky-950 text-sky-400 font-mono text-[10px] px-2 py-0.5 rounded border border-sky-800 font-semibold">
               Parent-Child Hierarchical Model
             </span>
@@ -221,6 +229,19 @@ ${html}
             >
               <FileText className="w-3.5 h-3.5 text-amber-300" />
               <span>Hierarchical YAML</span>
+            </button>
+
+            {/* XML TAB */}
+            <button
+              onClick={() => setActiveTab('xml')}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded font-medium transition-colors ${
+                activeTab === 'xml'
+                  ? 'bg-blue-600 text-white shadow-sm'
+                  : 'text-zinc-400 hover:text-zinc-200'
+              }`}
+            >
+              <FileCode className="w-3.5 h-3.5 text-cyan-300" />
+              <span>Clean XML</span>
             </button>
 
             {/* JSON TAB */}
@@ -283,6 +304,7 @@ ${html}
             style={{ tabSize: 2 }}
           >
             {activeTab === 'yaml' && highlightYaml(yamlString)}
+            {activeTab === 'xml' && highlightHtmlCss(xmlString)}
             {activeTab === 'json' && highlightJson(jsonString)}
             {activeTab === 'html' && highlightHtmlCss(standaloneHtml)}
           </div>
@@ -293,6 +315,8 @@ ${html}
           <span>
             {activeTab === 'yaml'
               ? 'Layout Engine Schema (flow: ROW/COLUMN, gap: [x,y], margin, padding, fill_ratio).'
+              : activeTab === 'xml'
+              ? 'Clean, declarative XML layout tree with semantic tags, attributes, and preserved hierarchy.'
               : activeTab === 'json'
               ? 'Nested JSON hierarchy with parentId links, declared styles, and computed geometry for unit testing.'
               : 'Standalone clean HTML & CSS representation with matching IDs and classes.'}

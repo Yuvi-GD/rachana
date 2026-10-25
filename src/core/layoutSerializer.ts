@@ -1005,3 +1005,213 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
     isExpanded: true,
   };
 };
+
+// ========================================================
+// XML Layout Serializer & Parser
+// ========================================================
+const escapeXmlAttr = (str: string): string => {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&apos;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+};
+
+export const exportToXml = (rootNode: LayoutNode): string => {
+  const serializeNode = (node: LayoutNode, indent: number = 0): string => {
+    const spaces = ' '.repeat(indent);
+    const s = node.style;
+    const attrs: string[] = [];
+
+    attrs.push(`id="${node.id}"`);
+    if (node.name && node.name !== node.id) {
+      attrs.push(`name="${escapeXmlAttr(node.name)}"`);
+    }
+
+    let tag = node.type || 'container';
+    if (tag === 'container' && s.display === 'flex') {
+      tag = 'flex';
+    } else if (tag === 'container' && s.display === 'grid') {
+      tag = 'grid';
+    }
+
+    if (s.flow && s.flow !== 'NONE') attrs.push(`flow="${s.flow}"`);
+    if (s.flexDirection && s.flexDirection !== 'row') attrs.push(`flexDirection="${s.flexDirection}"`);
+    if (s.justifyContent && s.justifyContent !== 'flex-start') attrs.push(`justifyContent="${s.justifyContent}"`);
+    if (s.alignItems && s.alignItems !== 'stretch') attrs.push(`alignItems="${s.alignItems}"`);
+    if (s.fillRatio) attrs.push(`fillRatio="${s.fillRatio}"`);
+    else if (s.flexGrow && s.flexGrow !== '0') attrs.push(`flexGrow="${s.flexGrow}"`);
+
+    if (s.gap && s.gap !== '0px') attrs.push(`gap="${s.gap}"`);
+    if (s.width && s.width !== 'auto') attrs.push(`width="${s.width}"`);
+    if (s.height && s.height !== 'auto') attrs.push(`height="${s.height}"`);
+    if (s.minWidth && s.minWidth !== '0px') attrs.push(`minWidth="${s.minWidth}"`);
+    if (s.minHeight && s.minHeight !== '0px') attrs.push(`minHeight="${s.minHeight}"`);
+    if (s.maxWidth && s.maxWidth !== 'none') attrs.push(`maxWidth="${s.maxWidth}"`);
+    if (s.maxHeight && s.maxHeight !== 'none') attrs.push(`maxHeight="${s.maxHeight}"`);
+
+    const m = s.margin;
+    if (m.top !== '0px' || m.right !== '0px' || m.bottom !== '0px' || m.left !== '0px') {
+      if (m.top === m.right && m.right === m.bottom && m.bottom === m.left) {
+        attrs.push(`margin="${m.top}"`);
+      } else {
+        attrs.push(`margin="${m.top} ${m.right} ${m.bottom} ${m.left}"`);
+      }
+    }
+
+    const p = s.padding;
+    if (p.top !== '0px' || p.right !== '0px' || p.bottom !== '0px' || p.left !== '0px') {
+      if (p.top === p.right && p.right === p.bottom && p.bottom === p.left) {
+        attrs.push(`padding="${p.top}"`);
+      } else {
+        attrs.push(`padding="${p.top} ${p.right} ${p.bottom} ${p.left}"`);
+      }
+    }
+
+    if (s.backgroundColor && s.backgroundColor !== 'transparent') {
+      attrs.push(`backgroundColor="${s.backgroundColor}"`);
+    }
+    if (s.color) attrs.push(`color="${s.color}"`);
+    if (s.fontSize && s.fontSize !== '14px') attrs.push(`fontSize="${s.fontSize}"`);
+    if (s.fontWeight && s.fontWeight !== '400') attrs.push(`fontWeight="${s.fontWeight}"`);
+    if (s.textAlign && s.textAlign !== 'left') attrs.push(`textAlign="${s.textAlign}"`);
+    if (s.borderRadius && s.borderRadius !== '0px') attrs.push(`borderRadius="${s.borderRadius}"`);
+    if (s.borderColor && s.borderColor !== 'transparent') attrs.push(`borderColor="${s.borderColor}"`);
+    const bw = s.borderWidth;
+    if (bw.top !== '0px' || bw.right !== '0px' || bw.bottom !== '0px' || bw.left !== '0px') {
+      attrs.push(`borderWidth="${bw.top}"`);
+    }
+
+    if (s.position && s.position !== 'relative') attrs.push(`position="${s.position}"`);
+    if (s.overflow && s.overflow !== 'visible') attrs.push(`overflow="${s.overflow}"`);
+    if (s.overflowY && s.overflowY !== 'visible') attrs.push(`overflowY="${s.overflowY}"`);
+
+    if (node.textContent) attrs.push(`text="${escapeXmlAttr(node.textContent)}"`);
+    if (node.placeholder) attrs.push(`placeholder="${escapeXmlAttr(node.placeholder)}"`);
+    if (node.src) attrs.push(`src="${escapeXmlAttr(node.src)}"`);
+
+    const attrString = attrs.length > 0 ? ' ' + attrs.join(' ') : '';
+
+    if (node.children.length === 0) {
+      return `${spaces}<${tag}${attrString} />`;
+    }
+
+    const childrenStr = node.children.map(c => serializeNode(c, indent + 2)).join('\n');
+    return `${spaces}<${tag}${attrString}>\n${childrenStr}\n${spaces}</${tag}>`;
+  };
+
+  return `<?xml version="1.0" encoding="UTF-8"?>\n${serializeNode(rootNode, 0)}`;
+};
+
+export const parseXmlLayout = (xmlText: string): LayoutNode => {
+  const parser = new DOMParser();
+  const doc = parser.parseFromString(xmlText.trim(), 'application/xml');
+  const parserError = doc.querySelector('parsererror');
+  if (parserError) {
+    throw new Error(parserError.textContent || 'Invalid XML syntax');
+  }
+
+  let idCounter = 1;
+
+  const traverseElement = (el: Element): LayoutNode => {
+    const rawTag = el.tagName.toLowerCase();
+    let nodeType: LayoutNode['type'] = 'container';
+
+    if (rawTag === 'button') nodeType = 'button';
+    else if (rawTag === 'text' || rawTag === 'p' || rawTag === 'span') nodeType = 'text';
+    else if (rawTag === 'heading' || rawTag === 'h1' || rawTag === 'h2' || rawTag === 'h3') nodeType = 'heading';
+    else if (rawTag === 'input') nodeType = 'input';
+    else if (rawTag === 'badge') nodeType = 'badge';
+    else if (rawTag === 'card') nodeType = 'card';
+    else if (rawTag === 'scroll') nodeType = 'scroll';
+    else if (rawTag === 'divider') nodeType = 'divider';
+    else if (rawTag === 'spacer') nodeType = 'spacer';
+    else if (rawTag === 'image' || rawTag === 'img') nodeType = 'image';
+    else if (rawTag === 'flex') nodeType = 'flex';
+    else if (rawTag === 'grid') nodeType = 'grid';
+    else if (el.hasAttribute('type')) nodeType = el.getAttribute('type') as any;
+
+    const style = createDefaultStyle();
+
+    if (nodeType === 'flex' || rawTag === 'flex') {
+      style.display = 'flex';
+      style.flow = 'ROW';
+    } else if (nodeType === 'grid' || rawTag === 'grid') {
+      style.display = 'grid';
+    } else if (nodeType === 'button') {
+      style.display = 'inline-block';
+      style.cursor = 'pointer';
+    }
+
+    if (el.hasAttribute('display')) style.display = el.getAttribute('display') as any;
+    if (el.hasAttribute('flow')) {
+      const f = el.getAttribute('flow')!;
+      style.flow = f as any;
+      if (f === 'ROW') {
+        style.display = 'flex';
+        style.flexDirection = 'row';
+      } else if (f === 'COLUMN') {
+        style.display = 'flex';
+        style.flexDirection = 'column';
+      }
+    }
+    if (el.hasAttribute('flexDirection')) style.flexDirection = el.getAttribute('flexDirection') as any;
+    if (el.hasAttribute('justifyContent')) style.justifyContent = el.getAttribute('justifyContent') as any;
+    if (el.hasAttribute('alignItems')) style.alignItems = el.getAttribute('alignItems') as any;
+    if (el.hasAttribute('fillRatio')) {
+      style.fillRatio = el.getAttribute('fillRatio')!;
+      style.flexGrow = style.fillRatio;
+    }
+    if (el.hasAttribute('flexGrow')) style.flexGrow = el.getAttribute('flexGrow')!;
+    if (el.hasAttribute('gap')) {
+      style.gap = el.getAttribute('gap')!;
+      style.rowGap = style.gap;
+      style.columnGap = style.gap;
+    }
+    if (el.hasAttribute('width')) style.width = el.getAttribute('width')!;
+    if (el.hasAttribute('height')) style.height = el.getAttribute('height')!;
+    if (el.hasAttribute('minWidth')) style.minWidth = el.getAttribute('minWidth')!;
+    if (el.hasAttribute('minHeight')) style.minHeight = el.getAttribute('minHeight')!;
+    if (el.hasAttribute('maxWidth')) style.maxWidth = el.getAttribute('maxWidth')!;
+    if (el.hasAttribute('maxHeight')) style.maxHeight = el.getAttribute('maxHeight')!;
+
+    if (el.hasAttribute('margin')) style.margin = defaultSpacing(el.getAttribute('margin')!);
+    if (el.hasAttribute('padding')) style.padding = defaultSpacing(el.getAttribute('padding')!);
+    if (el.hasAttribute('borderWidth')) style.borderWidth = defaultSpacing(el.getAttribute('borderWidth')!);
+    if (el.hasAttribute('borderColor')) style.borderColor = el.getAttribute('borderColor')!;
+    if (el.hasAttribute('borderRadius')) style.borderRadius = el.getAttribute('borderRadius')!;
+    if (el.hasAttribute('backgroundColor')) style.backgroundColor = el.getAttribute('backgroundColor')!;
+    if (el.hasAttribute('color')) style.color = el.getAttribute('color')!;
+    if (el.hasAttribute('fontSize')) style.fontSize = el.getAttribute('fontSize')!;
+    if (el.hasAttribute('fontWeight')) style.fontWeight = el.getAttribute('fontWeight')!;
+    if (el.hasAttribute('textAlign')) style.textAlign = el.getAttribute('textAlign') as any;
+    if (el.hasAttribute('position')) style.position = el.getAttribute('position') as any;
+    if (el.hasAttribute('overflow')) style.overflow = el.getAttribute('overflow') as any;
+    if (el.hasAttribute('overflowY')) style.overflowY = el.getAttribute('overflowY') as any;
+
+    const id = el.getAttribute('id') || `node_${idCounter++}_xml`;
+    const name = el.getAttribute('name') || id;
+    const textContent = el.getAttribute('text') || el.getAttribute('textContent') || undefined;
+    const placeholder = el.getAttribute('placeholder') || undefined;
+    const src = el.getAttribute('src') || undefined;
+
+    const childElements = Array.from(el.children).filter(c => c.nodeType === 1);
+    const children = childElements.map(traverseElement);
+
+    return {
+      id,
+      name,
+      type: nodeType,
+      style,
+      textContent,
+      placeholder,
+      src,
+      children,
+      isExpanded: true,
+    };
+  };
+
+  const rootElement = doc.documentElement;
+  return traverseElement(rootElement);
+};

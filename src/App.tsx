@@ -5,16 +5,28 @@ import { Hierarchy } from './components/hierarchy/Hierarchy';
 import { Viewport } from './components/viewport/Viewport';
 import { DetailsPanel } from './components/details/DetailsPanel';
 import { LiveYamlPanel } from './components/script/LiveYamlPanel';
-import { ExportTestModal } from './components/modals/ExportTestModal';
+import { ExportModal } from './components/modals/ExportModal';
 import { ImportModal } from './components/modals/ImportModal';
+import { SettingsModal } from './components/modals/SettingsModal';
+import { ShortcutsModal } from './components/modals/ShortcutsModal';
 import { Splitter } from './components/common/Splitter';
 import { useEditorStore } from './store/editorStore';
+import { LayoutNode } from './types/layout';
+import { Settings, Keyboard } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
   const { 
+    rootNode,
     selectedNodeId, 
+    selectedNode,
+    metricsMap,
+    zoom,
+    screenWidth,
+    screenHeight,
     showMetrics, 
     showLeftPanel,
     showBottomPanel,
@@ -25,16 +37,43 @@ export const App: React.FC = () => {
     paletteHeight, 
     rightPanelWidth, 
     bottomPanelHeight, 
+    preferences,
     actions 
   } = useEditorStore();
 
   const isBottomVisible = showBottomPanel !== undefined ? showBottomPanel : showMetrics;
+  const selectedMetrics = selectedNodeId ? metricsMap[selectedNodeId] : null;
+
+  const countTreeNodes = (node: LayoutNode): number => {
+    return 1 + (node.children ? node.children.reduce((acc, c) => acc + countTreeNodes(c), 0) : 0);
+  };
+  const totalNodes = countTreeNodes(rootNode);
+
+  // Sync theme attribute to <html> element
+  useEffect(() => {
+    const theme = preferences?.theme || 'unreal-dark';
+    document.documentElement.setAttribute('data-theme', theme);
+  }, [preferences?.theme]);
 
   // Keyboard Shortcuts (Unreal Engine style)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Preferences shortcut (Ctrl+,) can be pressed anywhere
+      if ((e.ctrlKey || e.metaKey) && e.key === ',') {
+        e.preventDefault();
+        setIsSettingsOpen((prev) => !prev);
+        return;
+      }
+
       const activeTag = (document.activeElement?.tagName || '').toLowerCase();
       if (activeTag === 'input' || activeTag === 'textarea' || activeTag === 'select') {
+        return;
+      }
+
+      // Keyboard shortcuts cheatsheet (?)
+      if (e.key === '?' && !e.ctrlKey && !e.metaKey) {
+        e.preventDefault();
+        setIsShortcutsOpen((prev) => !prev);
         return;
       }
 
@@ -80,10 +119,16 @@ export const App: React.FC = () => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [selectedNodeId, isSimulating, actions]);
 
+  const isHighContrast = preferences?.theme === 'high-contrast';
+
   return (
-    <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#121214] text-zinc-300">
+    <div className={`flex flex-col h-screen w-screen overflow-hidden ${isHighContrast ? 'bg-[#09090b] text-zinc-100' : 'bg-[#121214] text-zinc-300'}`}>
       {/* 1. Main Studio Toolbar */}
-      <Toolbar />
+      <Toolbar 
+        onOpenExport={() => setIsExportOpen(true)}
+        onOpenImport={() => setIsImportOpen(true)}
+        onOpenSettings={() => setIsSettingsOpen(true)}
+      />
 
       {/* 2. Workspace Body: Resizable 3-Column Studio Layout */}
       <div className="flex-1 flex overflow-hidden relative">
@@ -94,7 +139,7 @@ export const App: React.FC = () => {
           <>
             <div
               style={{ width: `${leftPanelWidth}px` }}
-              className="flex-shrink-0 flex flex-col overflow-hidden bg-[#1e1e22]"
+              className="flex-shrink-0 flex flex-col overflow-hidden bg-[#18181b] border-r border-[#27272a]"
             >
               {/* Top: Palette */}
               <div
@@ -149,8 +194,13 @@ export const App: React.FC = () => {
               currentSize={bottomPanelHeight}
               onUpdateSize={actions.setBottomPanelHeight}
               min={80}
-              max={500}
-              onDoubleClick={() => actions.setBottomPanelHeight(180)}
+              max={typeof window !== 'undefined' ? Math.max(300, window.innerHeight - 120) : 700}
+              onDoubleClick={() => {
+                const newHeight = typeof window !== 'undefined'
+                  ? Math.max(160, Math.round((window.innerHeight - 48) * 0.38))
+                  : 300;
+                actions.setBottomPanelHeight(newHeight);
+              }}
             />
           )}
 
@@ -183,7 +233,7 @@ export const App: React.FC = () => {
 
             <div
               style={{ width: `${rightPanelWidth}px` }}
-              className="flex-shrink-0 overflow-hidden bg-[#1e1e22]"
+              className="flex-shrink-0 overflow-hidden bg-[#18181b] border-l border-[#27272a]"
             >
               <DetailsPanel />
             </div>
@@ -191,8 +241,78 @@ export const App: React.FC = () => {
         )}
       </div>
 
+      {/* 3. VS Code-Style Bottom Status Bar */}
+      <footer className="h-6 bg-[#141417] border-t border-[#27272a] px-3 flex items-center justify-between text-[11px] font-mono text-zinc-400 select-none flex-shrink-0 z-20">
+        {/* Left: Node info, dimensions, element count */}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1.5 text-zinc-300 font-sans font-semibold">
+            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
+            <span>Rachana</span>
+          </div>
+
+          <div className="h-3 w-[1px] bg-[#22222a]" />
+
+          {/* Selected Node or Root Canvas */}
+          <span className="text-zinc-300 truncate max-w-[220px]">
+            {selectedNode ? `${selectedNode.type} #${selectedNode.id}` : 'Screen Canvas (Root)'}
+          </span>
+
+          {selectedMetrics && (
+            <span className="text-blue-400 font-semibold">
+              {Math.round(selectedMetrics.boundingRect.width)} × {Math.round(selectedMetrics.boundingRect.height)} px
+            </span>
+          )}
+
+          <div className="h-3 w-[1px] bg-[#22222a]" />
+
+          <span className="text-zinc-500">
+            {totalNodes} {totalNodes === 1 ? 'element' : 'elements'}
+          </span>
+        </div>
+
+        {/* Right: Resolution, Zoom, Shortcuts, Settings */}
+        <div className="flex items-center gap-3">
+          <span className="text-zinc-400">
+            {screenWidth}×{screenHeight} px
+          </span>
+
+          <div className="h-3 w-[1px] bg-[#22222a]" />
+
+          <span className="text-zinc-400 font-semibold">
+            {Math.round(zoom * 100)}%
+          </span>
+
+          <div className="h-3 w-[1px] bg-[#22222a]" />
+
+          <span className="text-zinc-500 hidden sm:inline">Spaces: 2</span>
+          <span className="text-zinc-500 hidden sm:inline">UTF-8</span>
+
+          <div className="h-3 w-[1px] bg-[#22222a]" />
+
+          <button
+            onClick={() => setIsShortcutsOpen(true)}
+            className="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 cursor-pointer"
+            title="Keyboard Shortcuts Cheatsheet (?)"
+          >
+            <Keyboard className="w-3 h-3 text-zinc-500" />
+            <span>Shortcuts</span>
+          </button>
+
+          <div className="h-3 w-[1px] bg-[#22222a]" />
+
+          <button
+            onClick={() => setIsSettingsOpen(true)}
+            className="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 cursor-pointer"
+            title="Open Studio Settings (Ctrl+,)"
+          >
+            <Settings className="w-3 h-3 text-zinc-500" />
+            <span>Settings</span>
+          </button>
+        </div>
+      </footer>
+
       {/* Dedicated Export Modal */}
-      <ExportTestModal 
+      <ExportModal 
         isOpen={isExportOpen} 
         onClose={() => setIsExportOpen(false)} 
         onSwitchToImport={() => {
@@ -209,6 +329,18 @@ export const App: React.FC = () => {
           setIsImportOpen(false);
           setIsExportOpen(true);
         }}
+      />
+
+      {/* Dedicated Studio Preferences / Settings Modal */}
+      <SettingsModal
+        isOpen={isSettingsOpen}
+        onClose={() => setIsSettingsOpen(false)}
+      />
+
+      {/* Dedicated Keyboard Shortcuts Cheatsheet Modal */}
+      <ShortcutsModal
+        isOpen={isShortcutsOpen}
+        onClose={() => setIsShortcutsOpen(false)}
       />
     </div>
   );

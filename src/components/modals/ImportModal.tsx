@@ -4,9 +4,11 @@ import {
   parseTetherYaml, 
   parseJsonLayout, 
   parseHtmlLayout,
+  parseXmlLayout,
   exportLayoutEngineYaml,
   exportLayoutEngineGoldenTest,
-  exportToHtmlCss
+  exportToHtmlCss,
+  exportToXml
 } from '../../core/layoutSerializer';
 import { LayoutNode } from '../../types/layout';
 import { 
@@ -15,6 +17,7 @@ import {
   Check, 
   AlertCircle, 
   FileText, 
+  FileCode,
   FileJson, 
   Code2, 
   FolderOpen
@@ -28,7 +31,7 @@ interface ImportModalProps {
 
 export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwitchToExport }) => {
   const { rootNode, metricsMap, actions } = useEditorStore();
-  const [format, setFormat] = useState<'yaml' | 'json' | 'html'>('yaml');
+  const [format, setFormat] = useState<'yaml' | 'xml' | 'json' | 'html'>('yaml');
   const [code, setCode] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
@@ -42,6 +45,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
       let root: LayoutNode;
       if (format === 'yaml') {
         root = parseTetherYaml(code);
+      } else if (format === 'xml') {
+        root = parseXmlLayout(code);
       } else if (format === 'json') {
         root = parseJsonLayout(code);
       } else {
@@ -61,7 +66,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
 
   if (!isOpen) return null;
 
-  const handleSelectFormat = (newFmt: 'yaml' | 'json' | 'html') => {
+  const handleSelectFormat = (newFmt: 'yaml' | 'xml' | 'json' | 'html') => {
     setFormat(newFmt);
     setError(null);
   };
@@ -72,6 +77,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
 
     const fileName = file.name.toLowerCase();
     if (fileName.endsWith('.json')) setFormat('json');
+    else if (fileName.endsWith('.xml')) setFormat('xml');
     else if (fileName.endsWith('.html') || fileName.endsWith('.htm')) setFormat('html');
     else if (fileName.endsWith('.yaml') || fileName.endsWith('.yml')) setFormat('yaml');
 
@@ -90,6 +96,8 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
   const handleLoadCurrentScreen = () => {
     if (format === 'yaml') {
       setCode(exportLayoutEngineYaml(rootNode, metricsMap));
+    } else if (format === 'xml') {
+      setCode(exportToXml(rootNode));
     } else if (format === 'json') {
       setCode(JSON.stringify(exportLayoutEngineGoldenTest(rootNode, metricsMap), null, 2));
     } else {
@@ -110,7 +118,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
     }
 
     try {
-      actions.loadCustomRootNode(parseResult.rootNode);
+      actions.loadCustomRootNode(parseResult.rootNode, true);
       setSuccess(true);
       setTimeout(() => {
         setSuccess(false);
@@ -130,7 +138,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
             <UploadCloud className="w-4 h-4 text-emerald-400" />
             <span className="font-bold text-sm text-zinc-100">Import Layout Specification</span>
             <span className="bg-emerald-950 text-emerald-400 font-mono text-[10px] px-2 py-0.5 rounded border border-emerald-800 font-semibold">
-              YAML • JSON • HTML
+              YAML • XML • JSON • HTML
             </span>
           </div>
 
@@ -167,6 +175,17 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
               >
                 <FileText className="w-3.5 h-3.5 text-amber-400" />
                 <span>YAML</span>
+              </button>
+              <button
+                onClick={() => handleSelectFormat('xml')}
+                className={`flex items-center gap-1.5 px-3 py-1 rounded text-xs font-semibold transition-all ${
+                  format === 'xml'
+                    ? 'bg-cyan-600/30 text-cyan-300 border border-cyan-500/50 shadow-sm'
+                    : 'text-zinc-400 hover:text-zinc-200'
+                }`}
+              >
+                <FileCode className="w-3.5 h-3.5 text-cyan-400" />
+                <span>XML</span>
               </button>
               <button
                 onClick={() => handleSelectFormat('json')}

@@ -63,3 +63,80 @@ body {
   background: #4a4a55;
 }
 
+/* ======================================================== */
+/* Theme Definitions: Unreal Dark vs Midnight High Contrast */
+/* ======================================================== */
+
+[data-theme="high-contrast"] body {
+  background-color: #000000;
+  color: #ffffff;
+}
+
+[data-theme="high-contrast"] .bg-\[\#121214\],
+[data-theme="high-contrast"] .bg-\[\#121215\],
+[data-theme="high-contrast"] .bg-\[\#0c0c0e\],
+[data-theme="high-contrast"] .bg-\[\#0e0e11\],
+[data-theme="high-contrast"] .bg-\[\#101013\],
+[data-theme="high-contrast"] .bg-\[\#141417\],
+[data-theme="high-contrast"] .bg-\[\#0a0a0c\] {
+  background-color: #000000 !important;
+}
+
+[data-theme="high-contrast"] .bg-\[\#16161a\],
+[data-theme="high-contrast"] .bg-\[\#18181b\],
+[data-theme="high-contrast"] .bg-\[\#18181d\],
+[data-theme="high-contrast"] .bg-\[\#1a1a20\],
+[data-theme="high-contrast"] .bg-\[\#1b1b22\],
+[data-theme="high-contrast"] .bg-\[\#1c1c20\],
+[data-theme="high-contrast"] .bg-\[\#1e1e22\] {
+  background-color: #08080a !important;
+}
+
+[data-theme="high-contrast"] .bg-\[\#202028\],
+[data-theme="high-contrast"] .bg-\[\#242427\],
+[data-theme="high-contrast"] .bg-\[\#242429\],
+[data-theme="high-contrast"] .bg-\[\#25252e\],
+[data-theme="high-contrast"] .bg-\[\#282830\] {
+  background-color: #14141a !important;
+}
+
+[data-theme="high-contrast"] .border-\[\#202026\],
+[data-theme="high-contrast"] .border-\[\#22222a\],
+[data-theme="high-contrast"] .border-\[\#242429\],
+[data-theme="high-contrast"] .border-\[\#27272a\],
+[data-theme="high-contrast"] .border-\[\#27272e\],
+[data-theme="high-contrast"] .border-\[\#2a2a34\],
+[data-theme="high-contrast"] .border-\[\#2b2b36\],
+[data-theme="high-contrast"] .border-\[\#2c2c36\],
+[data-theme="high-contrast"] .border-\[\#2d2d38\],
+[data-theme="high-contrast"] .border-\[\#2e2e38\],
+[data-theme="high-contrast"] .border-\[\#303038\],
+[data-theme="high-contrast"] .border-\[\#333338\],
+[data-theme="high-contrast"] .border-\[\#33333d\],
+[data-theme="high-contrast"] .border-\[\#383842\],
+[data-theme="high-contrast"] .border-\[\#393946\] {
+  border-color: #484858 !important;
+}
+
+[data-theme="high-contrast"] .text-zinc-400 {
+  color: #c4c4cc !important;
+}
+
+[data-theme="high-contrast"] .text-zinc-500 {
+  color: #9c9ca8 !important;
+}
+
+[data-theme="high-contrast"] .text-zinc-300 {
+  color: #f4f4f6 !important;
+}
+
+[data-theme="high-contrast"] .text-zinc-200 {
+  color: #ffffff !important;
+}
+
+[data-theme="high-contrast"] kbd {
+  border-color: #606075 !important;
+  color: #ffffff !important;
+  background-color: #181820 !important;
+}
+

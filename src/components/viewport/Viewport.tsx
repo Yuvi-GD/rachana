@@ -30,6 +30,7 @@ export const Viewport: React.FC = () => {
   const containerRef = useRef<HTMLDivElement>(null);
   const rootElementRef = useRef<HTMLElement | null>(null);
   const wasInteractingRef = useRef(false);
+  const startMousePosRef = useRef({ x: 0, y: 0 });
 
   const [containerSize, setContainerSize] = useState({ width: 800, height: 600 });
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(null);
@@ -215,10 +216,12 @@ export const Viewport: React.FC = () => {
 
   // Mouse pan handling
   const handleMouseDown = (e: React.MouseEvent) => {
+    startMousePosRef.current = { x: e.clientX, y: e.clientY };
     if (e.button === 1 || e.button === 2 || e.target === containerRef.current) {
       e.preventDefault();
       setIsPanning(true);
-      wasInteractingRef.current = true;
+      // NOTE: Do NOT set wasInteractingRef.current = true here on simple click!
+      // It is only set in handleWindowMouseMove if the mouse moves > 4px.
       setStartPan({ x: e.clientX - panOffset.x, y: e.clientY - panOffset.y });
     }
   };
@@ -270,11 +273,16 @@ export const Viewport: React.FC = () => {
   useEffect(() => {
     const handleWindowMouseMove = (e: MouseEvent) => {
       if (isPanning) {
+        const dist = Math.hypot(e.clientX - startMousePosRef.current.x, e.clientY - startMousePosRef.current.y);
+        if (dist > 4) {
+          wasInteractingRef.current = true;
+        }
         actions.setPanOffset({
           x: e.clientX - startPan.x,
           y: e.clientY - startPan.y,
         });
       } else if (isResizingElement && elementResizeHandle && selectedNodeId) {
+        wasInteractingRef.current = true;
         const deltaX = (e.clientX - startElementPos.x) / zoom;
         const deltaY = (e.clientY - startElementPos.y) / zoom;
 
@@ -879,8 +887,29 @@ export const Viewport: React.FC = () => {
           </div>
         )}
 
-        {/* The Root Node is its OWN top-level container (No artificial wrapper box!) */}
-        <div className="relative overflow-visible">
+        {/* The Root Node is its OWN top-level container (with Simulation Window frame in Play Mode) */}
+        <div className={`relative overflow-visible transition-all duration-200 ${
+          isSimulating
+            ? 'rounded-lg ring-2 ring-emerald-500/70 shadow-[0_0_50px_rgba(16,185,129,0.22),0_20px_50px_rgba(0,0,0,0.85)]'
+            : ''
+        }`}>
+          {/* Simulation Window Header Bar */}
+          {isSimulating && (
+            <div className="h-7 -top-7 left-0 right-0 absolute bg-[#16161b] border-t border-x border-emerald-500/50 rounded-t-lg flex items-center justify-between px-3 text-[11px] select-none text-zinc-300">
+              <div className="flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse inline-block" />
+                <span className="font-bold text-emerald-300 font-mono text-[10px] tracking-wide">
+                  SIMULATED APPLICATION WINDOW
+                </span>
+                <span className="text-zinc-600 text-[10px]">|</span>
+                <span className="text-zinc-400 font-mono text-[10px]">{screenWidth} × {screenHeight} px</span>
+              </div>
+              <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
+                <span>Interactive Sandbox</span>
+              </div>
+            </div>
+          )}
+
           {renderNode(rootNode)}
 
           {/* Unified Selection Box & DevTools Calipers Overlay */}

@@ -50,7 +50,53 @@ export interface EditorState {
   isCodeMaximized: boolean;
   isSimulating: boolean;
   simulationLogs: Array<{ id: string; time: string; text: string; type: 'click' | 'input' | 'focus' }>;
+  preferences: EditorPreferences;
 }
+
+export interface EditorPreferences {
+  theme: 'unreal-dark' | 'high-contrast';
+  codeFontSize: number; // 10 to 18, default 12
+  autoSyncScript: boolean; // default true
+}
+
+const DEFAULT_PREFERENCES: EditorPreferences = {
+  theme: 'unreal-dark',
+  codeFontSize: 12,
+  autoSyncScript: true,
+};
+
+function loadStoredPreferences(): EditorPreferences {
+  if (typeof window === 'undefined') return DEFAULT_PREFERENCES;
+  try {
+    const raw = localStorage.getItem('rachana_preferences');
+    if (raw) {
+      return { ...DEFAULT_PREFERENCES, ...JSON.parse(raw) };
+    }
+  } catch {}
+  return DEFAULT_PREFERENCES;
+}
+
+function loadStoredNumber(key: string, defaultVal: number): number {
+  if (typeof window === 'undefined') return defaultVal;
+  try {
+    const raw = localStorage.getItem(key);
+    if (raw) {
+      const parsed = parseFloat(raw);
+      if (!isNaN(parsed)) return parsed;
+    }
+  } catch {}
+  return defaultVal;
+}
+
+const initialPreferences = loadStoredPreferences();
+if (typeof document !== 'undefined') {
+  document.documentElement.setAttribute('data-theme', initialPreferences.theme || 'unreal-dark');
+}
+const initialMaxHistory = Math.round(loadStoredNumber('rachana_max_history', 64));
+const initialScrollSens = loadStoredNumber('rachana_scroll_sens', 1.0);
+const initialBottomHeight = typeof window !== 'undefined'
+  ? Math.max(160, Math.round((window.innerHeight - 48) * 0.38))
+  : 300;
 
 // Initial state
 let state: EditorState = {
@@ -72,17 +118,18 @@ let state: EditorState = {
   metricsMap: {},
   history: [JSON.parse(JSON.stringify(LAYOUT_PRESETS[0].rootNode))],
   historyIndex: 0,
-  maxHistorySteps: 64,
-  scrollSensitivity: 1.0,
+  maxHistorySteps: initialMaxHistory,
+  scrollSensitivity: initialScrollSens,
   scriptError: null,
 
   leftPanelWidth: 260,
   paletteHeight: typeof window !== 'undefined' ? Math.max(260, Math.round((window.innerHeight - 60) * 0.5)) : 360,
   rightPanelWidth: 340,
-  bottomPanelHeight: 180,
+  bottomPanelHeight: initialBottomHeight,
   isCodeMaximized: false,
   isSimulating: false,
   simulationLogs: [],
+  preferences: initialPreferences,
 };
 
 type Listener = () => void;
@@ -199,8 +246,13 @@ export const editorStore = {
   },
 
   setScrollSensitivity: (scrollSensitivity: number) => {
-    const clamped = Math.max(0.2, Math.min(scrollSensitivity, 3.0));
+    const clamped = Math.max(0.1, Math.min(scrollSensitivity, 3.0));
     state = { ...state, scrollSensitivity: clamped };
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('rachana_scroll_sens', String(clamped));
+      } catch {}
+    }
     emitChange();
   },
 
@@ -272,8 +324,23 @@ export const editorStore = {
   },
 
   setBottomPanelHeight: (height: number) => {
-    const clamped = Math.max(80, Math.min(height, 600));
+    const maxHeight = typeof window !== 'undefined' ? Math.max(300, window.innerHeight - 120) : 800;
+    const clamped = Math.max(80, Math.min(height, maxHeight));
     state = { ...state, bottomPanelHeight: Math.round(clamped) };
+    emitChange();
+  },
+
+  setPreferences: (partial: Partial<EditorPreferences>) => {
+    const updated = { ...state.preferences, ...partial };
+    state = { ...state, preferences: updated };
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('rachana_preferences', JSON.stringify(updated));
+        if (updated.theme) {
+          document.documentElement.setAttribute('data-theme', updated.theme);
+        }
+      } catch {}
+    }
     emitChange();
   },
 
@@ -684,27 +751,37 @@ export const editorStore = {
     }
   },
 
-  loadCustomRootNode: (customRoot: LayoutNode) => {
+  loadCustomRootNode: (customRoot: LayoutNode, isNewDocument: boolean = false) => {
     const newRoot = clone(customRoot);
-    const rootW = parseInt(newRoot.style.width, 10) || 840;
-    const rootH = parseInt(newRoot.style.height, 10) || 540;
-    state = {
-      ...state,
-      rootNode: newRoot,
-      selectedNodeId: newRoot.id,
-      screenWidth: rootW,
-      screenHeight: rootH,
-      devicePreset: {
-        name: `Custom (${rootW}×${rootH})`,
-        width: rootW,
-        height: rootH,
-        isCustom: true,
-      },
-      metricsMap: {},
-      history: [newRoot],
-      historyIndex: 0,
-    };
-    emitChange();
+    const rootW = parseInt(newRoot.style.width, 10) || state.screenWidth || 800;
+    const rootH = parseInt(newRoot.style.height, 10) || state.screenHeight || 520;
+    if (isNewDocument) {
+      state = {
+        ...state,
+        rootNode: newRoot,
+        selectedNodeId: newRoot.id,
+        screenWidth: rootW,
+        screenHeight: rootH,
+        devicePreset: {
+          name: `Custom (${rootW}×${rootH})`,
+          width: rootW,
+          height: rootH,
+          isCustom: true,
+        },
+        metricsMap: {},
+        history: [newRoot],
+        historyIndex: 0,
+      };
+      emitChange();
+    } else {
+      state = {
+        ...state,
+        rootNode: newRoot,
+        screenWidth: rootW,
+        screenHeight: rootH,
+      };
+      pushHistory(newRoot);
+    }
   },
 
   registerMetric: (id: string, metric: ComputedMetrics) => {
@@ -737,6 +814,7 @@ export const editorStore = {
         ...state,
         rootNode: prevRoot,
         historyIndex: prevIndex,
+        selectedNodeId: findNodeById(prevRoot, state.selectedNodeId) ? state.selectedNodeId : prevRoot.id,
       };
       emitChange();
     }
@@ -750,13 +828,14 @@ export const editorStore = {
         ...state,
         rootNode: nextRoot,
         historyIndex: nextIndex,
+        selectedNodeId: findNodeById(nextRoot, state.selectedNodeId) ? state.selectedNodeId : nextRoot.id,
       };
       emitChange();
     }
   },
 
   setMaxHistorySteps: (steps: number) => {
-    const clamped = Math.max(16, Math.min(steps, 256));
+    const clamped = Math.max(16, Math.min(steps, 512));
     const trimmed = state.history.length > clamped ? state.history.slice(state.history.length - clamped) : state.history;
     state = {
       ...state,
@@ -764,6 +843,11 @@ export const editorStore = {
       history: trimmed,
       historyIndex: Math.min(state.historyIndex, trimmed.length - 1),
     };
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('rachana_max_history', String(clamped));
+      } catch {}
+    }
     emitChange();
   },
 };

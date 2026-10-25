@@ -1,6 +1,8 @@
-# Rachana - Visual Layout Studio and Engine Testbed
+# Rachana - Visual Layout Editor
 
-Rachana is a high-precision visual layout testbed, geometry inspector, and test case generator designed for authors of custom layout engines (such as Flexbox, CSS Grid, Yoga, Taffy, and game engine UI frameworks like Unreal Engine UMG). It bridges high-level declarative layout schemas with ground-truth browser layout computation, providing sub-pixel verification of layout algorithms.
+> **Live Web Application:** [Rachana - Visual Layout Editor](https://rachana-studio.onrender.com/)
+
+Rachana is a high-precision visual layout editor, geometry inspector, and test case generator designed for authors of custom layout engines (such as Flexbox, CSS Grid, Yoga, Taffy, and game engine UI frameworks like Unreal Engine UMG). It bridges high-level declarative layout schemas with ground-truth browser layout computation, providing sub-pixel verification of layout algorithms.
 
 ---
 

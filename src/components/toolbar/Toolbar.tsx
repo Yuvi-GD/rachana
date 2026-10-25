@@ -13,7 +13,8 @@ import {
   PanelBottom,
   PanelRight,
   Play,
-  Square
+  Square,
+  Settings
 } from 'lucide-react';
 import { useEditorStore, DEVICE_PRESETS } from '../../store/editorStore';
 import { LAYOUT_PRESETS } from '../../core/presets';
@@ -21,12 +22,12 @@ import { LAYOUT_PRESETS } from '../../core/presets';
 interface ToolbarProps {
   onOpenExport?: () => void;
   onOpenImport?: () => void;
+  onOpenSettings?: () => void;
 }
 
-export const Toolbar: React.FC<ToolbarProps> = () => {
+export const Toolbar: React.FC<ToolbarProps> = ({ onOpenSettings }) => {
   const {
     zoom,
-    scrollSensitivity,
     devicePreset,
     showOverlays,
     showRulers,
@@ -36,7 +37,6 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
     isSimulating,
     historyIndex,
     history,
-    maxHistorySteps,
     actions,
   } = useEditorStore();
 
@@ -121,28 +121,13 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
           </button>
         </div>
 
-        {/* Scroll Sensitivity */}
-        <div className="h-7 hidden lg:flex items-center gap-1 bg-[#242427] px-2 rounded border border-[#333338]" title="Mouse Wheel / Trackpad Zoom Sensitivity">
-          <span className="text-[11px] text-zinc-400 font-medium">Sens:</span>
-          <select
-            value={scrollSensitivity || 1.0}
-            onChange={(e) => actions.setScrollSensitivity(parseFloat(e.target.value))}
-            className="bg-transparent text-zinc-200 text-[11px] outline-none cursor-pointer font-mono"
-          >
-            <option value="0.5" className="bg-[#242427]">0.5x Smooth</option>
-            <option value="1.0" className="bg-[#242427]">1.0x Normal</option>
-            <option value="1.5" className="bg-[#242427]">1.5x Fast</option>
-            <option value="2.0" className="bg-[#242427]">2.0x Ultra</option>
-          </select>
-        </div>
-
-        {/* Undo / Redo with Steps Capacity Selector */}
+        {/* Common Global Undo / Redo controls on top of screen */}
         <div className="h-7 flex items-center bg-[#242427] rounded border border-[#333338] px-1 gap-0.5">
           <button
             onClick={actions.undo}
             disabled={historyIndex <= 0}
             title={`Undo (Ctrl+Z) - Step ${historyIndex}/${history.length - 1}`}
-            className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
+            className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             <Undo2 className="w-3.5 h-3.5" />
           </button>
@@ -150,23 +135,10 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
             onClick={actions.redo}
             disabled={historyIndex >= history.length - 1}
             title={`Redo (Ctrl+Y) - Step ${historyIndex}/${history.length - 1}`}
-            className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors"
+            className="p-1 text-zinc-400 hover:text-white disabled:opacity-30 disabled:hover:text-zinc-400 transition-colors cursor-pointer disabled:cursor-not-allowed"
           >
             <Redo2 className="w-3.5 h-3.5" />
           </button>
-          <div className="h-3.5 w-[1px] bg-[#333338] mx-0.5 hidden sm:block" />
-          <select
-            value={maxHistorySteps || 64}
-            onChange={(e) => actions.setMaxHistorySteps(parseInt(e.target.value, 10))}
-            title="Max Undo/Redo History Steps"
-            className="bg-transparent text-zinc-300 hover:text-zinc-100 text-[11px] outline-none cursor-pointer font-mono hidden sm:block"
-          >
-            <option value="16" className="bg-[#242427]">16 steps</option>
-            <option value="32" className="bg-[#242427]">32 steps</option>
-            <option value="64" className="bg-[#242427]">64 steps</option>
-            <option value="128" className="bg-[#242427]">128 steps</option>
-            <option value="256" className="bg-[#242427]">256 steps</option>
-          </select>
         </div>
       </div>
 
@@ -260,6 +232,17 @@ export const Toolbar: React.FC<ToolbarProps> = () => {
           }`}
         >
           <PanelRight className="w-3.5 h-3.5" />
+        </button>
+
+        <div className="h-4 w-[1px] bg-[#333338] mx-0.5" />
+
+        {/* Studio Preferences / Settings Modal Toggle */}
+        <button
+          onClick={onOpenSettings}
+          title="Studio Preferences (Ctrl+,)"
+          className="h-7 w-7 flex items-center justify-center rounded border bg-[#242427] border-[#333338] text-zinc-400 hover:text-zinc-100 hover:bg-[#2b2b30] transition-colors"
+        >
+          <Settings className="w-3.5 h-3.5" />
         </button>
       </div>
     </header>
