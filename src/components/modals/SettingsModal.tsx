@@ -8,8 +8,11 @@ import {
   Type,
   Palette,
   RotateCw,
-  History
+  History,
+  Sparkles,
+  Pipette
 } from 'lucide-react';
+import { PRESET_CUSTOM_PALETTES } from '../../core/themeEngine';
 
 interface SettingsModalProps {
   isOpen: boolean;
@@ -33,12 +36,16 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
   if (!isOpen) return null;
 
   const currentTheme = preferences?.theme || 'grey';
+  const customBase = preferences?.customBaseColor || '#0f172a';
+  const customAccent = preferences?.customAccentColor || '#38bdf8';
   const currentFontSize = preferences?.codeFontSize || 12;
   const currentAutoSync = preferences?.autoSyncScript ?? true;
 
   const resetAllDefaults = () => {
     actions.setPreferences({
       theme: 'grey',
+      customBaseColor: '#0f172a',
+      customAccentColor: '#38bdf8',
       codeFontSize: 12,
       autoSyncScript: true,
     });
@@ -77,55 +84,191 @@ export const SettingsModal: React.FC<SettingsModalProps> = ({ isOpen, onClose })
 
         {/* Settings Body - 5 Working Sensible Controls */}
         <div className="p-5 overflow-y-auto custom-scrollbar space-y-4 max-h-[75vh]">
-          {/* 1. Interface Theme: 3 Choices (Grey, AMOLED Black, White) */}
-          <div className="p-3 bg-[#1a1a20] border border-[#2b2b36] rounded-lg space-y-2">
-            <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
-              <Palette className="w-4 h-4 text-purple-400" />
-              <span>Studio Theme</span>
+          {/* 1. Interface Theme: 4 Choices (Grey, AMOLED Black, White, Custom) */}
+          <div className="p-3 bg-[#1a1a20] border border-[#2b2b36] rounded-lg space-y-2.5">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-semibold text-zinc-200">
+                <Palette className="w-4 h-4 text-purple-400" />
+                <span>Studio Theme</span>
+              </div>
+              {currentTheme === 'custom' && (
+                <span className="flex items-center gap-1 text-[10px] text-cyan-400 font-mono">
+                  <Sparkles className="w-3 h-3" />
+                  <span>Custom Active</span>
+                </span>
+              )}
             </div>
-            <div className="grid grid-cols-3 gap-2 pt-1">
+
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
               {/* Theme 1: Unreal Slate Grey */}
               <button
                 type="button"
                 onClick={() => actions.setPreferences({ theme: 'grey' })}
-                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
+                className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
                   currentTheme === 'grey'
-                    ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm'
-                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200'
+                    ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm ring-1 ring-blue-500/50'
+                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200 hover:bg-[#1a1a20]'
                 }`}
               >
-                <div className="text-xs font-semibold text-zinc-100">Slate Grey</div>
-                <div className="text-[10px] text-zinc-500">Uniform studio grey</div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-3 h-3 rounded-full bg-[#1e1e24] border border-[#3c3c48]" />
+                  <div className="text-xs font-semibold text-zinc-100">Slate Grey</div>
+                </div>
+                <div className="text-[10px] text-zinc-500">Studio grey</div>
               </button>
 
               {/* Theme 2: AMOLED Pitch Black */}
               <button
                 type="button"
                 onClick={() => actions.setPreferences({ theme: 'amoled-black' })}
-                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
+                className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
                   currentTheme === 'amoled-black'
-                    ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm'
-                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200'
+                    ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm ring-1 ring-blue-500/50'
+                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200 hover:bg-[#1a1a20]'
                 }`}
               >
-                <div className="text-xs font-semibold text-zinc-100">AMOLED Black</div>
-                <div className="text-[10px] text-zinc-500">Pure pitch dark</div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-3 h-3 rounded-full bg-[#000000] border border-zinc-700" />
+                  <div className="text-xs font-semibold text-zinc-100">AMOLED</div>
+                </div>
+                <div className="text-[10px] text-zinc-500">Pure pitch black</div>
               </button>
 
               {/* Theme 3: Studio White */}
               <button
                 type="button"
                 onClick={() => actions.setPreferences({ theme: 'white' })}
-                className={`p-2.5 rounded-md border text-left transition-all cursor-pointer ${
+                className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
                   currentTheme === 'white'
-                    ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm'
-                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200'
+                    ? 'border-blue-500 bg-blue-600/15 text-white shadow-sm ring-1 ring-blue-500/50'
+                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200 hover:bg-[#1a1a20]'
                 }`}
               >
-                <div className="text-xs font-semibold text-zinc-100">Studio White</div>
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div className="w-3 h-3 rounded-full bg-[#ffffff] border border-zinc-300" />
+                  <div className="text-xs font-semibold text-zinc-100">White</div>
+                </div>
                 <div className="text-[10px] text-zinc-500">Clean light mode</div>
               </button>
+
+              {/* Theme 4: Custom Tint Palette */}
+              <button
+                type="button"
+                onClick={() => actions.setPreferences({ theme: 'custom' })}
+                className={`p-2 rounded-md border text-left transition-all cursor-pointer ${
+                  currentTheme === 'custom'
+                    ? 'border-cyan-500 bg-cyan-600/15 text-white shadow-sm ring-1 ring-cyan-500/50'
+                    : 'border-[#2d2d38] bg-[#141418] text-zinc-400 hover:text-zinc-200 hover:bg-[#1a1a20]'
+                }`}
+              >
+                <div className="flex items-center gap-1.5 mb-1">
+                  <div 
+                    style={{ backgroundColor: customBase, borderColor: customAccent }}
+                    className="w-3 h-3 rounded-full border"
+                  />
+                  <div className="text-xs font-semibold text-zinc-100">Custom</div>
+                </div>
+                <div className="text-[10px] text-zinc-500">Custom palette</div>
+              </button>
             </div>
+
+            {/* Custom Theme Interactive Color Controls */}
+            {currentTheme === 'custom' && (
+              <div className="pt-2 mt-2 border-t border-[#2d2d38] space-y-3 animate-in fade-in duration-150">
+                {/* 1. Quick Presets */}
+                <div>
+                  <div className="text-[10px] text-zinc-400 font-medium mb-1.5 flex items-center justify-between">
+                    <span>Preset Studio Colorways</span>
+                    <span className="text-[9px] text-zinc-500 font-mono">1-Click Apply</span>
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {PRESET_CUSTOM_PALETTES.map((preset) => (
+                      <button
+                        key={preset.name}
+                        type="button"
+                        onClick={() => actions.setPreferences({
+                          theme: 'custom',
+                          customBaseColor: preset.base,
+                          customAccentColor: preset.accent,
+                        })}
+                        className={`p-1.5 rounded flex items-center gap-2 border text-left transition-colors cursor-pointer ${
+                          customBase.toLowerCase() === preset.base.toLowerCase()
+                            ? 'bg-zinc-800/80 border-cyan-500 text-white'
+                            : 'bg-[#141418] border-[#2d2d38] hover:border-zinc-500 text-zinc-300'
+                        }`}
+                      >
+                        <div 
+                          style={{ backgroundColor: preset.base, borderColor: preset.accent }}
+                          className="w-3.5 h-3.5 rounded-full border-2 flex-shrink-0 shadow-xs"
+                        />
+                        <div className="min-w-0">
+                          <div className="text-[11px] font-medium truncate">{preset.name}</div>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* 2. Color Inputs */}
+                <div className="grid grid-cols-2 gap-2 pt-1">
+                  {/* Base Color Picker */}
+                  <div className="bg-[#141418] p-2 rounded border border-[#2d2d38] space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-medium flex items-center justify-between">
+                      <span>Primary Studio Base</span>
+                      <Pipette className="w-2.5 h-2.5 text-zinc-500" />
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={customBase}
+                        onChange={(e) => actions.setPreferences({
+                          theme: 'custom',
+                          customBaseColor: e.target.value,
+                        })}
+                        className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+                      />
+                      <input
+                        type="text"
+                        value={customBase}
+                        onChange={(e) => actions.setPreferences({
+                          theme: 'custom',
+                          customBaseColor: e.target.value,
+                        })}
+                        className="flex-1 bg-[#1c1c24] border border-[#343444] rounded px-1.5 py-0.5 text-[11px] font-mono text-zinc-200 outline-none uppercase"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Accent Color Picker */}
+                  <div className="bg-[#141418] p-2 rounded border border-[#2d2d38] space-y-1">
+                    <label className="text-[10px] text-zinc-400 font-medium flex items-center justify-between">
+                      <span>Accent Highlight</span>
+                      <Pipette className="w-2.5 h-2.5 text-zinc-500" />
+                    </label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="color"
+                        value={customAccent}
+                        onChange={(e) => actions.setPreferences({
+                          theme: 'custom',
+                          customAccentColor: e.target.value,
+                        })}
+                        className="w-6 h-6 rounded cursor-pointer bg-transparent border-0 p-0"
+                      />
+                      <input
+                        type="text"
+                        value={customAccent}
+                        onChange={(e) => actions.setPreferences({
+                          theme: 'custom',
+                          customAccentColor: e.target.value,
+                        })}
+                        className="flex-1 bg-[#1c1c24] border border-[#343444] rounded px-1.5 py-0.5 text-[11px] font-mono text-zinc-200 outline-none uppercase"
+                      />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
           </div>
 
           {/* 2. Code Editor Font Size */}

@@ -58,10 +58,11 @@ export const Splitter: React.FC<SplitterProps> = ({
       onMouseDown={handleMouseDown}
       onDoubleClick={onDoubleClick}
       title="Click and drag to resize panel (Double-click to reset)"
+      style={{ backgroundColor: 'var(--theme-border, #27272e)' }}
       className={`group relative z-30 transition-colors select-none ${
         isH
-          ? 'w-1.5 cursor-col-resize hover:bg-blue-500/90 bg-[#27272e]'
-          : 'h-1.5 cursor-row-resize hover:bg-blue-500/90 bg-[#27272e]'
+          ? 'w-1.5 cursor-col-resize hover:bg-blue-500/90'
+          : 'h-1.5 cursor-row-resize hover:bg-blue-500/90'
       } ${className}`}
     >
       <div

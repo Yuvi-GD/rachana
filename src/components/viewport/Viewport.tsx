@@ -767,11 +767,10 @@ export const Viewport: React.FC = () => {
       onMouseLeave={handleMouseLeave}
       onWheel={handleWheel}
       onContextMenu={handleContainerContextMenu}
-      className="relative flex-1 h-full w-full overflow-hidden bg-[#121214] select-none cursor-default"
+      className="relative flex-1 h-full w-full overflow-hidden select-none cursor-default transition-colors"
       style={{
-        backgroundImage: `
-          radial-gradient(circle, #25252d 1px, transparent 1px)
-        `,
+        backgroundColor: 'var(--theme-viewport-bg, #121214)',
+        backgroundImage: `radial-gradient(circle, var(--theme-viewport-dot, #25252d) 1px, transparent 1px)`,
         backgroundSize: '20px 20px',
       }}
     >

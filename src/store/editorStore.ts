@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { ComputedMetrics, LayoutNode, LayoutNodeStyle, LayoutNodeType, isContainerNodeType } from '../types/layout';
 import { LAYOUT_PRESETS } from '../core/presets';
 import { createWidgetPreset } from '../core/defaultStyles';
+import { applyThemeToDom } from '../core/themeEngine';
 
 export interface DevicePreset {
   name: string;
@@ -54,13 +55,17 @@ export interface EditorState {
 }
 
 export interface EditorPreferences {
-  theme: 'grey' | 'amoled-black' | 'white';
+  theme: 'grey' | 'amoled-black' | 'white' | 'custom';
+  customBaseColor?: string;   // e.g. '#0f172a'
+  customAccentColor?: string; // e.g. '#38bdf8'
   codeFontSize: number; // 10 to 18, default 12
   autoSyncScript: boolean; // default true
 }
 
 const DEFAULT_PREFERENCES: EditorPreferences = {
   theme: 'grey',
+  customBaseColor: '#0f172a',
+  customAccentColor: '#38bdf8',
   codeFontSize: 12,
   autoSyncScript: true,
 };
@@ -72,10 +77,17 @@ function loadStoredPreferences(): EditorPreferences {
     if (raw) {
       const parsed = JSON.parse(raw);
       // Migrate legacy theme names if present
-      let theme: 'grey' | 'amoled-black' | 'white' = 'grey';
+      let theme: 'grey' | 'amoled-black' | 'white' | 'custom' = 'grey';
       if (parsed.theme === 'amoled-black' || parsed.theme === 'high-contrast') theme = 'amoled-black';
       else if (parsed.theme === 'white') theme = 'white';
-      return { ...DEFAULT_PREFERENCES, ...parsed, theme };
+      else if (parsed.theme === 'custom') theme = 'custom';
+      return { 
+        ...DEFAULT_PREFERENCES, 
+        ...parsed, 
+        theme,
+        customBaseColor: parsed.customBaseColor || DEFAULT_PREFERENCES.customBaseColor,
+        customAccentColor: parsed.customAccentColor || DEFAULT_PREFERENCES.customAccentColor,
+      };
     }
   } catch {}
   return DEFAULT_PREFERENCES;
@@ -95,7 +107,11 @@ function loadStoredNumber(key: string, defaultVal: number): number {
 
 const initialPreferences = loadStoredPreferences();
 if (typeof document !== 'undefined') {
-  document.documentElement.setAttribute('data-theme', initialPreferences.theme || 'grey');
+  applyThemeToDom(
+    initialPreferences.theme,
+    initialPreferences.customBaseColor,
+    initialPreferences.customAccentColor
+  );
 }
 const initialMaxHistory = Math.round(loadStoredNumber('rachana_max_history', 64));
 const initialScrollSens = loadStoredNumber('rachana_scroll_sens', 1.0);
@@ -347,9 +363,11 @@ export const editorStore = {
     if (typeof window !== 'undefined') {
       try {
         localStorage.setItem('rachana_preferences', JSON.stringify(updated));
-        if (updated.theme) {
-          document.documentElement.setAttribute('data-theme', updated.theme);
-        }
+        applyThemeToDom(
+          updated.theme,
+          updated.customBaseColor,
+          updated.customAccentColor
+        );
       } catch {}
     }
     emitChange();

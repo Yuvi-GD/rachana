@@ -1,4 +1,5 @@
 import React, { useRef, useEffect } from 'react';
+import { useEditorStore } from '../../store/editorStore';
 
 interface InfiniteRulerProps {
   panOffset: { x: number; y: number };
@@ -7,6 +8,30 @@ interface InfiniteRulerProps {
   height: number;
   mousePos: { x: number; y: number } | null;
 }
+
+const getRulerColors = () => {
+  if (typeof document === 'undefined') {
+    return { bg: '#161619', border: '#2d2d35', tickMajor: '#6b7280', tickMinor: '#3f3f46', text: '#a1a1aa' };
+  }
+  const theme = document.documentElement.getAttribute('data-theme') || 'grey';
+  if (theme === 'white') {
+    return { bg: '#f1f5f9', border: '#e2e8f0', tickMajor: '#64748b', tickMinor: '#cbd5e1', text: '#334155' };
+  }
+  if (theme === 'amoled-black') {
+    return { bg: '#000000', border: '#1f1f26', tickMajor: '#52525b', tickMinor: '#27272a', text: '#71717a' };
+  }
+  if (theme === 'custom') {
+    const computed = getComputedStyle(document.documentElement);
+    return {
+      bg: computed.getPropertyValue('--theme-ruler-bg').trim() || '#161619',
+      border: computed.getPropertyValue('--theme-border').trim() || '#2d2d35',
+      tickMajor: computed.getPropertyValue('--theme-ruler-tick').trim() || '#6b7280',
+      tickMinor: computed.getPropertyValue('--theme-ruler-subtick').trim() || '#3f3f46',
+      text: computed.getPropertyValue('--theme-text-sub').trim() || '#a1a1aa',
+    };
+  }
+  return { bg: '#161619', border: '#2d2d35', tickMajor: '#6b7280', tickMinor: '#3f3f46', text: '#a1a1aa' };
+};
 
 // Calculate adaptive LOD ruler tick intervals ensuring guaranteed pixel spacing between labels
 const getRulerSteps = (zoom: number, minPixelDist: number = 75) => {
@@ -37,6 +62,9 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
 }) => {
   const topCanvasRef = useRef<HTMLCanvasElement>(null);
   const leftCanvasRef = useRef<HTMLCanvasElement>(null);
+  const { preferences } = useEditorStore();
+  const theme = preferences?.theme || 'grey';
+  const colors = getRulerColors();
 
   const { major, minor, sub } = getRulerSteps(zoom, 75);
 
@@ -55,11 +83,11 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
     ctx.scale(dpr, dpr);
 
     // Background
-    ctx.fillStyle = '#161619';
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, w, h);
 
     // Bottom border
-    ctx.fillStyle = '#2d2d35';
+    ctx.fillStyle = colors.border;
     ctx.fillRect(0, h - 1, w, 1);
 
     // Visible canvas coordinate range
@@ -84,14 +112,14 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
         const subCoord = majorCoord + t * minor;
         const subScreenX = panOffset.x + subCoord * zoom;
         if (subScreenX >= 0 && subScreenX <= w) {
-          ctx.fillStyle = '#3f3f46';
+          ctx.fillStyle = colors.tickMinor;
           ctx.fillRect(Math.round(subScreenX), 12, 1, 8);
         }
       }
 
       // Draw Major tick
       if (majorScreenX >= 0 && majorScreenX <= w) {
-        ctx.fillStyle = '#6b7280';
+        ctx.fillStyle = colors.tickMajor;
         ctx.fillRect(Math.round(majorScreenX), 7, 1, 13);
 
         // Major Coordinate Label with strict collision prevention
@@ -99,7 +127,7 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
         const textWidth = ctx.measureText(label).width;
 
         if (majorScreenX >= lastLabelEnd + 8 && majorScreenX + textWidth <= w + 40) {
-          ctx.fillStyle = majorCoord === 0 ? '#38bdf8' : '#a1a1aa';
+          ctx.fillStyle = majorCoord === 0 ? '#38bdf8' : colors.text;
           ctx.fillText(label, Math.round(majorScreenX) + 2, 2);
           lastLabelEnd = majorScreenX + textWidth;
         }
@@ -112,7 +140,7 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
       ctx.fillStyle = '#38bdf8';
       ctx.fillRect(mouseX, 0, 1, h);
     }
-  }, [panOffset.x, zoom, width, mousePos, major, minor, sub]);
+  }, [panOffset.x, zoom, width, mousePos, major, minor, sub, theme, colors.bg, colors.border, colors.tickMajor, colors.tickMinor, colors.text]);
 
   // Render Left (Vertical) Ruler
   useEffect(() => {
@@ -129,11 +157,11 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
     ctx.scale(dpr, dpr);
 
     // Background
-    ctx.fillStyle = '#161619';
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, w, h);
 
     // Right border
-    ctx.fillStyle = '#2d2d35';
+    ctx.fillStyle = colors.border;
     ctx.fillRect(w - 1, 0, 1, h);
 
     const startMajorIndex = Math.floor((-panOffset.y) / (zoom * major)) - 1;
@@ -153,18 +181,18 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
         const subCoord = majorCoord + t * minor;
         const subScreenY = panOffset.y + subCoord * zoom;
         if (subScreenY >= 0 && subScreenY <= h) {
-          ctx.fillStyle = '#3f3f46';
+          ctx.fillStyle = colors.tickMinor;
           ctx.fillRect(12, Math.round(subScreenY), 8, 1);
         }
       }
 
       // Major tick
       if (majorScreenY >= 0 && majorScreenY <= h) {
-        ctx.fillStyle = '#6b7280';
+        ctx.fillStyle = colors.tickMajor;
         ctx.fillRect(7, Math.round(majorScreenY), 13, 1);
 
         ctx.save();
-        ctx.fillStyle = majorCoord === 0 ? '#38bdf8' : '#a1a1aa';
+        ctx.fillStyle = majorCoord === 0 ? '#38bdf8' : colors.text;
         ctx.fillText(`${majorCoord}`, 18, Math.round(majorScreenY) + 2);
         ctx.restore();
       }
@@ -176,12 +204,19 @@ export const InfiniteRuler: React.FC<InfiniteRulerProps> = ({
       ctx.fillStyle = '#38bdf8';
       ctx.fillRect(0, mouseY, w, 1);
     }
-  }, [panOffset.y, zoom, height, mousePos, major, minor, sub]);
+  }, [panOffset.y, zoom, height, mousePos, major, minor, sub, theme, colors.bg, colors.border, colors.tickMajor, colors.tickMinor, colors.text]);
 
   return (
     <div className="absolute inset-0 pointer-events-none select-none z-30 overflow-hidden font-mono text-[9px]">
       {/* Top-Left 20x20 Origin Corner */}
-      <div className="absolute top-0 left-0 w-5 h-5 bg-[#131316] border-r border-b border-[#2d2d35] flex items-center justify-center text-zinc-400 font-bold text-[8px] z-40">
+      <div 
+        style={{
+          backgroundColor: colors.bg,
+          borderColor: colors.border,
+          color: colors.text,
+        }}
+        className="absolute top-0 left-0 w-5 h-5 border-r border-b flex items-center justify-center font-bold text-[8px] z-40 transition-colors"
+      >
         px
       </div>
 

@@ -13,6 +13,7 @@ import { Splitter } from './components/common/Splitter';
 import { useEditorStore } from './store/editorStore';
 import { LayoutNode } from './types/layout';
 import { Settings, Keyboard } from 'lucide-react';
+import { applyThemeToDom } from './core/themeEngine';
 
 export const App: React.FC = () => {
   const [isExportOpen, setIsExportOpen] = useState(false);
@@ -49,11 +50,15 @@ export const App: React.FC = () => {
   };
   const totalNodes = countTreeNodes(rootNode);
 
-  // Sync theme attribute to <html> element
+  // Sync theme attribute & custom color variables to DOM
   useEffect(() => {
-    const theme = preferences?.theme || 'unreal-dark';
-    document.documentElement.setAttribute('data-theme', theme);
-  }, [preferences?.theme]);
+    const theme = preferences?.theme || 'grey';
+    applyThemeToDom(
+      theme,
+      preferences?.customBaseColor,
+      preferences?.customAccentColor
+    );
+  }, [preferences?.theme, preferences?.customBaseColor, preferences?.customAccentColor]);
 
   // Keyboard Shortcuts (Unreal Engine style)
   useEffect(() => {
