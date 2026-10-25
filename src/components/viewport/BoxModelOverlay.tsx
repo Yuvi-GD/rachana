@@ -103,9 +103,9 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 'n', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Height (Top)"
-              className="absolute -top-1.5 left-2 right-2 h-3 cursor-ns-resize flex items-center justify-center group z-20"
+              className="absolute -top-1 left-3 right-3 h-2 cursor-ns-resize flex items-center justify-center group z-20"
             >
-              <div className="h-1 w-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+              <div className="h-0.5 w-5 bg-blue-500 border border-white/90 rounded-xs shadow-xs group-hover:scale-125 transition-transform" />
             </div>
 
             {/* Bottom edge handle (S) */}
@@ -113,9 +113,9 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 's', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Height (Bottom)"
-              className="absolute -bottom-1.5 left-2 right-2 h-3 cursor-ns-resize flex items-center justify-center group z-20"
+              className="absolute -bottom-1 left-3 right-3 h-2 cursor-ns-resize flex items-center justify-center group z-20"
             >
-              <div className="h-1 w-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+              <div className="h-0.5 w-5 bg-blue-500 border border-white/90 rounded-xs shadow-xs group-hover:scale-125 transition-transform" />
             </div>
 
             {/* Left edge handle (W) */}
@@ -123,9 +123,9 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 'w', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Width (Left)"
-              className="absolute top-2 -left-1.5 bottom-2 w-3 cursor-ew-resize flex items-center justify-center group z-20"
+              className="absolute top-3 -left-1 bottom-3 w-2 cursor-ew-resize flex items-center justify-center group z-20"
             >
-              <div className="w-1 h-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+              <div className="w-0.5 h-5 bg-blue-500 border border-white/90 rounded-xs shadow-xs group-hover:scale-125 transition-transform" />
             </div>
 
             {/* Right edge handle (E) */}
@@ -133,9 +133,9 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 'e', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Width (Right)"
-              className="absolute top-2 -right-1.5 bottom-2 w-3 cursor-ew-resize flex items-center justify-center group z-20"
+              className="absolute top-3 -right-1 bottom-3 w-2 cursor-ew-resize flex items-center justify-center group z-20"
             >
-              <div className="w-1 h-6 bg-blue-500 border border-white rounded-xs shadow group-hover:scale-125 transition-transform" />
+              <div className="w-0.5 h-5 bg-blue-500 border border-white/90 rounded-xs shadow-xs group-hover:scale-125 transition-transform" />
             </div>
 
             {/* Top-Left Corner (NW) */}
@@ -143,7 +143,7 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 'nw', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Top-Left"
-              className="absolute -top-1.5 -left-1.5 w-3.5 h-3.5 cursor-nwse-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+              className="absolute -top-1 -left-1 w-2.5 h-2.5 cursor-nwse-resize bg-blue-500 hover:bg-blue-300 border border-white rounded-[1px] shadow-sm z-30 transition-transform hover:scale-125"
             />
 
             {/* Top-Right Corner (NE) */}
@@ -151,7 +151,7 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 'ne', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Top-Right"
-              className="absolute -top-1.5 -right-1.5 w-3.5 h-3.5 cursor-nesw-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+              className="absolute -top-1 -right-1 w-2.5 h-2.5 cursor-nesw-resize bg-blue-500 hover:bg-blue-300 border border-white rounded-[1px] shadow-sm z-30 transition-transform hover:scale-125"
             />
 
             {/* Bottom-Left Corner (SW) */}
@@ -159,7 +159,7 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 'sw', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Bottom-Left"
-              className="absolute -bottom-1.5 -left-1.5 w-3.5 h-3.5 cursor-nesw-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+              className="absolute -bottom-1 -left-1 w-2.5 h-2.5 cursor-nesw-resize bg-blue-500 hover:bg-blue-300 border border-white rounded-[1px] shadow-sm z-30 transition-transform hover:scale-125"
             />
 
             {/* Bottom-Right Corner (SE) */}
@@ -167,7 +167,7 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
               onMouseDown={(e) => onResizeStart(e, 'se', relWidth, relHeight)}
               onClick={(e) => e.stopPropagation()}
               title="Drag to resize Bottom-Right"
-              className="absolute -bottom-1.5 -right-1.5 w-3.5 h-3.5 cursor-nwse-resize bg-blue-600 hover:bg-blue-400 border border-white rounded-xs shadow-md z-30 transition-transform hover:scale-125"
+              className="absolute -bottom-1 -right-1 w-2.5 h-2.5 cursor-nwse-resize bg-blue-500 hover:bg-blue-300 border border-white rounded-[1px] shadow-sm z-30 transition-transform hover:scale-125"
             />
           </div>
         )}

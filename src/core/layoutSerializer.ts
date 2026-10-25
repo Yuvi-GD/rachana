@@ -200,10 +200,18 @@ export const nodeStyleToCss = (style: LayoutNodeStyle): React.CSSProperties => {
 };
 
 export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: string } => {
+  const rootBg = rootNode.style.backgroundColor && rootNode.style.backgroundColor !== 'transparent'
+    ? rootNode.style.backgroundColor
+    : '#121214';
+
   let cssRules: string[] = [
-    `/* Rachana Layout Engine CSS */`,
-    `*, *::before, *::after { box-sizing: border-box; }`,
-    `body { margin: 0; padding: 0; background: #121214; color: #eee; font-family: -apple-system, sans-serif; }`,
+    `/* Rachana Layout Engine CSS Reset */`,
+    `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }`,
+    `html, body { width: 100%; min-height: 100vh; margin: 0; padding: 0; background-color: ${rootBg}; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }`,
+    `button, input, textarea, select { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: none; }`,
+    `button { cursor: pointer; text-align: center; }`,
+    `h1, h2, h3, h4, h5, h6, p { margin: 0; }`,
+    `img { max-width: 100%; display: block; object-fit: cover; }`,
   ];
 
   const serializeNode = (node: LayoutNode, indent: number = 2): string => {
@@ -219,8 +227,13 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
     if (s.overflowX && s.overflowX !== s.overflow) styleLines.push(`  overflow-x: ${s.overflowX};`);
     if (s.overflowY && s.overflowY !== s.overflow) styleLines.push(`  overflow-y: ${s.overflowY};`);
 
-    if (s.width !== 'auto') styleLines.push(`  width: ${s.width};`);
-    if (s.height !== 'auto') styleLines.push(`  height: ${s.height};`);
+    if (indent === 0) {
+      styleLines.push(`  width: 100%;`);
+      styleLines.push(`  min-height: 100vh;`);
+    } else {
+      if (s.width !== 'auto') styleLines.push(`  width: ${s.width};`);
+      if (s.height !== 'auto') styleLines.push(`  height: ${s.height};`);
+    }
     if (s.minWidth !== 'auto') styleLines.push(`  min-width: ${s.minWidth};`);
     if (s.minHeight !== 'auto') styleLines.push(`  min-height: ${s.minHeight};`);
     if (s.maxWidth !== 'none') styleLines.push(`  max-width: ${s.maxWidth};`);

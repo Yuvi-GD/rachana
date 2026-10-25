@@ -258,10 +258,54 @@ body {
 /* AMOLED dark overrides for inputs & details panel sections */
 [data-theme="amoled-black"] input,
 [data-theme="amoled-black"] select,
-[data-theme="amoled-black"] textarea {
+[data-theme="amoled-black"] textarea:not(.code-editor-textarea) {
   background-color: #09090c !important;
   color: #ffffff !important;
   border-color: #1e1e26 !important;
+}
+
+[data-theme="white"] input,
+[data-theme="white"] select,
+[data-theme="white"] textarea:not(.code-editor-textarea) {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+  border-color: #cbd5e1 !important;
+}
+
+/* ======================================================== */
+/* Protected Code Editor Styling (Theme-Independent IDE)     */
+/* ======================================================== */
+.code-editor-workspace,
+[data-theme="white"] .code-editor-workspace,
+[data-theme="amoled-black"] .code-editor-workspace,
+[data-theme="grey"] .code-editor-workspace {
+  background-color: #121216 !important;
+  color: #d4d4d4 !important;
+}
+
+.code-editor-gutter,
+[data-theme="white"] .code-editor-gutter,
+[data-theme="amoled-black"] .code-editor-gutter,
+[data-theme="grey"] .code-editor-gutter {
+  background-color: #0d0d11 !important;
+  border-color: #24242e !important;
+}
+
+.code-editor-textarea,
+textarea.code-editor-textarea,
+[data-theme="white"] textarea.code-editor-textarea,
+[data-theme="amoled-black"] textarea.code-editor-textarea,
+[data-theme="grey"] textarea.code-editor-textarea {
+  background-color: transparent !important;
+  color: transparent !important;
+  caret-color: #38bdf8 !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.code-editor-pre,
+.code-editor-pre span {
+  /* Retain inline syntax highlighting colors without theme interference */
 }
 
 [data-theme="amoled-black"] select option {

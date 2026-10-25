@@ -250,6 +250,12 @@ export const editorStore = {
     emitChange();
   },
 
+  setViewportTransform: (zoom: number, panOffset: { x: number; y: number }) => {
+    const clamped = Math.min(Math.max(zoom, 0.15), 5.0);
+    state = { ...state, zoom: clamped, panOffset };
+    emitChange();
+  },
+
   setScrollSensitivity: (scrollSensitivity: number) => {
     const clamped = Math.max(0.1, Math.min(scrollSensitivity, 3.0));
     state = { ...state, scrollSensitivity: clamped };

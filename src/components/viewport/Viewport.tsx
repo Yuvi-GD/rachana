@@ -162,13 +162,28 @@ export const Viewport: React.FC = () => {
     }
   }, [rootNode.id]);
 
+  const measureDebounceRef = useRef<any>(null);
+
+  // Immediate layout measurement when tree structure or selection changes
   useEffect(() => {
     updateRootBounds();
     const frameId = requestAnimationFrame(() => {
       measureAllNodes();
     });
     return () => cancelAnimationFrame(frameId);
-  }, [selectedNodeId, rootNode, zoom, panOffset, screenWidth, screenHeight, measureAllNodes, updateRootBounds]);
+  }, [selectedNodeId, rootNode, screenWidth, screenHeight, measureAllNodes, updateRootBounds]);
+
+  // Debounced measurement during zoom & pan to ensure 60fps buttery-smooth hardware-accelerated canvas interaction
+  useEffect(() => {
+    updateRootBounds();
+    if (measureDebounceRef.current) clearTimeout(measureDebounceRef.current);
+    measureDebounceRef.current = setTimeout(() => {
+      measureAllNodes();
+    }, 100);
+    return () => {
+      if (measureDebounceRef.current) clearTimeout(measureDebounceRef.current);
+    };
+  }, [zoom, panOffset, measureAllNodes, updateRootBounds]);
 
   // Zoom centered on cursor location (Figma / CAD style) with normalized scrolling sensitivity
   const handleWheel = (e: React.WheelEvent) => {
@@ -210,8 +225,12 @@ export const Viewport: React.FC = () => {
     const newPanX = mouseX - canvasX * newZoom;
     const newPanY = mouseY - canvasY * newZoom;
 
-    actions.setZoom(newZoom);
-    actions.setPanOffset({ x: newPanX, y: newPanY });
+    if (actions.setViewportTransform) {
+      actions.setViewportTransform(newZoom, { x: newPanX, y: newPanY });
+    } else {
+      actions.setZoom(newZoom);
+      actions.setPanOffset({ x: newPanX, y: newPanY });
+    }
   };
 
   // Mouse pan handling
