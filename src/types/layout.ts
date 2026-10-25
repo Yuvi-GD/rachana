@@ -151,6 +151,12 @@ export interface ComputedMetrics {
     right: number;
     bottom: number;
   };
+  localRect?: {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
   contentBox: {
     width: number;
     height: number;

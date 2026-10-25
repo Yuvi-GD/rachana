@@ -206,7 +206,7 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
 
   let cssRules: string[] = [
     `/* Rachana Layout Engine CSS Reset */`,
-    `*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }`,
+    `*, *::before, *::after { box-sizing: border-box; }`,
     `html, body { width: 100%; min-height: 100vh; margin: 0; padding: 0; background-color: ${rootBg}; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }`,
     `button, input, textarea, select { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: none; }`,
     `button { cursor: pointer; text-align: center; }`,
@@ -227,13 +227,8 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
     if (s.overflowX && s.overflowX !== s.overflow) styleLines.push(`  overflow-x: ${s.overflowX};`);
     if (s.overflowY && s.overflowY !== s.overflow) styleLines.push(`  overflow-y: ${s.overflowY};`);
 
-    if (indent === 0) {
-      styleLines.push(`  width: 100%;`);
-      styleLines.push(`  min-height: 100vh;`);
-    } else {
-      if (s.width !== 'auto') styleLines.push(`  width: ${s.width};`);
-      if (s.height !== 'auto') styleLines.push(`  height: ${s.height};`);
-    }
+    if (s.width !== 'auto') styleLines.push(`  width: ${s.width};`);
+    if (s.height !== 'auto') styleLines.push(`  height: ${s.height};`);
     if (s.minWidth !== 'auto') styleLines.push(`  min-width: ${s.minWidth};`);
     if (s.minHeight !== 'auto') styleLines.push(`  min-height: ${s.minHeight};`);
     if (s.maxWidth !== 'none') styleLines.push(`  max-width: ${s.maxWidth};`);
@@ -1416,7 +1411,16 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
   }
 
   if (bodyChildren.length === 1) {
-    return traverseElement(bodyChildren[0]);
+    const root = traverseElement(bodyChildren[0]);
+    root.id = 'root';
+    root.name = 'Screen Canvas (Root)';
+    if (!root.style.width || root.style.width === 'auto') {
+      root.style.width = '840px';
+    }
+    if (!root.style.height || root.style.height === 'auto') {
+      root.style.height = '540px';
+    }
+    return root;
   }
 
   return {

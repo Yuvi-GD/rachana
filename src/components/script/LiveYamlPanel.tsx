@@ -942,7 +942,7 @@ export const LiveYamlPanel: React.FC = () => {
             onBlur={() => setIsFocused(false)}
             onScroll={handleScroll}
             spellCheck={false}
-            className="absolute inset-0 p-2 m-0 bg-transparent font-mono resize-none outline-none overflow-auto code-scrollbar custom-scrollbar whitespace-pre selection:bg-[#264f78] code-editor-textarea"
+            className="absolute inset-0 p-2 m-0 bg-transparent font-mono resize-none outline-none overflow-auto code-scrollbar whitespace-pre selection:bg-[#264f78] code-editor-textarea"
             style={{
               fontSize: `${codeFontSize}px`,
               lineHeight: `${lineHeightPx}px`,

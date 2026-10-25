@@ -130,6 +130,16 @@ export const ExportModal: React.FC<ExportModalProps> = ({ isOpen, onClose, onSwi
   <title>Rachana Layout Export</title>
   <style>
 ${css}
+
+  body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    margin: 0;
+    padding: 24px;
+    box-sizing: border-box;
+  }
   </style>
 </head>
 <body>

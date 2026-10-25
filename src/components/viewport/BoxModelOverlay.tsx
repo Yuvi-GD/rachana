@@ -23,18 +23,19 @@ export const BoxModelOverlay: React.FC<BoxModelOverlayProps> = ({
   isHovered = false,
   onResizeStart,
 }) => {
-  if (!canvasRect || zoom <= 0) return null;
+  if (!metrics || zoom <= 0) return null;
 
   const r = metrics.boundingRect;
   const m = metrics.margin;
   const p = metrics.padding;
   const b = metrics.border;
 
-  // Normalized local canvas coordinates
-  const relLeft = (r.left - canvasRect.left) / zoom;
-  const relTop = (r.top - canvasRect.top) / zoom;
-  const relWidth = r.width / zoom;
-  const relHeight = r.height / zoom;
+  // Normalized local canvas coordinates (invariant under panning, locks overlay smoothly)
+  const local = metrics.localRect;
+  const relLeft = local ? local.x : (canvasRect ? (r.left - canvasRect.left) / zoom : 0);
+  const relTop = local ? local.y : (canvasRect ? (r.top - canvasRect.top) / zoom : 0);
+  const relWidth = local ? local.width : (zoom > 0 ? r.width / zoom : r.width);
+  const relHeight = local ? local.height : (zoom > 0 ? r.height / zoom : r.height);
 
   // Outer Margin bounds
   const marginRect = {

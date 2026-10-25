@@ -127,18 +127,28 @@ export const DetailsPanel: React.FC = () => {
   const handleOpenColorPicker = (e: React.MouseEvent, type: 'background' | 'border' | 'text') => {
     e.stopPropagation();
     const rect = e.currentTarget.getBoundingClientRect();
-    const popoverWidth = 270;
-    const popoverHeight = 440;
+    const popoverWidth = 275;
+    const popoverHeight = 500;
 
+    // Default: place to the left of the clicked color swatch/button
     let left = rect.left - popoverWidth - 8;
-    if (left < 10) left = rect.right + 8;
-    if (left + popoverWidth > window.innerWidth - 10) left = window.innerWidth - popoverWidth - 10;
-
-    let top = rect.top - 20;
-    if (top + popoverHeight > window.innerHeight - 10) {
-      top = Math.max(10, window.innerHeight - popoverHeight - 10);
+    // If overflowing left edge of browser window, flip to the right side of the swatch
+    if (left < 12) {
+      if (rect.right + popoverWidth + 12 <= window.innerWidth) {
+        left = rect.right + 8;
+      } else {
+        left = Math.max(12, window.innerWidth - popoverWidth - 12);
+      }
     }
-    if (top < 10) top = 10;
+    // Hard clamp within window horizontal margins
+    left = Math.max(12, Math.min(left, window.innerWidth - popoverWidth - 12));
+
+    // Align vertically near swatch, then clamp inside window vertical margins
+    let top = rect.top - 24;
+    if (top + popoverHeight > window.innerHeight - 12) {
+      top = Math.max(12, window.innerHeight - popoverHeight - 12);
+    }
+    if (top < 12) top = 12;
 
     setColorPickerPos({ left, top });
     setActiveColorPicker(type);

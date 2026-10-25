@@ -63,24 +63,29 @@ body {
   background: #4a4a55;
 }
 
-/* Script Editor Wider Scrollbars */
+/* Script Editor Wider Scrollbars (VS Code style 14px) */
+.code-scrollbar {
+  scrollbar-width: auto;
+  scrollbar-color: #3e3e48 #141418;
+}
+
 .code-scrollbar::-webkit-scrollbar {
-  width: 10px;
-  height: 10px;
+  width: 14px;
+  height: 14px;
 }
 
 .code-scrollbar::-webkit-scrollbar-track {
-  background: #101014;
+  background: #141418;
 }
 
 .code-scrollbar::-webkit-scrollbar-thumb {
-  background: #343442;
-  border-radius: 4px;
-  border: 2px solid #101014;
+  background: #3e3e48;
+  border-radius: 7px;
+  border: 3px solid #141418;
 }
 
 .code-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #505064;
+  background: #5a5a68;
 }
 
 /* ======================================================== */

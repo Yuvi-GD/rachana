@@ -62,6 +62,10 @@ export const Viewport: React.FC = () => {
     const elements = document.querySelectorAll('[id^="node-dom-"]');
     if (!elements || elements.length === 0) return;
 
+    const rootEl = document.getElementById(`node-dom-${rootNode.id}`);
+    const rootRect = rootEl ? rootEl.getBoundingClientRect() : null;
+    const currentZoom = zoom > 0 ? zoom : 1;
+
     const batch: Record<string, ComputedMetrics> = {};
 
     elements.forEach((node) => {
@@ -88,6 +92,11 @@ export const Viewport: React.FC = () => {
       const contentWidth = Math.max(0, rect.width - (bLeft + bRight) - (pLeft + pRight));
       const contentHeight = Math.max(0, rect.height - (bTop + bBottom) - (pTop + pBottom));
 
+      const localLeft = rootRect ? (rect.left - rootRect.left) / currentZoom : 0;
+      const localTop = rootRect ? (rect.top - rootRect.top) / currentZoom : 0;
+      const localWidth = currentZoom > 0 ? rect.width / currentZoom : rect.width;
+      const localHeight = currentZoom > 0 ? rect.height / currentZoom : rect.height;
+
       batch[nodeId] = {
         id: nodeId,
         tagName: el.tagName.toLowerCase(),
@@ -100,6 +109,12 @@ export const Viewport: React.FC = () => {
           left: rect.left,
           right: rect.right,
           bottom: rect.bottom,
+        },
+        localRect: {
+          x: Math.round(localLeft * 100) / 100,
+          y: Math.round(localTop * 100) / 100,
+          width: Math.round(localWidth * 100) / 100,
+          height: Math.round(localHeight * 100) / 100,
         },
         contentBox: {
           width: contentWidth,
@@ -137,7 +152,7 @@ export const Viewport: React.FC = () => {
     if (Object.keys(batch).length > 0) {
       actions.registerMetricsBatch(batch);
     }
-  }, [actions]);
+  }, [actions, rootNode.id, zoom]);
 
   // Track container size for infinite rulers
   useEffect(() => {
@@ -173,17 +188,17 @@ export const Viewport: React.FC = () => {
     return () => cancelAnimationFrame(frameId);
   }, [selectedNodeId, rootNode, screenWidth, screenHeight, measureAllNodes, updateRootBounds]);
 
-  // Debounced measurement during zoom & pan to ensure 60fps buttery-smooth hardware-accelerated canvas interaction
+  // Debounced measurement when zoom changes so metrics stay accurate without blocking interaction
   useEffect(() => {
-    updateRootBounds();
     if (measureDebounceRef.current) clearTimeout(measureDebounceRef.current);
     measureDebounceRef.current = setTimeout(() => {
+      updateRootBounds();
       measureAllNodes();
-    }, 100);
+    }, 80);
     return () => {
       if (measureDebounceRef.current) clearTimeout(measureDebounceRef.current);
     };
-  }, [zoom, panOffset, measureAllNodes, updateRootBounds]);
+  }, [zoom, measureAllNodes, updateRootBounds]);
 
   // Zoom centered on cursor location (Figma / CAD style) with normalized scrolling sensitivity
   const handleWheel = (e: React.WheelEvent) => {
@@ -351,6 +366,8 @@ export const Viewport: React.FC = () => {
         setTimeout(() => {
           wasInteractingRef.current = false;
         }, 120);
+        updateRootBounds();
+        measureAllNodes();
       }
     };
 

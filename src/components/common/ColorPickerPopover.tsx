@@ -299,7 +299,7 @@ export const ColorPickerPopover: React.FC<ColorPickerPopoverProps> = ({
   const baseHueRgb = hsvToRgb(hsv.h, 100, 100);
 
   return (
-    <div className="w-[268px] bg-[#1a1a1e] border border-[#373742] rounded-lg shadow-2xl p-3 select-none text-zinc-300 font-sans z-50 text-xs">
+    <div className="w-[268px] max-h-[calc(100vh-24px)] overflow-y-auto custom-scrollbar bg-[#1a1a1e] border border-[#373742] rounded-lg shadow-2xl p-3 select-none text-zinc-300 font-sans z-50 text-xs">
       {/* Header */}
       <div className="flex items-center justify-between pb-2 mb-2 border-b border-[#282830]">
         <span className="font-bold text-[11px] text-zinc-200 uppercase tracking-wider">{label}</span>

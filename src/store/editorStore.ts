@@ -764,8 +764,16 @@ export const editorStore = {
 
   loadCustomRootNode: (customRoot: LayoutNode, isNewDocument: boolean = false) => {
     const newRoot = clone(customRoot);
-    const rootW = parseInt(newRoot.style.width, 10) || state.screenWidth || 800;
-    const rootH = parseInt(newRoot.style.height, 10) || state.screenHeight || 520;
+    const parsedW = newRoot.style.width && newRoot.style.width.endsWith('px')
+      ? parseInt(newRoot.style.width, 10)
+      : (newRoot.style.width === '100%' ? state.screenWidth : (parseInt(newRoot.style.width, 10) || state.screenWidth));
+    const parsedH = newRoot.style.height && newRoot.style.height.endsWith('px')
+      ? parseInt(newRoot.style.height, 10)
+      : (parseInt(newRoot.style.height, 10) || state.screenHeight);
+    const rootW = Math.max(200, parsedW || state.screenWidth || 840);
+    const rootH = Math.max(150, parsedH || state.screenHeight || 540);
+    newRoot.style.width = `${rootW}px`;
+    newRoot.style.height = `${rootH}px`;
     if (isNewDocument) {
       state = {
         ...state,
