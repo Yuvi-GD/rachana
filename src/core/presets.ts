@@ -1323,7 +1323,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'item_player',
                   name: 'Player Pawn',
                   type: 'text',
-                  textContent: '👤 BP_Character_Pawn [Selected]',
+                  textContent: 'BP_Character_Pawn [Selected]',
                   style: createDefaultStyle({
                     fontSize: '11px',
                     fontWeight: '600',

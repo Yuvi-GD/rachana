@@ -212,12 +212,12 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
 
   let cssRules: string[] = [
     `/* Rachana Layout Engine CSS Reset */`,
-    `*, *::before, *::after { box-sizing: border-box; }`,
-    `html, body { width: 100%; min-height: 100vh; margin: 0; padding: 0; background-color: ${rootBg}; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }`,
-    `button, input, textarea, select { font-family: inherit; font-size: inherit; color: inherit; background: transparent; border: none; }`,
-    `button { cursor: pointer; text-align: center; }`,
-    `h1, h2, h3, h4, h5, h6, p { margin: 0; }`,
-    `img { max-width: 100%; display: block; object-fit: cover; }`,
+    `*, *::before, *::after {\n  box-sizing: border-box;\n}`,
+    `html, body {\n  width: 100%;\n  min-height: 100vh;\n  margin: 0;\n  padding: 0;\n  background-color: ${rootBg};\n  color: #e2e8f0;\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;\n  -webkit-font-smoothing: antialiased;\n}`,
+    `button, input, textarea, select {\n  font-family: inherit;\n  font-size: inherit;\n  color: inherit;\n  background: transparent;\n  border: none;\n}`,
+    `button {\n  cursor: pointer;\n  text-align: center;\n}`,
+    `h1, h2, h3, h4, h5, h6, p {\n  margin: 0;\n}`,
+    `img {\n  max-width: 100%;\n  display: block;\n  object-fit: cover;\n}`,
   ];
 
   const serializeNode = (node: LayoutNode, indent: number = 2): string => {
@@ -1304,6 +1304,8 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
       nodeType = 'divider';
     } else if (el.getAttribute('data-type') === 'spacer' || el.className.includes('spacer')) {
       nodeType = 'spacer';
+    } else {
+      nodeType = 'container';
     }
 
     // Merge matched CSS rules: Tag, Classes, ID, and then inline style
@@ -1327,10 +1329,12 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
     // Map declarations to style
     if (mergedProps['display']) {
       style.display = mergedProps['display'] as any;
-      if (mergedProps['display'].includes('flex')) {
-        nodeType = nodeType === 'button' ? 'button' : 'flex';
-      } else if (mergedProps['display'].includes('grid')) {
-        nodeType = 'grid';
+      if (nodeType === 'container') {
+        if (mergedProps['display'].includes('grid')) {
+          nodeType = 'grid';
+        } else {
+          nodeType = 'flex';
+        }
       }
     }
     if (mergedProps['position']) style.position = mergedProps['position'] as any;

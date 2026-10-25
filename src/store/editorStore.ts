@@ -676,34 +676,25 @@ export const editorStore = {
     }
   },
 
-  replaceNodeType: (id: string, newType: LayoutNodeType) => {
+  replaceNodeType: (id: string, newType: LayoutNodeType, customName?: string) => {
     const rootCopy = clone(state.rootNode);
     let updated = false;
 
     updateNodeInTree(rootCopy, id, (node) => {
       node.type = newType;
+      if (customName) node.name = customName;
+
       if (newType === 'flex') {
+        const isCol = Boolean(customName && customName.toLowerCase().includes('column'));
         node.style.display = 'flex';
-        if (!node.style.flexDirection) node.style.flexDirection = 'row';
-        node.style.flow = node.style.flexDirection === 'column' ? 'COLUMN' : 'ROW';
+        node.style.flexDirection = isCol ? 'column' : 'row';
+        node.style.flow = isCol ? 'COLUMN' : 'ROW';
       } else if (newType === 'grid') {
         node.style.display = 'grid';
         if (!node.style.gridTemplateColumns) node.style.gridTemplateColumns = '1fr 1fr';
       } else if (newType === 'container') {
         node.style.display = 'flex';
-        node.style.flexDirection = 'column';
-        node.style.flow = 'COLUMN';
-      } else if (newType === 'card') {
-        node.style.display = 'flex';
-        node.style.flexDirection = 'column';
-        node.style.flow = 'COLUMN';
-        node.style.backgroundColor = '#1f1f26';
-        node.style.borderColor = '#2e2e38';
-        node.style.borderRadius = '8px';
-      } else if (newType === 'scroll') {
-        node.style.display = 'flex';
-        node.style.flexDirection = 'column';
-        node.style.overflowY = 'auto';
+        node.style.position = 'relative';
       } else if (newType === 'button') {
         node.style.display = 'flex';
         node.style.alignItems = 'center';
@@ -718,6 +709,19 @@ export const editorStore = {
         node.style.fontSize = '22px';
         node.style.fontWeight = '700';
         if (!node.textContent) node.textContent = 'Heading';
+      } else if (newType === 'input') {
+        node.style.display = 'flex';
+        if (!node.placeholder) node.placeholder = 'Enter text...';
+      } else if (newType === 'image') {
+        node.style.display = 'flex';
+        if (!node.src) node.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80';
+      } else if (newType === 'divider') {
+        node.style.display = 'flex';
+        node.style.height = '1px';
+        node.style.width = '100%';
+      } else if (newType === 'spacer') {
+        node.style.display = 'flex';
+        node.style.flexGrow = '1';
       }
       updated = true;
     });
@@ -727,10 +731,10 @@ export const editorStore = {
     }
   },
 
-  wrapNode: (id: string, wrapperType: LayoutNodeType) => {
+  wrapNode: (id: string, wrapperType: LayoutNodeType, customName?: string) => {
     if (id === state.rootNode.id) {
       const rootCopy = clone(state.rootNode);
-      const newRoot = createWidgetPreset(wrapperType, 'Root Canvas (Wrapped)');
+      const newRoot = createWidgetPreset(wrapperType, customName || 'Root Canvas (Wrapped)');
       newRoot.style.width = rootCopy.style.width;
       newRoot.style.height = rootCopy.style.height;
       rootCopy.style.width = '100%';
@@ -750,7 +754,7 @@ export const editorStore = {
       const idx = parent.children.findIndex(c => c.id === id);
       if (idx !== -1) {
         const target = parent.children[idx];
-        const wrapper = createWidgetPreset(wrapperType, `Wrapper (${wrapperType})`);
+        const wrapper = createWidgetPreset(wrapperType, customName || `Wrapper (${wrapperType})`);
         wrapper.children = [target];
         parent.children[idx] = wrapper;
         state.selectedNodeId = wrapper.id;
@@ -765,6 +769,29 @@ export const editorStore = {
     if (findAndWrap(rootCopy)) {
       pushHistory(rootCopy);
     }
+  },
+
+  unwrapNode: (id: string) => {
+    if (!id || id === state.rootNode.id) return;
+    const rootCopy = clone(state.rootNode);
+    const parentInfo = findParentOfNode(rootCopy, id);
+    if (!parentInfo) return;
+
+    const { parent, index } = parentInfo;
+    const target = parent.children[index];
+    if (!target) return;
+
+    const childrenToPromote = target.children || [];
+    // Splice children into parent replacing target
+    parent.children.splice(index, 1, ...childrenToPromote);
+
+    const newSelectedId = childrenToPromote.length > 0 ? childrenToPromote[0].id : parent.id;
+    state = {
+      ...state,
+      selectedNodeId: newSelectedId,
+      selectedNodeIds: [newSelectedId],
+    };
+    pushHistory(rootCopy);
   },
 
   resetRootCanvas: (type: LayoutNodeType = 'flex') => {

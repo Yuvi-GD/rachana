@@ -91,11 +91,11 @@ export const UnitInput: React.FC<UnitInputProps> = ({
       {/* Input container with number + unit dropdown */}
       <div className="flex-1 flex items-center rounded border border-[#34343d] bg-[#1c1c20] focus-within:border-blue-500 overflow-hidden min-w-0 transition-colors">
         {isAuto ? (
-          <div className="flex-1 px-2 py-1 text-xs font-mono text-cyan-400 font-semibold select-none">
+          <div className="flex-1 px-2 py-1 text-xs font-mono text-zinc-200 font-semibold select-none">
             auto
           </div>
         ) : isNone ? (
-          <div className="flex-1 px-2 py-1 text-xs font-mono text-zinc-500 font-semibold select-none">
+          <div className="flex-1 px-2 py-1 text-xs font-mono text-zinc-400 font-semibold select-none">
             none
           </div>
         ) : (
@@ -137,7 +137,7 @@ export const UnitInput: React.FC<UnitInputProps> = ({
           title={isAuto ? 'Switch to numeric value' : 'Set to auto'}
           className={`px-1.5 py-1 rounded text-[10px] font-mono font-semibold transition-all flex-shrink-0 border ${
             isAuto
-              ? 'bg-cyan-950/80 border-cyan-500 text-cyan-300 shadow-xs'
+              ? 'bg-blue-600/25 border-blue-500/60 text-blue-300 shadow-xs'
               : 'bg-[#222227] hover:bg-[#2b2b33] border-[#34343d] text-zinc-400 hover:text-zinc-200'
           }`}
         >
@@ -152,7 +152,7 @@ export const UnitInput: React.FC<UnitInputProps> = ({
           title={isNone ? 'Switch to numeric value' : 'Set to none'}
           className={`px-1.5 py-1 rounded text-[10px] font-mono font-semibold transition-all flex-shrink-0 border ${
             isNone
-              ? 'bg-purple-950/80 border-purple-500 text-purple-300 shadow-xs'
+              ? 'bg-blue-600/25 border-blue-500/60 text-blue-300 shadow-xs'
               : 'bg-[#222227] hover:bg-[#2b2b33] border-[#34343d] text-zinc-400 hover:text-zinc-200'
           }`}
         >

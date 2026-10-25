@@ -93,7 +93,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
         <div className="space-y-3">
           {/* Gap Editor (Unified Single Source for Gap Spacing) */}
           {onGapChange && (
-            <div className="bg-[#1a1a1e] p-2 rounded border border-[#3b3226] space-y-1.5">
+            <div className="space-y-1.5 pb-2.5 border-b border-[#292934]/50">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-1.5">
                   <Move className="w-3 h-3 text-amber-400" />
@@ -105,7 +105,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                   <button
                     type="button"
                     onClick={() => onGapChange({ columnGap: '0px', rowGap: '0px', gap: '0px' })}
-                    className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
+                    className="px-1.5 py-0.5 rounded bg-[#22222a] hover:bg-[#2c2c36] text-[9px] text-zinc-300 font-mono"
                   >
                     0px
                   </button>
@@ -166,7 +166,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
           )}
 
           {/* Margin Editor */}
-          <div className="bg-[#1a1a1e] p-2 rounded border border-[#2d2d38] space-y-1.5">
+          <div className="space-y-1.5 pb-2.5 border-b border-[#292934]/50">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-bold text-orange-400 tracking-wider">
                 Margin
@@ -175,7 +175,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                 <button
                   type="button"
                   onClick={() => onMarginChange({ top: 'auto', right: 'auto', bottom: 'auto', left: 'auto' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
+                  className="px-1.5 py-0.5 rounded bg-[#22222a] hover:bg-[#2c2c36] text-[9px] text-zinc-300 font-mono"
                   title="Set all margins to auto (centering)"
                 >
                   Auto
@@ -183,7 +183,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                 <button
                   type="button"
                   onClick={() => onMarginChange({ top: '0px', right: '0px', bottom: '0px', left: '0px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
+                  className="px-1.5 py-0.5 rounded bg-[#22222a] hover:bg-[#2c2c36] text-[9px] text-zinc-300 font-mono"
                   title="Reset margins to 0px"
                 >
                   0px
@@ -233,7 +233,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
           </div>
 
           {/* Padding Editor */}
-          <div className="bg-[#1a1a1e] p-2 rounded border border-[#2d2d38] space-y-1.5">
+          <div className="space-y-1.5 pb-2.5 border-b border-[#292934]/50">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-bold text-emerald-400 tracking-wider">
                 Padding
@@ -242,7 +242,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                 <button
                   type="button"
                   onClick={() => onPaddingChange({ top: '0px', right: '0px', bottom: '0px', left: '0px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
+                  className="px-1.5 py-0.5 rounded bg-[#22222a] hover:bg-[#2c2c36] text-[9px] text-zinc-300 font-mono"
                 >
                   0px
                 </button>
@@ -289,7 +289,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
           </div>
 
           {/* Border Width Editor */}
-          <div className="bg-[#1a1a1e] p-2 rounded border border-[#2d2d38] space-y-1.5">
+          <div className="space-y-1.5 pt-0.5">
             <div className="flex items-center justify-between">
               <span className="text-[10px] uppercase font-bold text-yellow-500 tracking-wider">
                 Border Width
@@ -298,7 +298,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                 <button
                   type="button"
                   onClick={() => onBorderChange({ top: '0px', right: '0px', bottom: '0px', left: '0px' })}
-                  className="px-1.5 py-0.5 rounded bg-[#25252d] hover:bg-[#32323c] text-[9px] text-zinc-300 font-mono"
+                  className="px-1.5 py-0.5 rounded bg-[#22222a] hover:bg-[#2c2c36] text-[9px] text-zinc-300 font-mono"
                 >
                   0px
                 </button>
@@ -384,7 +384,7 @@ export const BoxModelInput: React.FC<BoxModelInputProps> = ({
                         <div className="flex-1 mx-1 bg-[#0f243c] border border-blue-500/70 rounded py-1 px-1 text-center text-blue-200">
                           <div className="text-[8px] uppercase font-bold text-blue-400">content</div>
                           <div className="font-bold text-[10px] mt-0.5">
-                            {Math.round(contentWidth)} × {Math.round(contentHeight)}
+                            {Math.round(contentWidth)} x {Math.round(contentHeight)}
                           </div>
                         </div>
 

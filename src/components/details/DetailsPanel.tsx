@@ -10,7 +10,6 @@ import {
   Move, 
   Palette as PaletteIcon, 
   LayoutGrid, 
-  Maximize, 
   Type as TypeIcon, 
   Layers, 
   BoxSelect, 
@@ -21,11 +20,7 @@ import {
   AlignRight,
   AlignJustify,
   Copy,
-  Check,
-  Columns,
-  Rows,
-  Grid3X3,
-  Box
+  Check
 } from 'lucide-react';
 
 interface UnrealSectionHeaderProps {
@@ -242,13 +237,13 @@ export const DetailsPanel: React.FC = () => {
           <div className="flex items-center gap-1.5">
             <span className="text-zinc-500 text-[10px] uppercase font-semibold">Size:</span>
             <span className="text-emerald-400 font-bold bg-[#14231b] px-2 py-0.5 rounded border border-emerald-800/40">
-              {metrics ? `${Math.round(metrics.boundingRect.width)} × ${Math.round(metrics.boundingRect.height)} px` : '—'}
+              {metrics ? `${Math.round(metrics.boundingRect.width)} * ${Math.round(metrics.boundingRect.height)} px` : '-'}
             </span>
           </div>
           <div className="flex items-center gap-1.5" title="Screen Coordinates (Relative to Canvas Root)">
             <span className="text-zinc-500 text-[10px] uppercase font-semibold">Pos:</span>
             <span className="text-blue-300 font-medium bg-[#141e2c] px-2 py-0.5 rounded border border-blue-800/40">
-              {metrics ? `X: ${relX}, Y: ${relY}` : '—'}
+              {metrics ? `X: ${relX}, Y: ${relY}` : '-'}
             </span>
           </div>
         </div>
@@ -409,242 +404,225 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 2. POSITIONING & COORDINATES */}
-        <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
-          <UnrealSectionHeader
-            title="Positioning & Coordinates"
-            icon={<Move className="w-3.5 h-3.5 text-emerald-400" />}
-            isOpen={isSectionOpen('position')}
-            onToggle={() => toggleSection('position')}
-          />
-          {isSectionOpen('position') && (
-            <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-              <div className="grid grid-cols-2 gap-2">
-                <div {...getPropHandlers('position', style.position)}>
-                  <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
-                    Position
-                  </label>
-                  <select
-                    value={style.position}
-                    onChange={(e) => handleStyleChange({ position: e.target.value as any })}
-                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
-                  >
-                    <option value="static">static (Normal flow)</option>
-                    <option value="relative">relative</option>
-                    <option value="absolute">absolute</option>
-                    <option value="fixed">fixed</option>
-                    <option value="sticky">sticky</option>
-                  </select>
-                </div>
+        {/* 2. POSITION & SIZING */}
+        {!isDividerType && (
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+            <UnrealSectionHeader
+              title="Position & Sizing"
+              icon={<Move className="w-3.5 h-3.5 text-emerald-400" />}
+              isOpen={isSectionOpen('position')}
+              onToggle={() => toggleSection('position')}
+            />
+            {isSectionOpen('position') && (
+              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
+                {/* Position and Z-Index side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('position', style.position)}>
+                    <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
+                      Position
+                    </label>
+                    <select
+                      value={style.position === 'static' ? 'relative' : (style.position || 'relative')}
+                      onChange={(e) => handleStyleChange({ position: e.target.value as any })}
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                    >
+                      <option value="relative">relative (Flow Position)</option>
+                      <option value="absolute">absolute (Parent Origin)</option>
+                      <option value="fixed">fixed (Screen Origin)</option>
+                      <option value="sticky">sticky (Scroll Pin)</option>
+                    </select>
+                  </div>
 
-                <div {...getPropHandlers('zIndex', style.zIndex)}>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[9px] uppercase font-semibold text-zinc-400">
+                  <div {...getPropHandlers('zIndex', style.zIndex)}>
+                    <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
                       Z-Index
                     </label>
-                    <button
-                      type="button"
-                      onClick={() => handleStyleChange({ zIndex: 'auto' })}
-                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
-                        style.zIndex === 'auto' || !style.zIndex
-                          ? 'bg-blue-600/30 text-blue-300 border-blue-500/50 font-bold'
-                          : 'bg-[#1c1c20] text-zinc-400 border-[#34343d] hover:text-white'
-                      }`}
-                      title="Set z-index to auto"
-                    >
-                      Auto
-                    </button>
+                    <div className="flex items-center gap-1">
+                      <input
+                        type="text"
+                        value={style.zIndex || 'auto'}
+                        onChange={(e) => handleStyleChange({ zIndex: e.target.value })}
+                        placeholder="auto"
+                        className="flex-1 bg-[#1c1c20] hover:bg-[#23232a] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono min-w-0"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => handleStyleChange({ zIndex: style.zIndex === 'auto' || !style.zIndex ? '1' : 'auto' })}
+                        className={`px-1.5 py-1 rounded text-[10px] font-mono font-semibold transition-all flex-shrink-0 border ${
+                          style.zIndex === 'auto' || !style.zIndex
+                            ? 'bg-blue-600/25 border-blue-500/60 text-blue-300 shadow-xs'
+                            : 'bg-[#222227] hover:bg-[#2b2b33] border-[#34343d] text-zinc-400 hover:text-zinc-200'
+                        }`}
+                        title={style.zIndex === 'auto' || !style.zIndex ? 'Switch to numeric value' : 'Set z-index to auto'}
+                      >
+                        Auto
+                      </button>
+                    </div>
                   </div>
-                  <input
-                    type="text"
-                    value={style.zIndex}
-                    onChange={(e) => handleStyleChange({ zIndex: e.target.value })}
-                    placeholder="auto"
-                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
-                  />
+                </div>
+
+                {/* Width & Height side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('width', style.width)}>
+                    <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
+                      Width
+                    </label>
+                    <UnitInput
+                      value={style.width}
+                      onChange={(val) => handleStyleChange({ width: val })}
+                      units={['px', '%', 'vw', 'rem']}
+                      allowAuto={true}
+                      placeholder="auto"
+                    />
+                  </div>
+
+                  <div {...getPropHandlers('height', style.height)}>
+                    <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
+                      Height
+                    </label>
+                    <UnitInput
+                      value={style.height}
+                      onChange={(val) => handleStyleChange({ height: val })}
+                      units={['px', '%', 'vh', 'rem']}
+                      allowAuto={true}
+                      placeholder="auto"
+                    />
+                  </div>
+                </div>
+
+                {/* Min Width & Max Width side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('minWidth', style.minWidth)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Min Width</label>
+                    <UnitInput
+                      value={style.minWidth}
+                      onChange={(val) => handleStyleChange({ minWidth: val })}
+                      units={['px', '%', 'vw']}
+                      allowAuto={true}
+                      placeholder="auto"
+                    />
+                  </div>
+
+                  <div {...getPropHandlers('maxWidth', style.maxWidth)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Max Width</label>
+                    <UnitInput
+                      value={style.maxWidth}
+                      onChange={(val) => handleStyleChange({ maxWidth: val })}
+                      units={['px', '%', 'vw']}
+                      allowNone={true}
+                      placeholder="none"
+                    />
+                  </div>
+                </div>
+
+                {/* Min Height & Max Height side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('minHeight', style.minHeight)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Min Height</label>
+                    <UnitInput
+                      value={style.minHeight}
+                      onChange={(val) => handleStyleChange({ minHeight: val })}
+                      units={['px', '%', 'vh']}
+                      allowAuto={true}
+                      placeholder="auto"
+                    />
+                  </div>
+
+                  <div {...getPropHandlers('maxHeight', style.maxHeight)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Max Height</label>
+                    <UnitInput
+                      value={style.maxHeight}
+                      onChange={(val) => handleStyleChange({ maxHeight: val })}
+                      units={['px', '%', 'vh']}
+                      allowNone={true}
+                      placeholder="none"
+                    />
+                  </div>
+                </div>
+
+                {/* Anchor Offsets (Top, Right, Bottom, Left) */}
+                <div className="pt-2 border-t border-[#292930]">
+                  <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1.5">
+                    Anchor Offsets ({style.position || 'relative'})
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+                      <div key={side} {...getPropHandlers(side, style[side])}>
+                        <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">{side}</label>
+                        <UnitInput
+                          value={style[side]}
+                          onChange={(val) => handleStyleChange({ [side]: val })}
+                          units={['px', '%', 'vw', 'vh']}
+                          allowAuto={true}
+                          placeholder="auto"
+                        />
+                      </div>
+                    ))}
+                  </div>
                 </div>
               </div>
+            )}
+          </div>
+        )}
 
-              {style.position !== 'static' && (
-                <div className="grid grid-cols-2 gap-2 pt-1 border-t border-[#292930]">
-                  {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-                    <div key={side} {...getPropHandlers(side, style[side])}>
-                      <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">{side}</label>
-                      <UnitInput
-                        value={style[side]}
-                        onChange={(val) => handleStyleChange({ [side]: val })}
-                        units={['px', '%', 'vw', 'vh']}
-                        allowAuto={true}
-                        placeholder="auto"
-                      />
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-
-        {/* 3. LAYOUT MODE & FLOW (Containers Only) */}
+        {/* 3. CHILD ALIGNMENT & FILL (Containers Only) */}
         {isContainerType && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
-              title="Layout Mode & Flow"
-              icon={<Move className="w-3.5 h-3.5 text-blue-400" />}
+              title="Child Alignment & Fill"
+              icon={<Sliders className="w-3.5 h-3.5 text-blue-400" />}
               isOpen={isSectionOpen('layoutFlow')}
               onToggle={() => toggleSection('layoutFlow')}
             />
             {isSectionOpen('layoutFlow') && (
-              <div className="p-2.5 space-y-3 bg-[#17171b]/40">
-                {/* Modern Container Architecture Selector */}
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <label className="text-[10px] uppercase font-bold text-sky-400 tracking-wider">
-                      Container Layout Mode
-                    </label>
-                    <span className="text-[9px] font-mono text-zinc-500">
-                      {isFlex ? (style.flexDirection?.includes('column') ? 'Flex Column' : 'Flex Row') : isGrid ? 'CSS Grid' : 'Freeform Canvas'}
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-2 gap-1.5">
-                    {/* Flex Row */}
-                    <button
-                      type="button"
-                      onClick={() => handleStyleChange({ display: 'flex', flexDirection: 'row', flow: 'ROW' })}
-                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
-                        isFlex && (!style.flexDirection || style.flexDirection.includes('row'))
-                          ? 'bg-blue-600/25 border-blue-500 text-blue-200 shadow-sm ring-1 ring-blue-500/30'
-                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
-                      }`}
-                    >
-                      <Columns className="w-4 h-4 text-blue-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-[11px] font-semibold leading-tight">Flex Row</div>
-                        <div className="text-[9px] text-zinc-500 leading-tight">1D Horizontal Flow</div>
-                      </div>
-                    </button>
-
-                    {/* Flex Column */}
-                    <button
-                      type="button"
-                      onClick={() => handleStyleChange({ display: 'flex', flexDirection: 'column', flow: 'COLUMN' })}
-                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
-                        isFlex && style.flexDirection?.includes('column')
-                          ? 'bg-cyan-600/25 border-cyan-500 text-cyan-200 shadow-sm ring-1 ring-cyan-500/30'
-                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
-                      }`}
-                    >
-                      <Rows className="w-4 h-4 text-cyan-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-[11px] font-semibold leading-tight">Flex Column</div>
-                        <div className="text-[9px] text-zinc-500 leading-tight">1D Vertical Stack</div>
-                      </div>
-                    </button>
-
-                    {/* CSS Grid */}
-                    <button
-                      type="button"
-                      onClick={() => handleStyleChange({ display: 'grid', flow: 'NONE' })}
-                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
-                        isGrid
-                          ? 'bg-purple-600/25 border-purple-500 text-purple-200 shadow-sm ring-1 ring-purple-500/30'
-                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
-                      }`}
-                    >
-                      <Grid3X3 className="w-4 h-4 text-purple-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-[11px] font-semibold leading-tight">CSS Grid</div>
-                        <div className="text-[9px] text-zinc-500 leading-tight">2D Matrix Tracks</div>
-                      </div>
-                    </button>
-
-                    {/* Freeform Canvas */}
-                    <button
-                      type="button"
-                      onClick={() => handleStyleChange({ display: 'block', position: 'relative', flow: 'NONE' })}
-                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
-                        !isFlex && !isGrid
-                          ? 'bg-amber-600/25 border-amber-500 text-amber-200 shadow-sm ring-1 ring-amber-500/30'
-                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
-                      }`}
-                    >
-                      <Box className="w-4 h-4 text-amber-400 flex-shrink-0" />
-                      <div>
-                        <div className="text-[11px] font-semibold leading-tight">Freeform Canvas</div>
-                        <div className="text-[9px] text-zinc-500 leading-tight">Absolute Positioning</div>
-                      </div>
-                    </button>
-                  </div>
+              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
+                <div className="flex items-center justify-between mb-0.5">
+                  <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
+                    Child Slot Properties
+                  </span>
+                  <span className="text-[9px] font-mono text-zinc-500">
+                    flow: {style.flow || (isFlex ? (style.flexDirection === 'row' ? 'ROW' : 'COLUMN') : 'NONE')}
+                  </span>
                 </div>
 
-                {/* Box-Sizing */}
-                <div className="pt-2 border-t border-[#292930]">
-                  <div {...getPropHandlers('boxSizing', style.boxSizing)}>
-                    <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
-                      Box-Sizing
+                <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('fillRatio', style.fillRatio || style.flexGrow || '0')}>
+                    <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
+                      Fill Ratio (flex-grow)
                     </label>
-                    <select
-                      value={style.boxSizing}
-                      onChange={(e) => handleStyleChange({ boxSizing: e.target.value as any })}
-                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
-                    >
-                      <option value="border-box">border-box (Standard)</option>
-                      <option value="content-box">content-box (Legacy)</option>
-                    </select>
-                  </div>
-                </div>
-
-                {/* Child Slot Stretch & Fill (Tether UI & Flex item fill) */}
-                <div className="pt-2 border-t border-[#292930] space-y-2">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
-                      Child Alignment & Fill
-                    </span>
-                    <span className="text-[9px] font-mono text-zinc-500">
-                      flow: {style.flow || (isFlex ? (style.flexDirection === 'row' ? 'ROW' : 'COLUMN') : 'NONE')}
-                    </span>
+                    <input
+                      type="number"
+                      step="0.1"
+                      min="0"
+                      value={style.fillRatio || style.flexGrow || '0'}
+                      onChange={(e) => handleStyleChange({ fillRatio: e.target.value, flexGrow: e.target.value })}
+                      placeholder="0"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-blue-300 outline-none font-mono"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-2 gap-2">
-                    <div {...getPropHandlers('fillRatio', style.fillRatio || style.flexGrow || '0')}>
-                      <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
-                        Fill Ratio (flex-grow)
-                      </label>
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        value={style.fillRatio || style.flexGrow || '0'}
-                        onChange={(e) => handleStyleChange({ fillRatio: e.target.value, flexGrow: e.target.value })}
-                        placeholder="0"
-                        className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-sky-300 outline-none font-mono"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
-                        Content Align
-                      </label>
-                      <div className="grid grid-cols-3 gap-1">
-                        {(['START', 'CENTER', 'END'] as const).map((align) => {
-                          const isActive = (style.contentAlign || 'START') === align;
-                          return (
-                            <button
-                              type="button"
-                              key={align}
-                              onClick={() => handleStyleChange({ contentAlign: align })}
-                              className={`py-1 rounded border text-[9px] font-semibold transition-colors text-center ${
-                                isActive
-                                  ? 'bg-sky-600/40 border-sky-500 text-sky-200'
-                                  : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
-                              }`}
-                            >
-                              {align}
-                            </button>
-                          );
-                        })}
-                      </div>
+                  <div>
+                    <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
+                      Content Align
+                    </label>
+                    <div className="grid grid-cols-3 gap-1">
+                      {(['START', 'CENTER', 'END'] as const).map((align) => {
+                        const isActive = (style.contentAlign || 'START') === align;
+                        return (
+                          <button
+                            type="button"
+                            key={align}
+                            onClick={() => handleStyleChange({ contentAlign: align })}
+                            className={`py-1 rounded border text-[9px] font-semibold transition-colors text-center ${
+                              isActive
+                                ? 'bg-blue-600/30 border-blue-500 text-blue-200'
+                                : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
+                            }`}
+                          >
+                            {align}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -686,96 +664,7 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 5. SIZING & CONSTRAINTS */}
-        {!isDividerType && (
-          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
-            <UnrealSectionHeader
-              title="Sizing & Constraints"
-              icon={<Maximize className="w-3.5 h-3.5 text-cyan-400" />}
-              isOpen={isSectionOpen('sizing')}
-              onToggle={() => toggleSection('sizing')}
-            />
-            {isSectionOpen('sizing') && (
-              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div {...getPropHandlers('width', style.width)}>
-                  <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-                    Width
-                  </label>
-                  <UnitInput
-                    value={style.width}
-                    onChange={(val) => handleStyleChange({ width: val })}
-                    units={['px', '%', 'vw', 'rem']}
-                    allowAuto={true}
-                    placeholder="auto"
-                  />
-                </div>
-
-                <div {...getPropHandlers('height', style.height)}>
-                  <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-                    Height
-                  </label>
-                  <UnitInput
-                    value={style.height}
-                    onChange={(val) => handleStyleChange({ height: val })}
-                    units={['px', '%', 'vh', 'rem']}
-                    allowAuto={true}
-                    placeholder="auto"
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('minWidth', style.minWidth)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Min Width</label>
-                    <UnitInput
-                      value={style.minWidth}
-                      onChange={(val) => handleStyleChange({ minWidth: val })}
-                      units={['px', '%', 'vw']}
-                      allowAuto={true}
-                      placeholder="auto"
-                    />
-                  </div>
-
-                  <div {...getPropHandlers('maxWidth', style.maxWidth)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Max Width</label>
-                    <UnitInput
-                      value={style.maxWidth}
-                      onChange={(val) => handleStyleChange({ maxWidth: val })}
-                      units={['px', '%', 'vw']}
-                      allowNone={true}
-                      placeholder="none"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('minHeight', style.minHeight)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Min Height</label>
-                    <UnitInput
-                      value={style.minHeight}
-                      onChange={(val) => handleStyleChange({ minHeight: val })}
-                      units={['px', '%', 'vh']}
-                      allowAuto={true}
-                      placeholder="auto"
-                    />
-                  </div>
-
-                  <div {...getPropHandlers('maxHeight', style.maxHeight)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Max Height</label>
-                    <UnitInput
-                      value={style.maxHeight}
-                      onChange={(val) => handleStyleChange({ maxHeight: val })}
-                      units={['px', '%', 'vh']}
-                      allowNone={true}
-                      placeholder="none"
-                    />
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 6. STYLE & APPEARANCE */}
+        {/* 4. STYLE & APPEARANCE */}
         {!isSpacerType && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
@@ -1086,7 +975,7 @@ export const DetailsPanel: React.FC = () => {
                 </div>
 
                 <div {...getPropHandlers('overflowX', style.overflowX || style.overflow)}>
-                  <label className="text-[10px] uppercase font-bold text-purple-400 tracking-wider block mb-1">
+                  <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider block mb-1">
                     Overflow X
                   </label>
                   <div className="grid grid-cols-4 gap-1">
@@ -1097,7 +986,7 @@ export const DetailsPanel: React.FC = () => {
                         onClick={() => handleStyleChange({ overflowX: mode })}
                         className={`py-1 px-1 rounded border text-[10px] font-medium capitalize transition-colors text-center ${
                           (style.overflowX || style.overflow) === mode
-                            ? 'bg-purple-600/40 border-purple-500 text-purple-200 font-bold'
+                            ? 'bg-blue-600/30 border-blue-500 text-blue-200 font-bold'
                             : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
                         }`}
                       >
@@ -1108,7 +997,7 @@ export const DetailsPanel: React.FC = () => {
                 </div>
 
                 <div {...getPropHandlers('overflowY', style.overflowY || style.overflow)}>
-                  <label className="text-[10px] uppercase font-bold text-cyan-400 tracking-wider block mb-1">
+                  <label className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider block mb-1">
                     Overflow Y
                   </label>
                   <div className="grid grid-cols-4 gap-1">
@@ -1119,7 +1008,7 @@ export const DetailsPanel: React.FC = () => {
                         onClick={() => handleStyleChange({ overflowY: mode })}
                         className={`py-1 px-1 rounded border text-[10px] font-medium capitalize transition-colors text-center ${
                           (style.overflowY || style.overflow) === mode
-                            ? 'bg-cyan-600/40 border-cyan-500 text-cyan-200 font-bold'
+                            ? 'bg-blue-600/30 border-blue-500 text-blue-200 font-bold'
                             : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
                         }`}
                       >
