@@ -11,6 +11,7 @@ export const Viewport: React.FC = () => {
   const {
     rootNode,
     selectedNodeId,
+    selectedNodeIds,
     hoveredNodeId,
     zoom,
     scrollSensitivity,
@@ -393,7 +394,9 @@ export const Viewport: React.FC = () => {
     if (isSimulating) return;
     e.preventDefault();
     e.stopPropagation();
-    actions.selectNode(node.id);
+    if (!selectedNodeIds || !selectedNodeIds.includes(node.id)) {
+      actions.selectNode(node.id);
+    }
     setContextMenu({ x: e.clientX, y: e.clientY, node });
   };
 
@@ -510,6 +513,10 @@ export const Viewport: React.FC = () => {
     if (widgetType) {
       if ((pos === 'before' || pos === 'after') && targetNode.id !== rootNode.id) {
         actions.addNodeAround(targetNode.id, widgetType, widgetLabel, pos);
+      } else if (pos === 'inside' && isContainerNodeType(targetNode.type)) {
+        actions.addNode(targetNode.id, widgetType, widgetLabel);
+      } else if (targetNode.id !== rootNode.id) {
+        actions.addNodeAround(targetNode.id, widgetType, widgetLabel, 'after');
       } else {
         actions.addNode(targetNode.id, widgetType, widgetLabel);
       }
@@ -519,6 +526,10 @@ export const Viewport: React.FC = () => {
     if (draggedTreeId && draggedTreeId !== targetNode.id) {
       if ((pos === 'before' || pos === 'after') && targetNode.id !== rootNode.id) {
         actions.reparentNodeAround(draggedTreeId, targetNode.id, pos);
+      } else if (pos === 'inside' && isContainerNodeType(targetNode.type)) {
+        actions.reparentNode(draggedTreeId, targetNode.id);
+      } else if (targetNode.id !== rootNode.id) {
+        actions.reparentNodeAround(draggedTreeId, targetNode.id, 'after');
       } else {
         actions.reparentNode(draggedTreeId, targetNode.id);
       }
@@ -529,7 +540,7 @@ export const Viewport: React.FC = () => {
   const renderNode = (node: LayoutNode) => {
     if (node.isHidden) return null;
 
-    const cssStyle = nodeStyleToCss(node.style);
+    const cssStyle = nodeStyleToCss(node.style, node.type);
 
     // ==========================================
     // SIMULATION MODE RENDERING (Live Widget Test)
@@ -583,23 +594,107 @@ export const Viewport: React.FC = () => {
         );
       }
 
-      if (node.type === 'heading') {
+      if (node.type === 'select') {
+        const opts = (node.placeholder || 'Option 1, Option 2, Option 3')
+          .split(',')
+          .map((o) => o.trim())
+          .filter(Boolean);
+        const currentVal = simulationValues[node.id] !== undefined
+          ? simulationValues[node.id]
+          : (node.textContent || opts[0] || 'Option 1');
+
         return (
-          <h3 key={node.id} id={`node-dom-${node.id}`} style={cssStyle} className="m-0 font-bold select-text">
-            {node.textContent || 'Heading'}
-          </h3>
+          <select
+            key={node.id}
+            id={`node-dom-${node.id}`}
+            style={cssStyle}
+            value={currentVal}
+            onChange={(e) => {
+              setSimulationValues((prev) => ({ ...prev, [node.id]: e.target.value }));
+              actions.addSimulationLog(`Dropdown selection changed to "${e.target.value}" on #${node.id}`, 'input');
+            }}
+            className="bg-[#222227] text-zinc-100 border border-[#34343d] rounded px-2 py-1 text-xs outline-none cursor-pointer"
+          >
+            {opts.map((opt) => (
+              <option key={opt} value={opt}>
+                {opt}
+              </option>
+            ))}
+          </select>
         );
       }
 
-      if (node.type === 'badge') {
+      if (node.type === 'progress') {
+        const maxVal = parseFloat(node.placeholder || '100') || 100;
+        const currentVal = parseFloat(node.textContent || '60') || 0;
+
         return (
-          <span key={node.id} id={`node-dom-${node.id}`} style={cssStyle} className="select-none">
-            {node.textContent || 'Badge'}
-          </span>
+          <progress
+            key={node.id}
+            id={`node-dom-${node.id}`}
+            style={{
+              ...cssStyle,
+              display: 'inline-block',
+              verticalAlign: 'middle',
+            }}
+            value={currentVal}
+            max={maxVal}
+          />
         );
       }
 
-      if (node.type === 'divider') {
+      if (node.type === 'checkbox') {
+        const isChecked = simulationValues[node.id] !== undefined
+          ? simulationValues[node.id] === 'true'
+          : (node.textContent === 'true' || node.textContent === 'checked');
+
+        return (
+          <label
+            key={node.id}
+            id={`node-dom-${node.id}`}
+            style={cssStyle}
+            className="flex items-center gap-2 cursor-pointer select-none"
+          >
+            <input
+              type="checkbox"
+              checked={isChecked}
+              onChange={(e) => {
+                setSimulationValues((prev) => ({ ...prev, [node.id]: String(e.target.checked) }));
+                actions.addSimulationLog(`Checkbox toggled to ${e.target.checked} on #${node.id}`, 'click');
+              }}
+              className="w-3.5 h-3.5 accent-blue-500 rounded cursor-pointer"
+            />
+            <span className="text-xs text-zinc-200">{node.name || 'Checkbox'}</span>
+          </label>
+        );
+      }
+
+      if (node.type === 'slider') {
+        const sliderVal = simulationValues[node.id] !== undefined
+          ? parseFloat(simulationValues[node.id])
+          : parseFloat(node.textContent || '50');
+        const minVal = parseFloat(node.alt || '0') || 0;
+        const maxVal = parseFloat(node.placeholder || '100') || 100;
+
+        return (
+          <input
+            key={node.id}
+            id={`node-dom-${node.id}`}
+            style={cssStyle}
+            type="range"
+            min={minVal}
+            max={maxVal}
+            value={sliderVal}
+            onChange={(e) => {
+              setSimulationValues((prev) => ({ ...prev, [node.id]: e.target.value }));
+              actions.addSimulationLog(`Slider changed to ${e.target.value} on #${node.id}`, 'input');
+            }}
+            className="cursor-pointer"
+          />
+        );
+      }
+
+    if (node.type === 'divider') {
         return <div key={node.id} id={`node-dom-${node.id}`} style={cssStyle} />;
       }
 
@@ -639,7 +734,13 @@ export const Viewport: React.FC = () => {
 
     const handleClick = (e: React.MouseEvent) => {
       e.stopPropagation();
-      actions.selectNode(node.id);
+      if (e.ctrlKey || e.metaKey) {
+        actions.toggleSelectNode(node.id);
+      } else if (e.shiftKey) {
+        actions.selectNodeRange(node.id);
+      } else {
+        actions.selectNode(node.id);
+      }
     };
 
     const renderDropLines = () => (
@@ -689,15 +790,6 @@ export const Viewport: React.FC = () => {
       );
     }
 
-    if (node.type === 'heading') {
-      return (
-        <h3 key={node.id} {...commonProps} className={`${commonProps.className} m-0 font-bold`}>
-          {renderDropLines()}
-          {node.textContent || 'Heading'}
-        </h3>
-      );
-    }
-
     if (node.type === 'input') {
       return (
         <div key={node.id} className="relative inline-block">
@@ -713,12 +805,92 @@ export const Viewport: React.FC = () => {
       );
     }
 
-    if (node.type === 'badge') {
+    if (node.type === 'select') {
+      const opts = (node.placeholder || 'Option 1, Option 2, Option 3')
+        .split(',')
+        .map((o) => o.trim())
+        .filter(Boolean);
+      const defaultVal = node.textContent || opts[0] || 'Option 1';
+
       return (
-        <span key={node.id} {...commonProps} className={`${commonProps.className} select-none`}>
+        <div
+          key={node.id}
+          {...commonProps}
+          className={`${commonProps.className} flex items-center justify-between px-2.5 py-1 bg-[#222227] text-zinc-100 border border-[#34343d] rounded text-xs select-none`}
+        >
           {renderDropLines()}
-          {node.textContent || 'Badge'}
-        </span>
+          <span className="truncate flex-1 pointer-events-none">
+            {defaultVal}
+          </span>
+          <ChevronDown className="w-3.5 h-3.5 text-zinc-400 pointer-events-none flex-shrink-0 ml-1.5" />
+        </div>
+      );
+    }
+
+    if (node.type === 'progress') {
+      const maxVal = parseFloat(node.placeholder || '100') || 100;
+      const currentVal = parseFloat(node.textContent || '60') || 0;
+
+      return (
+        <progress
+          key={node.id}
+          {...commonProps}
+          value={currentVal}
+          max={maxVal}
+          style={{
+            ...cssStyle,
+            display: 'inline-block',
+            verticalAlign: 'middle',
+          }}
+          className={`${commonProps.className}`}
+        />
+      );
+    }
+
+    if (node.type === 'checkbox') {
+      const isChecked = node.textContent === 'true' || node.textContent === 'checked';
+
+      return (
+        <div
+          key={node.id}
+          {...commonProps}
+          className={`${commonProps.className} flex items-center gap-2 select-none`}
+        >
+          {renderDropLines()}
+          <input
+            type="checkbox"
+            checked={isChecked}
+            readOnly
+            className="w-3.5 h-3.5 accent-blue-500 rounded pointer-events-none"
+          />
+          <span className="text-xs text-zinc-200 pointer-events-none">{node.name || 'Checkbox'}</span>
+        </div>
+      );
+    }
+
+    if (node.type === 'slider') {
+      const sliderVal = simulationValues[node.id] !== undefined
+        ? parseFloat(simulationValues[node.id])
+        : parseFloat(node.textContent || '50');
+      const minVal = parseFloat(node.alt || '0') || 0;
+      const maxVal = parseFloat(node.placeholder || '100') || 100;
+
+      return (
+        <input
+          key={node.id}
+          type="range"
+          min={minVal}
+          max={maxVal}
+          value={sliderVal}
+          onChange={(e) => {
+            if (isSimulating) {
+              setSimulationValues((prev) => ({ ...prev, [node.id]: e.target.value }));
+              actions.addSimulationLog(`Slider changed to ${e.target.value} on #${node.id}`, 'input');
+            }
+          }}
+          {...commonProps}
+          className={`${commonProps.className} cursor-pointer`}
+        />
       );
     }
 
@@ -755,8 +927,6 @@ export const Viewport: React.FC = () => {
       </div>
     );
   };
-
-  const selectedMetrics = selectedNodeId ? metricsMap[selectedNodeId] : null;
 
   return (
     <div
@@ -929,14 +1099,21 @@ export const Viewport: React.FC = () => {
           {renderNode(rootNode)}
 
           {/* Unified Selection Box & DevTools Calipers Overlay */}
-          {!isSimulating && showOverlays && selectedMetrics && canvasRect && (
-            <BoxModelOverlay
-              metrics={selectedMetrics}
-              canvasRect={canvasRect}
-              zoom={zoom}
-              isHovered={false}
-              onResizeStart={handleElementResizeStart}
-            />
+          {!isSimulating && showOverlays && canvasRect && (
+            (selectedNodeIds && selectedNodeIds.length > 0 ? selectedNodeIds : (selectedNodeId ? [selectedNodeId] : [])).map((id) => {
+              const m = metricsMap[id];
+              if (!m) return null;
+              return (
+                <BoxModelOverlay
+                  key={id}
+                  metrics={m}
+                  canvasRect={canvasRect}
+                  zoom={zoom}
+                  isHovered={false}
+                  onResizeStart={handleElementResizeStart}
+                />
+              );
+            })
           )}
         </div>
       </div>

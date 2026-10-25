@@ -5,13 +5,16 @@ export type LayoutNodeType =
   | 'card'
   | 'scroll'
   | 'text'
-  | 'heading'
   | 'button'
   | 'input'
   | 'image'
   | 'badge'
   | 'divider'
-  | 'spacer';
+  | 'spacer'
+  | 'select'
+  | 'progress'
+  | 'checkbox'
+  | 'slider';
 
 export const isContainerNodeType = (type: LayoutNodeType): boolean => {
   return type === 'container' || type === 'flex' || type === 'grid' || type === 'card' || type === 'scroll';

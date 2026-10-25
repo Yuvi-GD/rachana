@@ -110,7 +110,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                 {
                   id: 'app_title',
                   name: 'Console Title',
-                  type: 'heading',
+                  type: 'text',
                   textContent: 'Cloud Ops Matrix',
                   style: createDefaultStyle({
                     fontSize: '15px',
@@ -257,7 +257,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                     {
                       id: 'val_rev',
                       name: 'Amount',
-                      type: 'heading',
+                      type: 'text',
                       textContent: '$148.2k',
                       style: createDefaultStyle({
                         fontSize: '20px',
@@ -332,7 +332,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                     {
                       id: 'val_cpu',
                       name: 'Percentage',
-                      type: 'heading',
+                      type: 'text',
                       textContent: '41.8%',
                       style: createDefaultStyle({
                         fontSize: '20px',
@@ -407,7 +407,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                     {
                       id: 'val_pods',
                       name: 'Node Count',
-                      type: 'heading',
+                      type: 'text',
                       textContent: '64 / 64',
                       style: createDefaultStyle({
                         fontSize: '20px',
@@ -482,7 +482,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                     {
                       id: 'val_err',
                       name: 'Rate',
-                      type: 'heading',
+                      type: 'text',
                       textContent: '0.002%',
                       style: createDefaultStyle({
                         fontSize: '20px',
@@ -552,7 +552,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                 {
                   id: 'telemetry_title',
                   name: 'Section Title',
-                  type: 'heading',
+                  type: 'text',
                   textContent: 'Microservice Ingress & Load Balancing',
                   style: createDefaultStyle({
                     fontSize: '13px',
@@ -710,7 +710,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                 {
                   id: 'logs_title',
                   name: 'Section Title',
-                  type: 'heading',
+                  type: 'text',
                   textContent: 'Recent Deploy Events',
                   style: createDefaultStyle({
                     fontSize: '13px',
@@ -723,7 +723,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'log_item_1',
                   name: 'Log Item 1',
                   type: 'text',
-                  textContent: '✓ [21:48:10] Container cluster scale-out completed: 64 active pods',
+                  textContent: '[PASS] [21:48:10] Container cluster scale-out completed: 64 active pods',
                   style: createDefaultStyle({
                     fontSize: '11px',
                     color: '#34d399',
@@ -735,7 +735,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'log_item_2',
                   name: 'Log Item 2',
                   type: 'text',
-                  textContent: 'ℹ [21:45:02] TLS Wildcard cert renewed via Let\'s Encrypt edge',
+                  textContent: '[INFO] [21:45:02] TLS Wildcard cert renewed via Let\'s Encrypt edge',
                   style: createDefaultStyle({
                     fontSize: '11px',
                     color: '#94a3b8',
@@ -747,7 +747,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'log_item_3',
                   name: 'Log Item 3',
                   type: 'text',
-                  textContent: 'ℹ [21:41:55] Cache invalidated for route /api/v2/pricing',
+                  textContent: '[INFO] [21:41:55] Cache invalidated for route /api/v2/pricing',
                   style: createDefaultStyle({
                     fontSize: '11px',
                     color: '#94a3b8',
@@ -759,7 +759,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'log_item_4',
                   name: 'Log Item 4',
                   type: 'text',
-                  textContent: '✓ [21:38:20] Automated security benchmark check passed: 100/100',
+                  textContent: '[PASS] [21:38:20] Automated security benchmark check passed: 100/100',
                   style: createDefaultStyle({
                     fontSize: '11px',
                     color: '#38bdf8',
@@ -859,7 +859,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                 {
                   id: 'player_name',
                   name: 'Player Name',
-                  type: 'heading',
+                  type: 'text',
                   textContent: 'Commander Alex Vance',
                   style: createDefaultStyle({
                     fontSize: '14px',
@@ -895,7 +895,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
               id: 'hud_credits',
               name: 'Currency Counter',
               type: 'text',
-              textContent: '⚡ 42,850 CREDITS',
+              textContent: '42,850 CREDITS',
               style: createDefaultStyle({
                 fontSize: '12px',
                 fontWeight: '700',
@@ -957,7 +957,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
               id: 'threat_warning',
               name: 'Threat Level Indicator',
               type: 'badge',
-              textContent: '⚠ 3 TARGETS LOCKED IN ENGAGEMENT CONE',
+              textContent: '[WARN] 3 TARGETS LOCKED IN ENGAGEMENT CONE',
               style: createDefaultStyle({
                 fontSize: '10px',
                 fontWeight: '700',
@@ -1145,7 +1145,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'slot_r',
                   name: 'Ability R: Ultimate',
                   type: 'button',
-                  textContent: '⚡ [R] ORBITAL',
+                  textContent: '[R] ORBITAL',
                   style: createDefaultStyle({
                     width: '105px',
                     height: '42px',
@@ -1290,7 +1290,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                 {
                   id: 'tree_header',
                   name: 'Tree Header',
-                  type: 'heading',
+                  type: 'text',
                   textContent: 'OUTLINER',
                   style: createDefaultStyle({ fontSize: '10px', fontWeight: '800', color: '#94a3b8' }),
                   children: [],
@@ -1299,7 +1299,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'item_sun',
                   name: 'Directional Light',
                   type: 'text',
-                  textContent: '☀️ DirectionalLight_Sun',
+                  textContent: 'DirectionalLight_Sun',
                   style: createDefaultStyle({ fontSize: '11px', color: '#fde047' }),
                   children: [],
                 },
@@ -1307,7 +1307,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'item_sky',
                   name: 'Sky Atmosphere',
                   type: 'text',
-                  textContent: '☁️ SkyAtmosphere_Actor',
+                  textContent: 'SkyAtmosphere_Actor',
                   style: createDefaultStyle({ fontSize: '11px', color: '#38bdf8' }),
                   children: [],
                 },
@@ -1315,7 +1315,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                   id: 'item_landscape',
                   name: 'Landscape Terrain',
                   type: 'text',
-                  textContent: '⛰️ Terrain_Biome_Canyon',
+                  textContent: 'Terrain_Biome_Canyon',
                   style: createDefaultStyle({ fontSize: '11px', color: '#4ade80' }),
                   children: [],
                 },
@@ -1418,7 +1418,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
                 {
                   id: 'inspector_header',
                   name: 'Details Header',
-                  type: 'heading',
+                  type: 'text',
                   textContent: 'TRANSFORM DETAILS',
                   style: createDefaultStyle({ fontSize: '10px', fontWeight: '800', color: '#94a3b8' }),
                   children: [],
@@ -1551,7 +1551,7 @@ export const LAYOUT_PRESETS: LayoutEngineTestCase[] = [
             {
               id: 'settings_title',
               name: 'Dialog Title',
-              type: 'heading',
+              type: 'text',
               textContent: 'Security & Access Control',
               style: createDefaultStyle({
                 fontSize: '18px',

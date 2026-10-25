@@ -223,8 +223,8 @@ export const FlexControls: React.FC<FlexControlsProps> = ({ style, onChange }) =
                 onClick={() => onChange({ flexBasis: style.flexBasis === 'auto' || !style.flexBasis ? '100px' : 'auto' })}
                 className={`px-1.5 py-1 rounded text-[10px] font-mono font-semibold transition-all flex-shrink-0 border ${
                   style.flexBasis === 'auto' || !style.flexBasis
-                    ? 'bg-blue-600/25 border-blue-500/60 text-blue-300 shadow-xs'
-                    : 'bg-[#222227] hover:bg-[#2b2b33] border-[#34343d] text-zinc-400 hover:text-zinc-200'
+                    ? 'bg-blue-600/30 border-blue-500 text-blue-300 font-semibold shadow-xs'
+                    : 'bg-[#1c1c22] hover:bg-[#24242c] border-[#2e2e38] text-zinc-400 hover:text-zinc-200'
                 }`}
                 title={style.flexBasis === 'auto' || !style.flexBasis ? 'Switch to value' : 'Set to auto'}
               >

@@ -1,5 +1,5 @@
 import React from 'react';
-import { ComputedMetrics, LayoutNode, LayoutNodeStyle } from '../types/layout';
+import { ComputedMetrics, LayoutNode, LayoutNodeStyle, LayoutNodeType, isContainerNodeType } from '../types/layout';
 import { createCleanNodeStyle, createDefaultStyle, defaultSpacing } from './defaultStyles';
 
 // Helper to convert Tether UI [r, g, b, a] array or rgba(...) string to clean CSS HEX string (#rrggbb or #rrggbbaa)
@@ -88,7 +88,7 @@ export const cssColorToRgbaArray = (colorStr: string): [number, number, number, 
 };
 
 // Map style to CSS including Tether UI flow & fill_ratio
-export const nodeStyleToCss = (style: LayoutNodeStyle): React.CSSProperties => {
+export const nodeStyleToCss = (style: LayoutNodeStyle, nodeType?: LayoutNodeType): React.CSSProperties => {
   // Translate flow to display/flexDirection if flow is specified
   let display = style.display;
   let flexDirection = style.flexDirection;
@@ -101,12 +101,22 @@ export const nodeStyleToCss = (style: LayoutNodeStyle): React.CSSProperties => {
     flexDirection = 'column';
   }
 
-  // Modern UI layout normalization: legacy block and inline modes become flex
-  if (display === 'block' || display === 'inline-block' || display === 'inline' || display === 'inline-flex') {
-    display = 'flex';
-    if (!flexDirection) flexDirection = 'column';
-  } else if (display === 'inline-grid') {
-    display = 'grid';
+  const isContainer = !nodeType || isContainerNodeType(nodeType) || ['flex', 'grid', 'container', 'card', 'scroll'].includes(nodeType);
+
+  if (isContainer) {
+    // Modern UI layout normalization: containers become flex or grid
+    if (display === 'block' || display === 'inline-block' || display === 'inline' || display === 'inline-flex') {
+      display = 'flex';
+      if (!flexDirection) flexDirection = 'column';
+    } else if (display === 'inline-grid') {
+      display = 'grid';
+    }
+  } else if (nodeType === 'progress' || nodeType === 'slider' || nodeType === 'input' || nodeType === 'select') {
+    display = 'inline-block';
+  } else if (nodeType === 'checkbox' || nodeType === 'button') {
+    display = 'inline-flex';
+  } else if (nodeType === 'text' || nodeType === 'image' || nodeType === 'divider' || nodeType === 'spacer') {
+    display = 'block';
   }
 
   // Translate contentAlign
@@ -121,8 +131,11 @@ export const nodeStyleToCss = (style: LayoutNodeStyle): React.CSSProperties => {
     justifyContent = 'flex-end';
   }
 
-  // Translate fill_ratio to flex-grow
-  const flexGrow = style.fillRatio ? parseFloat(style.fillRatio) : (parseFloat(style.flexGrow) || 0);
+  // Translate flex-grow and fill_ratio
+  const flexGrowVal = (style.flexGrow !== undefined && style.flexGrow !== '' && style.flexGrow !== '0')
+    ? style.flexGrow
+    : (style.fillRatio && style.fillRatio !== '0' ? style.fillRatio : '0');
+  const flexGrow = parseFloat(flexGrowVal) || 0;
 
   const css: React.CSSProperties = {
     display,
@@ -190,7 +203,7 @@ export const nodeStyleToCss = (style: LayoutNodeStyle): React.CSSProperties => {
     borderStyle: style.borderStyle,
     borderRadius: style.borderRadius,
     boxShadow: style.boxShadow,
-    opacity: parseFloat(style.opacity) || 1,
+    opacity: (style.opacity !== undefined && style.opacity !== '') ? parseFloat(style.opacity) : 1,
     color: style.color,
     fontSize: style.fontSize,
     fontWeight: style.fontWeight,
@@ -215,40 +228,72 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
     `*, *::before, *::after {\n  box-sizing: border-box;\n}`,
     `html, body {\n  width: 100%;\n  min-height: 100vh;\n  margin: 0;\n  padding: 0;\n  background-color: ${rootBg};\n  color: #e2e8f0;\n  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;\n  -webkit-font-smoothing: antialiased;\n}`,
     `button, input, textarea, select {\n  font-family: inherit;\n  font-size: inherit;\n  color: inherit;\n  background: transparent;\n  border: none;\n}`,
-    `button {\n  cursor: pointer;\n  text-align: center;\n}`,
+    `button {\n  cursor: pointer;\n  text-align: center;\n  transition: transform 0.08s ease, filter 0.1s ease;\n  user-select: none;\n}\nbutton:hover {\n  filter: brightness(1.1);\n}\nbutton:active {\n  transform: scale(0.96);\n  filter: brightness(0.9);\n}`,
     `h1, h2, h3, h4, h5, h6, p {\n  margin: 0;\n}`,
     `img {\n  max-width: 100%;\n  display: block;\n  object-fit: cover;\n}`,
+    `progress {\n  -webkit-appearance: none;\n  appearance: none;\n  border: none;\n  overflow: hidden;\n  vertical-align: middle;\n}`,
+    `progress::-webkit-progress-bar {\n  background-color: rgba(255, 255, 255, 0.12);\n  border-radius: inherit;\n  width: 100%;\n  height: 100%;\n}`,
+    `progress::-webkit-progress-value {\n  background-color: #3b82f6;\n  border-radius: inherit;\n  height: 100%;\n}`,
+    `progress::-moz-progress-bar {\n  background-color: #3b82f6;\n  border-radius: inherit;\n  height: 100%;\n}`,
   ];
 
   const serializeNode = (node: LayoutNode, indent: number = 2): string => {
     const spaces = ' '.repeat(indent);
-    const className = `node-${node.id.replace(/[^a-zA-Z0-9_-]/g, '_')}`;
+    const cleanSlug = (node.name || node.type || 'el')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-+|-+$/g, '');
+    const className = `c-${cleanSlug || 'item'}`;
 
     const styleLines: string[] = [];
     const s = node.style;
+    const isRoot = node.id === rootNode.id;
+    const isContainer = isRoot || isContainerNodeType(node.type) || ['flex', 'grid', 'container', 'card', 'scroll'].includes(node.type);
     const isGrid = s.display?.includes('grid') || node.type === 'grid';
-    const displayVal = isGrid ? 'grid' : 'flex';
-    styleLines.push(`  display: ${displayVal};`);
-    if (s.position !== 'static') styleLines.push(`  position: ${s.position};`);
-    if (s.boxSizing !== 'border-box') styleLines.push(`  box-sizing: ${s.boxSizing};`);
-    if (s.overflow !== 'visible') styleLines.push(`  overflow: ${s.overflow};`);
+
+    if (isContainer) {
+      styleLines.push(`  display: ${isGrid ? 'grid' : 'flex'};`);
+    } else if (node.type === 'button') {
+      styleLines.push(`  display: inline-flex;`);
+      styleLines.push(`  align-items: center;`);
+      styleLines.push(`  justify-content: center;`);
+    } else if (node.type === 'checkbox') {
+      styleLines.push(`  display: inline-flex;`);
+      styleLines.push(`  align-items: center;`);
+      styleLines.push(`  gap: 8px;`);
+      styleLines.push(`  cursor: pointer;`);
+    } else if (node.type === 'text' || node.type === 'divider') {
+      styleLines.push(`  display: block;`);
+    } else {
+      styleLines.push(`  display: inline-block;`);
+    }
+
+    if (s.position !== 'static' && s.position) styleLines.push(`  position: ${s.position};`);
+    if (s.boxSizing) styleLines.push(`  box-sizing: ${s.boxSizing};`);
+    if (s.overflow && s.overflow !== 'visible') styleLines.push(`  overflow: ${s.overflow};`);
     if (s.overflowX && s.overflowX !== s.overflow) styleLines.push(`  overflow-x: ${s.overflowX};`);
     if (s.overflowY && s.overflowY !== s.overflow) styleLines.push(`  overflow-y: ${s.overflowY};`);
 
-    if (s.width !== 'auto') styleLines.push(`  width: ${s.width};`);
-    if (s.height !== 'auto') styleLines.push(`  height: ${s.height};`);
-    if (s.minWidth !== 'auto') styleLines.push(`  min-width: ${s.minWidth};`);
-    if (s.minHeight !== 'auto') styleLines.push(`  min-height: ${s.minHeight};`);
-    if (s.maxWidth !== 'none') styleLines.push(`  max-width: ${s.maxWidth};`);
-    if (s.maxHeight !== 'none') styleLines.push(`  max-height: ${s.maxHeight};`);
+    if (isRoot) {
+      styleLines.push(`  width: ${s.width || '100%'};`);
+      styleLines.push(`  height: ${s.height || 'auto'};`);
+      styleLines.push(`  min-height: ${s.height || '100vh'};`);
+    } else {
+      if (s.width) styleLines.push(`  width: ${s.width};`);
+      if (s.height) styleLines.push(`  height: ${s.height};`);
+    }
+    if (s.minWidth && s.minWidth !== 'auto') styleLines.push(`  min-width: ${s.minWidth};`);
+    if (s.minHeight && s.minHeight !== 'auto') styleLines.push(`  min-height: ${s.minHeight};`);
+    if (s.maxWidth && s.maxWidth !== 'none') styleLines.push(`  max-width: ${s.maxWidth};`);
+    if (s.maxHeight && s.maxHeight !== 'none') styleLines.push(`  max-height: ${s.maxHeight};`);
 
     const m = s.margin;
-    if (m.top !== '0px' || m.right !== '0px' || m.bottom !== '0px' || m.left !== '0px') {
+    if (m && (m.top !== '0px' || m.right !== '0px' || m.bottom !== '0px' || m.left !== '0px')) {
       styleLines.push(`  margin: ${m.top} ${m.right} ${m.bottom} ${m.left};`);
     }
 
     const p = s.padding;
-    if (p.top !== '0px' || p.right !== '0px' || p.bottom !== '0px' || p.left !== '0px') {
+    if (p && (p.top !== '0px' || p.right !== '0px' || p.bottom !== '0px' || p.left !== '0px')) {
       styleLines.push(`  padding: ${p.top} ${p.right} ${p.bottom} ${p.left};`);
     }
 
@@ -256,7 +301,7 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
       styleLines.push(`  gap: ${s.gap};`);
     }
 
-    if (!isGrid) {
+    if (isContainer && !isGrid) {
       const dir = (s.flexDirection === 'row' || s.flow === 'ROW') ? 'row' : 'column';
       styleLines.push(`  flex-direction: ${dir};`);
       if (s.flexWrap && s.flexWrap !== 'nowrap') styleLines.push(`  flex-wrap: ${s.flexWrap};`);
@@ -264,16 +309,27 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
       if (s.alignItems && s.alignItems !== 'stretch') styleLines.push(`  align-items: ${s.alignItems};`);
     }
 
-    if (isGrid) {
+    if (isContainer && isGrid) {
       styleLines.push(`  grid-template-columns: ${s.gridTemplateColumns};`);
-      if (s.gridTemplateRows !== 'auto') styleLines.push(`  grid-template-rows: ${s.gridTemplateRows};`);
+      if (s.gridTemplateRows && s.gridTemplateRows !== 'auto') styleLines.push(`  grid-template-rows: ${s.gridTemplateRows};`);
     }
 
-    if (s.fillRatio) {
-      styleLines.push(`  flex-grow: ${s.fillRatio};`);
-    } else if (s.flexGrow !== '0') {
-      styleLines.push(`  flex-grow: ${s.flexGrow};`);
+    const fg = (s.flexGrow !== undefined && s.flexGrow !== '' && s.flexGrow !== '0')
+      ? s.flexGrow
+      : (s.fillRatio && s.fillRatio !== '0' ? s.fillRatio : null);
+    if (fg) {
+      styleLines.push(`  flex-grow: ${fg};`);
     }
+    if (s.flexShrink && s.flexShrink !== '1') styleLines.push(`  flex-shrink: ${s.flexShrink};`);
+    if (s.flexBasis && s.flexBasis !== 'auto') styleLines.push(`  flex-basis: ${s.flexBasis};`);
+    if (s.alignSelf && s.alignSelf !== 'auto') styleLines.push(`  align-self: ${s.alignSelf};`);
+    if (s.order && s.order !== '0') styleLines.push(`  order: ${s.order};`);
+
+    if (s.top && s.top !== 'auto') styleLines.push(`  top: ${s.top};`);
+    if (s.right && s.right !== 'auto') styleLines.push(`  right: ${s.right};`);
+    if (s.bottom && s.bottom !== 'auto') styleLines.push(`  bottom: ${s.bottom};`);
+    if (s.left && s.left !== 'auto') styleLines.push(`  left: ${s.left};`);
+    if (s.zIndex && s.zIndex !== 'auto') styleLines.push(`  z-index: ${s.zIndex};`);
 
     if (s.backgroundColor && s.backgroundColor !== 'transparent') styleLines.push(`  background-color: ${s.backgroundColor};`);
     const bw = s.borderWidth;
@@ -283,54 +339,91 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
       styleLines.push(`  border-color: ${s.borderColor};`);
     }
     if (s.borderRadius && s.borderRadius !== '0px') styleLines.push(`  border-radius: ${s.borderRadius};`);
+    if (s.boxShadow && s.boxShadow !== 'none') styleLines.push(`  box-shadow: ${s.boxShadow};`);
+    if (s.opacity && s.opacity !== '1' && s.opacity !== '1.0') styleLines.push(`  opacity: ${s.opacity};`);
     if (s.color) styleLines.push(`  color: ${s.color};`);
     if (s.fontSize) styleLines.push(`  font-size: ${s.fontSize};`);
     if (s.fontWeight && s.fontWeight !== '400') styleLines.push(`  font-weight: ${s.fontWeight};`);
+    if (s.lineHeight && s.lineHeight !== 'normal') styleLines.push(`  line-height: ${s.lineHeight};`);
+    if (s.letterSpacing && s.letterSpacing !== 'normal' && s.letterSpacing !== '0px') styleLines.push(`  letter-spacing: ${s.letterSpacing};`);
     if (s.textAlign && s.textAlign !== 'left') styleLines.push(`  text-align: ${s.textAlign};`);
+    if (s.textTransform && s.textTransform !== 'none') styleLines.push(`  text-transform: ${s.textTransform};`);
+    if (s.cursor && s.cursor !== 'default' && s.cursor !== 'auto') styleLines.push(`  cursor: ${s.cursor};`);
 
-    cssRules.push(`.${className} {\n${styleLines.join('\n')}\n}`);
+    cssRules.push(`#${node.id}, .${className} {\n${styleLines.join('\n')}\n}`);
+
+    const metaAttrs = isRoot
+      ? `id="${node.id}" data-id="${node.id}" data-name="${escapeXmlAttr(node.name || '')}" data-canvas-width="${s.width || ''}" data-canvas-height="${s.height || ''}"`
+      : `id="${node.id}" data-id="${node.id}" data-name="${escapeXmlAttr(node.name || '')}"`;
 
     if (node.type === 'button') {
       const content = node.textContent || node.name || 'Button';
       if (node.children.length === 0) {
-        return `${spaces}<button class="${className}" id="${node.id}">${content}</button>`;
+        return `${spaces}<button class="${className}" ${metaAttrs}>${content}</button>`;
       }
       const childrenStr = node.children.map(child => serializeNode(child, indent + 2)).join('\n');
-      return `${spaces}<button class="${className}" id="${node.id}">\n${childrenStr}\n${spaces}</button>`;
+      return `${spaces}<button class="${className}" ${metaAttrs}>\n${childrenStr}\n${spaces}</button>`;
     }
 
     if (node.type === 'input') {
       const ph = node.placeholder ? ` placeholder="${escapeXmlAttr(node.placeholder)}"` : '';
       const val = node.textContent ? ` value="${escapeXmlAttr(node.textContent)}"` : '';
-      return `${spaces}<input type="text" class="${className}" id="${node.id}"${ph}${val} />`;
+      return `${spaces}<input type="text" class="${className}" ${metaAttrs}${ph}${val} />`;
     }
 
     if (node.type === 'image') {
       const src = node.src ? ` src="${node.src}"` : ' src="https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80"';
       const alt = node.alt ? ` alt="${escapeXmlAttr(node.alt)}"` : '';
-      return `${spaces}<img class="${className}" id="${node.id}"${src}${alt} />`;
+      return `${spaces}<img class="${className}" ${metaAttrs}${src}${alt} />`;
+    }
+
+    if (node.type === 'select') {
+      const opts = (node.placeholder || 'Option 1, Option 2, Option 3')
+        .split(',')
+        .map(o => o.trim())
+        .filter(Boolean);
+      const selectedVal = node.textContent || opts[0] || 'Option 1';
+      const optLines = opts.map(o => `${spaces}  <option value="${escapeXmlAttr(o)}"${o === selectedVal ? ' selected' : ''}>${escapeXmlAttr(o)}</option>`).join('\n');
+      return `${spaces}<select class="${className}" ${metaAttrs} data-type="select">\n${optLines}\n${spaces}</select>`;
+    }
+
+    if (node.type === 'progress') {
+      const val = node.textContent || '60';
+      const max = node.placeholder || '100';
+      return `${spaces}<progress class="${className}" ${metaAttrs} value="${val}" max="${max}" data-type="progress"></progress>`;
+    }
+
+    if (node.type === 'checkbox') {
+      const isChecked = node.textContent === 'true' || node.textContent === 'checked';
+      return `${spaces}<label class="${className}" ${metaAttrs} data-type="checkbox">\n${spaces}  <input type="checkbox"${isChecked ? ' checked' : ''} />\n${spaces}  <span>${escapeXmlAttr(node.name || 'Checkbox')}</span>\n${spaces}</label>`;
+    }
+
+    if (node.type === 'slider') {
+      const val = node.textContent || '50';
+      const min = node.alt || '0';
+      const max = node.placeholder || '100';
+      return `${spaces}<input type="range" class="${className}" ${metaAttrs} min="${min}" max="${max}" value="${val}" data-type="slider" />`;
     }
 
     if (node.type === 'divider') {
-      return `${spaces}<hr class="${className}" id="${node.id}" />`;
+      return `${spaces}<hr class="${className}" ${metaAttrs} />`;
     }
 
     if (node.type === 'spacer') {
-      return `${spaces}<div class="${className}" id="${node.id}" data-type="spacer"></div>`;
+      return `${spaces}<div class="${className}" ${metaAttrs} data-type="spacer"></div>`;
     }
 
-    let tag = 'div';
-    if (node.type === 'heading') tag = 'h2';
-    else if (node.type === 'text') tag = 'p';
-    else if (node.type === 'badge') tag = 'span';
+    if (node.type === 'text') {
+      return `${spaces}<p class="${className}" ${metaAttrs}>${escapeXmlAttr(node.textContent || node.name || '')}</p>`;
+    }
 
+    // Containers (flex, grid, canvas/container, card, scroll) NEVER output node.textContent
     if (node.children.length === 0) {
-      const content = node.textContent || '';
-      return `${spaces}<${tag} class="${className}" id="${node.id}">${content}</${tag}>`;
+      return `${spaces}<div class="${className}" ${metaAttrs}></div>`;
     }
 
     const childrenStr = node.children.map(child => serializeNode(child, indent + 2)).join('\n');
-    return `${spaces}<${tag} class="${className}" id="${node.id}">\n${childrenStr}\n${spaces}</${tag}>`;
+    return `${spaces}<div class="${className}" ${metaAttrs}>\n${childrenStr}\n${spaces}</div>`;
   };
 
   const html = serializeNode(rootNode, 0);
@@ -576,10 +669,12 @@ export const exportLayoutEngineYaml = (
     // Determine Tag based on node type
     let tag = 'Panel';
     if (node.type === 'text') tag = 'Text';
-    else if (node.type === 'heading') tag = 'Heading';
     else if (node.type === 'button') tag = 'Button';
     else if (node.type === 'input') tag = 'Input';
-    else if (node.type === 'badge') tag = 'Badge';
+    else if (node.type === 'select') tag = 'Select';
+    else if (node.type === 'progress') tag = 'Progress';
+    else if (node.type === 'checkbox') tag = 'Checkbox';
+    else if (node.type === 'slider') tag = 'Slider';
     else if (node.type === 'card') tag = 'Card';
     else if (node.type === 'scroll') tag = 'Scroll';
     else if (node.type === 'image') tag = 'Image';
@@ -593,8 +688,8 @@ export const exportLayoutEngineYaml = (
     if (node.name && node.name !== node.id) lines.push(`${bsp}name: "${node.name}"`);
     lines.push(`${bsp}type: ${node.type}`);
 
-    // Text & String content
-    if (node.textContent !== undefined && node.textContent !== '') {
+    // Text & String content (strictly on non-container elements)
+    if (!isContainerNodeType(node.type) && node.textContent !== undefined && node.textContent !== '') {
       lines.push(`${bsp}string: "${node.textContent.replace(/"/g, '\\"')}"`);
     }
     if (node.placeholder) {
@@ -642,11 +737,17 @@ export const exportLayoutEngineYaml = (
       if (s.gridTemplateRows && s.gridTemplateRows !== 'auto') lines.push(`${bsp}grid_template_rows: "${s.gridTemplateRows}"`);
     }
 
-    // Fill ratio / flex grow
-    const fr = s.fillRatio || s.flexGrow;
-    if (fr && fr !== '0') {
+    // Fill ratio / flex grow & flex item slot props
+    const fr = (s.flexGrow !== undefined && s.flexGrow !== '' && s.flexGrow !== '0')
+      ? s.flexGrow
+      : (s.fillRatio && s.fillRatio !== '0' ? s.fillRatio : null);
+    if (fr) {
       lines.push(`${bsp}fill_ratio: ${parseFloat(fr)}`);
     }
+    if (s.flexShrink && s.flexShrink !== '1') lines.push(`${bsp}flex_shrink: ${parseFloat(s.flexShrink)}`);
+    if (s.flexBasis && s.flexBasis !== 'auto') lines.push(`${bsp}flex_basis: "${s.flexBasis}"`);
+    if (s.order && s.order !== '0') lines.push(`${bsp}order: ${parseInt(s.order, 10)}`);
+    if (s.alignSelf && s.alignSelf !== 'auto') lines.push(`${bsp}align_self: ${s.alignSelf}`);
 
     // Width & Height (CRITICAL for lossless roundtrip!)
     if (s.width && s.width !== 'auto') lines.push(`${bsp}width: "${s.width}"`);
@@ -748,6 +849,10 @@ export const exportLayoutEngineYaml = (
     if (s.overflow && s.overflow !== 'visible') lines.push(`${bsp}overflow: ${s.overflow}`);
     if (s.overflowX && s.overflowX !== s.overflow) lines.push(`${bsp}overflow_x: ${s.overflowX}`);
     if (s.overflowY && s.overflowY !== s.overflow) lines.push(`${bsp}overflow_y: ${s.overflowY}`);
+    if (s.top && s.top !== 'auto') lines.push(`${bsp}top: "${s.top}"`);
+    if (s.right && s.right !== 'auto') lines.push(`${bsp}right: "${s.right}"`);
+    if (s.bottom && s.bottom !== 'auto') lines.push(`${bsp}bottom: "${s.bottom}"`);
+    if (s.left && s.left !== 'auto') lines.push(`${bsp}left: "${s.left}"`);
     if (s.zIndex && s.zIndex !== 'auto') lines.push(`${bsp}z_index: ${s.zIndex}`);
 
     // Children recursively
@@ -889,8 +994,10 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
 
     let nodeType: LayoutNode['type'] = 'container';
     if (p.type) {
-      nodeType = p.type as LayoutNode['type'];
-    } else if (['text', 'heading', 'button', 'input', 'badge', 'card', 'scroll', 'image', 'divider', 'spacer', 'grid', 'flex', 'container'].includes(tagLower)) {
+      nodeType = (p.type === 'heading' ? 'text' : p.type) as LayoutNode['type'];
+    } else if (tagLower === 'heading') {
+      nodeType = 'text';
+    } else if (['text', 'button', 'input', 'select', 'progress', 'checkbox', 'slider', 'card', 'scroll', 'image', 'divider', 'spacer', 'grid', 'flex', 'container'].includes(tagLower)) {
       nodeType = tagLower as LayoutNode['type'];
     } else if (p.flow === 'ROW' || p.flow === 'COLUMN') {
       nodeType = 'flex';
@@ -938,7 +1045,7 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
     if (p.grid_template_columns) style.gridTemplateColumns = String(p.grid_template_columns);
     if (p.grid_template_rows) style.gridTemplateRows = String(p.grid_template_rows);
 
-    // Fill ratio / flex grow
+    // Fill ratio / flex grow & flex item slot
     if (p.fill_ratio !== undefined) {
       style.fillRatio = String(p.fill_ratio);
       style.flexGrow = String(p.fill_ratio);
@@ -946,6 +1053,10 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
       style.fillRatio = String(p.flex_grow);
       style.flexGrow = String(p.flex_grow);
     }
+    if (p.flex_shrink !== undefined) style.flexShrink = String(p.flex_shrink);
+    if (p.flex_basis !== undefined) style.flexBasis = String(p.flex_basis);
+    if (p.order !== undefined) style.order = String(p.order);
+    if (p.align_self) style.alignSelf = p.align_self;
 
     // Gap [x, y]
     if (p.gap !== undefined) {
@@ -982,7 +1093,7 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
       style.backgroundColor = rgbaArrayToHex(p.background_color);
     } else if (p.color !== undefined) {
       const parsedColor = rgbaArrayToHex(p.color);
-      if (nodeType === 'text' || nodeType === 'heading') {
+      if (nodeType === 'text') {
         if (p.text_color || p.font_color) {
           style.backgroundColor = parsedColor;
         } else {
@@ -1023,13 +1134,17 @@ export const parseTetherYaml = (yamlText: string): LayoutNode => {
     if (p.font_weight !== undefined) style.fontWeight = String(p.font_weight);
     if (p.text_align) style.textAlign = p.text_align;
 
-    // Opacity, Position, Overflow, Z-Index
+    // Opacity, Position, Overflow, Z-Index, Offsets
     if (p.opacity !== undefined) style.opacity = String(p.opacity);
     if (p.position) style.position = p.position;
     if (p.box_sizing) style.boxSizing = p.box_sizing;
     if (p.overflow) style.overflow = p.overflow;
     if (p.overflow_x) style.overflowX = p.overflow_x;
     if (p.overflow_y) style.overflowY = p.overflow_y;
+    if (p.top !== undefined) style.top = String(p.top);
+    if (p.right !== undefined) style.right = String(p.right);
+    if (p.bottom !== undefined) style.bottom = String(p.bottom);
+    if (p.left !== undefined) style.left = String(p.left);
     if (p.z_index !== undefined) style.zIndex = String(p.z_index);
 
     // Content & text
@@ -1280,30 +1395,57 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
     const tagName = el.tagName.toLowerCase();
     const style = createCleanNodeStyle();
 
+    const dataType = el.getAttribute('data-type');
+    const inputType = el.getAttribute('type');
+
     let nodeType: LayoutNode['type'] = 'container';
     let placeholder: string | undefined;
     let src: string | undefined;
     let alt: string | undefined;
+    let isLeafWidget = false;
 
-    if (tagName === 'button') {
+    const hasDirectCheckbox = Array.from(el.children).some(
+      (c) => c.tagName.toLowerCase() === 'input' && (c as HTMLInputElement).type === 'checkbox'
+    );
+    if (dataType === 'checkbox' || (tagName === 'label' && hasDirectCheckbox) || (tagName === 'input' && inputType === 'checkbox')) {
+      nodeType = 'checkbox';
+      isLeafWidget = true;
+    } else if (dataType === 'slider' || (tagName === 'input' && inputType === 'range')) {
+      nodeType = 'slider';
+      isLeafWidget = true;
+      alt = el.getAttribute('min') || '0';
+      placeholder = el.getAttribute('max') || '100';
+    } else if (dataType === 'progress' || tagName === 'progress') {
+      nodeType = 'progress';
+      isLeafWidget = true;
+      placeholder = el.getAttribute('max') || '100';
+    } else if (dataType === 'select' || tagName === 'select') {
+      nodeType = 'select';
+      isLeafWidget = true;
+      const options = Array.from(el.querySelectorAll('option'));
+      const optValues = options.map(o => o.value || o.textContent?.trim() || '').filter(Boolean);
+      placeholder = optValues.length > 0 ? optValues.join(', ') : 'Option 1, Option 2, Option 3';
+    } else if (tagName === 'button') {
       nodeType = 'button';
-    } else if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6'].includes(tagName)) {
-      nodeType = 'heading';
-    } else if (tagName === 'span') {
-      nodeType = 'badge';
-    } else if (['p', 'label', 'a', 'strong', 'b', 'em'].includes(tagName)) {
+      isLeafWidget = el.children.length === 0;
+    } else if (['h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'p', 'span', 'label', 'a', 'strong', 'b', 'em'].includes(tagName)) {
       nodeType = 'text';
+      isLeafWidget = true;
     } else if (tagName === 'img') {
       nodeType = 'image';
+      isLeafWidget = true;
       src = el.getAttribute('src') || undefined;
       alt = el.getAttribute('alt') || undefined;
     } else if (tagName === 'input') {
       nodeType = 'input';
+      isLeafWidget = true;
       placeholder = el.getAttribute('placeholder') || undefined;
     } else if (tagName === 'hr') {
       nodeType = 'divider';
-    } else if (el.getAttribute('data-type') === 'spacer' || el.className.includes('spacer')) {
+      isLeafWidget = true;
+    } else if (dataType === 'spacer' || el.className.includes('spacer')) {
       nodeType = 'spacer';
+      isLeafWidget = true;
     } else {
       nodeType = 'container';
     }
@@ -1352,6 +1494,16 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
       style.flexGrow = mergedProps['flex-grow'];
       style.fillRatio = mergedProps['flex-grow'];
     }
+    if (mergedProps['flex-shrink']) style.flexShrink = mergedProps['flex-shrink'];
+    if (mergedProps['flex-basis']) style.flexBasis = mergedProps['flex-basis'];
+    if (mergedProps['align-self']) style.alignSelf = mergedProps['align-self'] as any;
+    if (mergedProps['order']) style.order = mergedProps['order'];
+
+    if (mergedProps['top']) style.top = mergedProps['top'];
+    if (mergedProps['right']) style.right = mergedProps['right'];
+    if (mergedProps['bottom']) style.bottom = mergedProps['bottom'];
+    if (mergedProps['left']) style.left = mergedProps['left'];
+    if (mergedProps['z-index']) style.zIndex = mergedProps['z-index'];
 
     if (mergedProps['grid-template-columns']) style.gridTemplateColumns = mergedProps['grid-template-columns'];
     if (mergedProps['grid-template-rows']) style.gridTemplateRows = mergedProps['grid-template-rows'];
@@ -1390,16 +1542,55 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
     if (mergedProps['text-align']) style.textAlign = mergedProps['text-align'] as any;
     if (mergedProps['opacity']) style.opacity = mergedProps['opacity'];
 
-    const nodeId = el.id || `node_${idCounter++}_${tagName}`;
-    const name = el.id ? `#${el.id}` : el.className ? `.${el.className.split(' ')[0]}` : tagName;
+    const nodeId = el.getAttribute('data-id') || el.id || `node_${idCounter++}_${tagName}`;
+    let name = el.getAttribute('data-name');
+    if (!name) {
+      if (nodeType === 'checkbox') {
+        const labelSpan = Array.from(el.children).find(c => c.tagName.toLowerCase() === 'span');
+        name = labelSpan ? (labelSpan.textContent?.trim() || 'Checkbox') : (el.textContent?.trim() || 'Checkbox');
+      } else if (nodeType === 'select') {
+        name = 'Dropdown';
+      } else if (nodeType === 'slider') {
+        name = 'Range Slider';
+      } else if (nodeType === 'progress') {
+        name = 'Progress Bar';
+      } else if (nodeType === 'input') {
+        name = el.getAttribute('placeholder') || 'Text Input Field';
+      } else if (el.id && !el.id.startsWith('node_')) {
+        name = el.id;
+      } else if (el.className) {
+        name = el.className.split(' ')[0].replace(/^c-/, '');
+      } else {
+        name = tagName;
+      }
+    }
 
     let textContent: string | undefined;
-    if (nodeType === 'text' || nodeType === 'button' || el.children.length === 0) {
+
+    if (nodeType === 'checkbox') {
+      const checkboxInput = Array.from(el.children).find(
+        (c) => c.tagName.toLowerCase() === 'input' && (c as HTMLInputElement).type === 'checkbox'
+      ) as HTMLInputElement | undefined;
+      const isChecked = checkboxInput ? checkboxInput.checked || checkboxInput.hasAttribute('checked') : (el.getAttribute('checked') !== null);
+      textContent = isChecked ? 'true' : 'false';
+    } else if (nodeType === 'slider') {
+      textContent = el.getAttribute('value') || '50';
+    } else if (nodeType === 'progress') {
+      textContent = el.getAttribute('value') || '60';
+    } else if (nodeType === 'select') {
+      const selectedOpt = el.querySelector('option[selected]') || el.querySelector('option');
+      textContent = selectedOpt ? (selectedOpt.getAttribute('value') || selectedOpt.textContent?.trim() || 'Option 1') : 'Option 1';
+    } else if (nodeType === 'input') {
+      textContent = el.getAttribute('value') || undefined;
+    } else if (nodeType === 'text' || nodeType === 'button') {
       const txt = el.textContent?.trim();
       if (txt) textContent = txt;
     }
 
-    const childElements = Array.from(el.children).filter(c => c instanceof HTMLElement) as HTMLElement[];
+    // Leaf elements and form controls never have parsed children
+    const childElements = isLeafWidget
+      ? []
+      : (Array.from(el.children).filter(c => c instanceof HTMLElement) as HTMLElement[]);
     const children = childElements.map(traverseElement);
 
     return {
@@ -1429,13 +1620,20 @@ export const parseHtmlLayout = (htmlText: string): LayoutNode => {
   }
 
   if (bodyChildren.length === 1) {
-    const root = traverseElement(bodyChildren[0]);
+    const rootEl = bodyChildren[0];
+    const root = traverseElement(rootEl);
     root.id = 'root';
     root.name = 'Screen Canvas (Root)';
-    if (!root.style.width || root.style.width === 'auto') {
+    const canvasW = rootEl.getAttribute('data-canvas-width');
+    const canvasH = rootEl.getAttribute('data-canvas-height');
+    if (canvasW) {
+      root.style.width = canvasW;
+    } else if (!root.style.width || root.style.width === 'auto' || root.style.width === '100%') {
       root.style.width = '840px';
     }
-    if (!root.style.height || root.style.height === 'auto') {
+    if (canvasH) {
+      root.style.height = canvasH;
+    } else if (!root.style.height || root.style.height === 'auto' || root.style.height === '100vh') {
       root.style.height = '540px';
     }
     return root;
@@ -1569,10 +1767,12 @@ export const parseXmlLayout = (xmlText: string): LayoutNode => {
     let nodeType: LayoutNode['type'] = 'container';
 
     if (rawTag === 'button') nodeType = 'button';
-    else if (rawTag === 'text' || rawTag === 'p' || rawTag === 'span') nodeType = 'text';
-    else if (rawTag === 'heading' || rawTag === 'h1' || rawTag === 'h2' || rawTag === 'h3') nodeType = 'heading';
+    else if (rawTag === 'text' || rawTag === 'p' || rawTag === 'span' || rawTag === 'heading' || rawTag === 'h1' || rawTag === 'h2' || rawTag === 'h3') nodeType = 'text';
     else if (rawTag === 'input') nodeType = 'input';
-    else if (rawTag === 'badge') nodeType = 'badge';
+    else if (rawTag === 'select') nodeType = 'select';
+    else if (rawTag === 'progress') nodeType = 'progress';
+    else if (rawTag === 'checkbox') nodeType = 'checkbox';
+    else if (rawTag === 'slider') nodeType = 'slider';
     else if (rawTag === 'card') nodeType = 'card';
     else if (rawTag === 'scroll') nodeType = 'scroll';
     else if (rawTag === 'divider') nodeType = 'divider';

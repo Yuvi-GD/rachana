@@ -89,7 +89,7 @@ export const createDefaultStyle = (overrides?: Partial<LayoutNodeStyle>): Layout
 
   // Tether UI Layout Props
   flow: 'COLUMN',
-  fillRatio: '1.0',
+  fillRatio: '0',
   contentAlign: 'START',
   anchorMin: '0.0',
   anchorMax: '1.0',
@@ -151,27 +151,37 @@ export const createDefaultStyle = (overrides?: Partial<LayoutNodeStyle>): Layout
   ...overrides,
 });
 
+let elementIdCounter = 1;
+
+export const generateReadableId = (type: string, name?: string): string => {
+  const clean = (name || type)
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  const prefix = clean || type || 'el';
+  return `${prefix}_${elementIdCounter++}`;
+};
+
 export const createWidgetPreset = (type: LayoutNodeType, customName?: string): LayoutNode => {
-  const id = 'node_' + Math.random().toString(36).substring(2, 9);
+  const id = generateReadableId(type, customName);
   
   switch (type) {
     case 'flex': {
-      const isCol = Boolean(customName && customName.toLowerCase().includes('column'));
       return {
         id,
-        name: customName || 'Flex Row',
+        name: customName || 'Flex',
         type: 'flex',
         isExpanded: true,
         style: createDefaultStyle({
           display: 'flex',
-          flexDirection: isCol ? 'column' : 'row',
+          flexDirection: 'row',
           flexWrap: 'nowrap',
           justifyContent: 'flex-start',
-          alignItems: isCol ? 'stretch' : 'center',
+          alignItems: 'center',
           gap: '12px',
           padding: defaultSpacing('16px'),
-          backgroundColor: isCol ? 'rgba(8, 145, 178, 0.25)' : 'rgba(23, 37, 84, 0.4)',
-          borderColor: isCol ? '#06b6d4' : '#2563eb',
+          backgroundColor: 'rgba(23, 37, 84, 0.4)',
+          borderColor: '#2563eb',
           minHeight: '80px',
         }),
         children: [],
@@ -181,7 +191,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
     case 'grid':
       return {
         id,
-        name: customName || 'Grid Container',
+        name: customName || 'Grid',
         type: 'grid',
         isExpanded: true,
         style: createDefaultStyle({
@@ -198,20 +208,19 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
       };
 
     case 'container': {
-      const isCanvas = Boolean(customName && (customName.toLowerCase().includes('canvas') || customName.toLowerCase().includes('freeform')));
       return {
         id,
-        name: customName || (isCanvas ? 'Freeform Canvas' : 'Flex Column'),
-        type: isCanvas ? 'container' : 'flex',
+        name: customName || 'Canvas',
+        type: 'container',
         isExpanded: true,
         style: createDefaultStyle({
           display: 'flex',
           flexDirection: 'column',
-          position: isCanvas ? 'relative' : 'relative',
-          padding: defaultSpacing(isCanvas ? '16px' : '12px'),
-          backgroundColor: isCanvas ? 'rgba(30, 41, 59, 0.45)' : 'rgba(30, 41, 59, 0.5)',
-          borderColor: isCanvas ? '#64748b' : '#475569',
-          minHeight: isCanvas ? '180px' : '60px',
+          position: 'relative',
+          padding: defaultSpacing('16px'),
+          backgroundColor: 'rgba(30, 41, 59, 0.45)',
+          borderColor: '#64748b',
+          minHeight: '180px',
         }),
         children: [],
       };
@@ -317,28 +326,6 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         children: [],
       };
 
-    case 'heading':
-      return {
-        id,
-        name: customName || 'Heading Text',
-        type: 'heading',
-        textContent: 'Heading Title',
-        style: createDefaultStyle({
-          display: 'flex',
-          width: 'auto',
-          height: 'auto',
-          padding: defaultSpacing('0px'),
-          backgroundColor: 'transparent',
-          borderColor: 'transparent',
-          borderWidth: defaultSpacing('0px'),
-          color: '#ffffff',
-          fontSize: '22px',
-          fontWeight: '700',
-          lineHeight: '28px',
-        }),
-        children: [],
-      };
-
     case 'input':
       return {
         id,
@@ -359,30 +346,6 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
           color: '#f4f4f5',
           fontSize: '13px',
           fontWeight: '400',
-        }),
-        children: [],
-      };
-
-    case 'badge':
-      return {
-        id,
-        name: customName || 'Badge Pill',
-        type: 'badge',
-        textContent: 'NEW',
-        style: createDefaultStyle({
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          width: 'auto',
-          height: 'auto',
-          padding: { top: '2px', right: '8px', bottom: '2px', left: '8px' },
-          backgroundColor: 'rgba(56, 189, 248, 0.2)',
-          borderColor: '#0284c7',
-          borderWidth: defaultSpacing('1px'),
-          borderRadius: '9999px',
-          color: '#38bdf8',
-          fontSize: '11px',
-          fontWeight: '700',
         }),
         children: [],
       };
@@ -418,6 +381,80 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
           borderColor: '#64748b',
           borderStyle: 'dashed',
           flexGrow: '1',
+        }),
+        children: [],
+      };
+
+    case 'select':
+      return {
+        id,
+        name: customName || 'Dropdown',
+        type: 'select',
+        textContent: 'Option 1',
+        placeholder: 'Option 1, Option 2, Option 3',
+        isExpanded: true,
+        style: createDefaultStyle({
+          width: '160px',
+          height: '34px',
+          padding: { top: '6px', right: '10px', bottom: '6px', left: '10px' },
+          backgroundColor: '#222227',
+          borderColor: '#34343d',
+          borderWidth: defaultSpacing('1px'),
+          borderRadius: '4px',
+          color: '#f4f4f5',
+          fontSize: '12px',
+        }),
+        children: [],
+      };
+
+    case 'progress':
+      return {
+        id,
+        name: customName || 'Progress Bar',
+        type: 'progress',
+        textContent: '60',
+        placeholder: '100',
+        isExpanded: true,
+        style: createDefaultStyle({
+          width: '180px',
+          height: '10px',
+          backgroundColor: '#27272a',
+          borderRadius: '5px',
+        }),
+        children: [],
+      };
+
+    case 'checkbox':
+      return {
+        id,
+        name: customName || 'Checkbox',
+        type: 'checkbox',
+        textContent: 'true',
+        isExpanded: true,
+        style: createDefaultStyle({
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: '8px',
+          fontSize: '12px',
+          color: '#f4f4f5',
+          cursor: 'pointer',
+        }),
+        children: [],
+      };
+
+    case 'slider':
+      return {
+        id,
+        name: customName || 'Range Slider',
+        type: 'slider',
+        textContent: '50',
+        alt: '0',
+        placeholder: '100',
+        isExpanded: true,
+        style: createDefaultStyle({
+          width: '160px',
+          height: '24px',
         }),
         children: [],
       };

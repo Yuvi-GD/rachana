@@ -16,76 +16,210 @@ body {
   overflow: hidden;
 }
 
-/* Global Sleek Dark Scrollbars (Chromium, Firefox, Safari) */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #3b3b47 transparent;
+/* ======================================================== */
+/* Global Studio Flat Rectangular Scrollbars (VS Code Style) */
+/* ======================================================== */
+/* Firefox standalone fallback */
+@supports not selector(::-webkit-scrollbar) {
+  * {
+    scrollbar-width: auto;
+    scrollbar-color: #464652 #141418;
+  }
 }
 
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+/* Chrome, Edge, Safari, Chromium */
+::-webkit-scrollbar,
+*::-webkit-scrollbar {
+  width: 14px !important;
+  height: 14px !important;
 }
 
-::-webkit-scrollbar-track {
-  background: transparent;
+::-webkit-scrollbar-track,
+*::-webkit-scrollbar-track {
+  background: #141418 !important;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #33333d;
-  border-radius: 4px;
+::-webkit-scrollbar-thumb,
+*::-webkit-scrollbar-thumb {
+  background: #464652 !important;
+  border-radius: 0px !important;
+  border: none !important;
 }
 
-::-webkit-scrollbar-thumb:hover {
-  background: #4e4e5c;
+::-webkit-scrollbar-thumb:hover,
+*::-webkit-scrollbar-thumb:hover {
+  background: #5f5f6e !important;
 }
 
-::-webkit-scrollbar-corner {
-  background: transparent;
+::-webkit-scrollbar-thumb:active,
+*::-webkit-scrollbar-thumb:active {
+  background: #737385 !important;
 }
 
-/* Explicit class for elements that want dark track background */
+::-webkit-scrollbar-corner,
+*::-webkit-scrollbar-corner {
+  background: #141418 !important;
+}
+
+/* Explicit custom scrollbars across panels matching VS Code */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 14px !important;
+  height: 14px !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-track {
-  background: #18181b;
+  background: #141418 !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #33333b;
-  border-radius: 3px;
+  background: #464652 !important;
+  border-radius: 0px !important;
+  border: none !important;
 }
 
 .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #4a4a55;
+  background: #5f5f6e !important;
 }
 
-/* Script Editor Wider Scrollbars (VS Code style 14px) */
-.code-scrollbar {
-  scrollbar-width: auto;
-  scrollbar-color: #3e3e48 #141418;
+.custom-scrollbar::-webkit-scrollbar-thumb:active {
+  background: #737385 !important;
 }
 
-.code-scrollbar::-webkit-scrollbar {
-  width: 14px;
-  height: 14px;
+.custom-scrollbar::-webkit-scrollbar-corner {
+  background: #141418 !important;
 }
 
-.code-scrollbar::-webkit-scrollbar-track {
-  background: #141418;
+/* Wide 16px flat rectangular scrollbar specifically for Code Editor */
+.code-scrollbar::-webkit-scrollbar,
+.code-editor-textarea::-webkit-scrollbar {
+  width: 16px !important;
+  height: 16px !important;
 }
 
-.code-scrollbar::-webkit-scrollbar-thumb {
-  background: #3e3e48;
-  border-radius: 7px;
-  border: 3px solid #141418;
+.code-scrollbar::-webkit-scrollbar-track,
+.code-editor-textarea::-webkit-scrollbar-track {
+  background: #18181f !important;
 }
 
-.code-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: #5a5a68;
+.code-scrollbar::-webkit-scrollbar-thumb,
+.code-editor-textarea::-webkit-scrollbar-thumb {
+  background: #4a4a58 !important;
+  border-radius: 0px !important;
+  border: 1px solid #282832 !important;
+}
+
+.code-scrollbar::-webkit-scrollbar-thumb:hover,
+.code-editor-textarea::-webkit-scrollbar-thumb:hover {
+  background: #636375 !important;
+}
+
+.code-scrollbar::-webkit-scrollbar-thumb:active,
+.code-editor-textarea::-webkit-scrollbar-thumb:active {
+  background: #7a7a90 !important;
+}
+
+.code-scrollbar::-webkit-scrollbar-corner,
+.code-editor-textarea::-webkit-scrollbar-corner {
+  background: #18181f !important;
+}
+
+/* ======================================================== */
+/* Custom Styled Progress Bar (Clean Track & Vibrant Fill)  */
+/* ======================================================== */
+progress {
+  -webkit-appearance: none;
+  appearance: none;
+  border: none;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+}
+
+progress::-webkit-progress-bar {
+  background-color: rgba(255, 255, 255, 0.12);
+  border-radius: inherit;
+  width: 100% !important;
+  height: 100% !important;
+}
+
+progress::-webkit-progress-value {
+  background-color: #3b82f6 !important;
+  border-radius: inherit;
+  height: 100% !important;
+  transition: width 0.15s ease;
+}
+
+progress::-moz-progress-bar {
+  background-color: #3b82f6 !important;
+  border-radius: inherit;
+  height: 100% !important;
+  transition: width 0.15s ease;
+}
+
+/* ======================================================== */
+/* Custom Wide Range Slider Track & Centered Thumb          */
+/* ======================================================== */
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 6px;
+  background: #272730;
+  border-radius: 3px;
+  outline: none;
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+input[type="range"]::-webkit-slider-runnable-track {
+  width: 100%;
+  height: 6px;
+  background: #272730;
+  border-radius: 3px;
+  border: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  margin-top: -5px;
+  border-radius: 3px;
+  background: #3b82f6;
+  border: 1px solid #60a5fa;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+input[type="range"]::-webkit-slider-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
+}
+
+input[type="range"]::-moz-range-track {
+  width: 100%;
+  height: 6px;
+  background: #272730;
+  border-radius: 3px;
+  border: none;
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  border-radius: 3px;
+  background: #3b82f6;
+  border: 1px solid #60a5fa;
+  cursor: pointer;
+  transition: background 0.15s ease, transform 0.15s ease;
+}
+
+input[type="range"]::-moz-range-thumb:hover {
+  background: #2563eb;
+  transform: scale(1.1);
 }
 
 /* ======================================================== */
@@ -156,15 +290,16 @@ body {
 }
 
 /* ======================================================== */
-/* 1. STUDIO WHITE THEME ADAPTER                            */
+/* Dynamic CSS Variable-Driven Theme Adapters               */
 /* ======================================================== */
 
-[data-theme="white"] body {
+[data-theme="white"] body,
+[data-theme="amoled-black"] body,
+[data-theme="custom"] body {
   background-color: var(--theme-bg-app) !important;
   color: var(--theme-text-main) !important;
 }
 
-/* All background classes adapted to crisp white studio */
 [data-theme="white"] .bg-\[\#121214\],
 [data-theme="white"] .bg-\[\#121215\],
 [data-theme="white"] .bg-\[\#121216\],
@@ -225,11 +360,84 @@ body {
 [data-theme="white"] .bg-\[\#343440\],
 [data-theme="white"] .bg-zinc-950,
 [data-theme="white"] .bg-zinc-900,
-[data-theme="white"] .bg-zinc-800 {
-  background-color: #ffffff !important;
+[data-theme="white"] .bg-zinc-800,
+[data-theme="amoled-black"] .bg-\[\#121214\],
+[data-theme="amoled-black"] .bg-\[\#121215\],
+[data-theme="amoled-black"] .bg-\[\#121216\],
+[data-theme="amoled-black"] .bg-\[\#121212\],
+[data-theme="amoled-black"] .bg-\[\#0c0c0e\],
+[data-theme="amoled-black"] .bg-\[\#0d0d10\],
+[data-theme="amoled-black"] .bg-\[\#0e0e11\],
+[data-theme="amoled-black"] .bg-\[\#101012\],
+[data-theme="amoled-black"] .bg-\[\#101013\],
+[data-theme="amoled-black"] .bg-\[\#111114\],
+[data-theme="amoled-black"] .bg-\[\#131316\],
+[data-theme="amoled-black"] .bg-\[\#161619\],
+[data-theme="amoled-black"] .bg-\[\#16161a\],
+[data-theme="amoled-black"] .bg-\[\#17171b\],
+[data-theme="amoled-black"] .bg-\[\#17171c\],
+[data-theme="amoled-black"] .bg-\[\#18181b\],
+[data-theme="amoled-black"] .bg-\[\#18181c\],
+[data-theme="amoled-black"] .bg-\[\#18181d\],
+[data-theme="amoled-black"] .bg-\[\#19191d\],
+[data-theme="amoled-black"] .bg-\[\#1a1a1e\],
+[data-theme="amoled-black"] .bg-\[\#1a1a1f\],
+[data-theme="amoled-black"] .bg-\[\#1b1b22\],
+[data-theme="amoled-black"] .bg-\[\#1c1c20\],
+[data-theme="amoled-black"] .bg-\[\#1d1d23\],
+[data-theme="amoled-black"] .bg-\[\#1e1e22\],
+[data-theme="amoled-black"] .bg-\[\#1f1f24\],
+[data-theme="amoled-black"] .bg-\[\#1f1f26\],
+[data-theme="amoled-black"] .bg-\[\#202026\],
+[data-theme="amoled-black"] .bg-\[\#202028\],
+[data-theme="amoled-black"] .bg-\[\#222227\],
+[data-theme="amoled-black"] .bg-\[\#222228\],
+[data-theme="amoled-black"] .bg-\[\#22222a\],
+[data-theme="amoled-black"] .bg-\[\#23232a\],
+[data-theme="amoled-black"] .bg-\[\#24242d\],
+[data-theme="amoled-black"] .bg-\[\#24242e\],
+[data-theme="amoled-black"] .bg-\[\#25252b\],
+[data-theme="amoled-black"] .bg-\[\#25252c\],
+[data-theme="amoled-black"] .bg-\[\#25252d\],
+[data-theme="amoled-black"] .bg-\[\#25252e\],
+[data-theme="amoled-black"] .bg-\[\#252530\],
+[data-theme="amoled-black"] .bg-\[\#26262e\],
+[data-theme="amoled-black"] .bg-\[\#262630\],
+[data-theme="amoled-black"] .bg-\[\#27272e\],
+[data-theme="amoled-black"] .bg-\[\#282830\],
+[data-theme="amoled-black"] .bg-\[\#282832\],
+[data-theme="amoled-black"] .bg-\[\#282834\],
+[data-theme="amoled-black"] .bg-\[\#2a2a30\],
+[data-theme="amoled-black"] .bg-\[\#2b2b30\],
+[data-theme="amoled-black"] .bg-\[\#2b2b32\],
+[data-theme="amoled-black"] .bg-\[\#2b2b33\],
+[data-theme="amoled-black"] .bg-\[\#2c2c34\],
+[data-theme="amoled-black"] .bg-\[\#2e2e38\],
+[data-theme="amoled-black"] .bg-\[\#32323c\],
+[data-theme="amoled-black"] .bg-\[\#32323e\],
+[data-theme="amoled-black"] .bg-\[\#333338\],
+[data-theme="amoled-black"] .bg-\[\#34343d\],
+[data-theme="amoled-black"] .bg-\[\#34343e\],
+[data-theme="amoled-black"] .bg-\[\#343440\],
+[data-theme="amoled-black"] .bg-zinc-950,
+[data-theme="amoled-black"] .bg-zinc-900,
+[data-theme="amoled-black"] .bg-zinc-800,
+[data-theme="custom"] .bg-\[\#121214\],
+[data-theme="custom"] .bg-\[\#121215\],
+[data-theme="custom"] .bg-\[\#121216\],
+[data-theme="custom"] .bg-\[\#121212\],
+[data-theme="custom"] .bg-\[\#16161a\],
+[data-theme="custom"] .bg-\[\#18181b\],
+[data-theme="custom"] .bg-\[\#18181c\],
+[data-theme="custom"] .bg-\[\#18181d\],
+[data-theme="custom"] .bg-\[\#1e1e22\],
+[data-theme="custom"] .bg-\[\#202026\],
+[data-theme="custom"] .bg-zinc-950,
+[data-theme="custom"] .bg-zinc-900,
+[data-theme="custom"] .bg-zinc-800 {
+  background-color: var(--theme-bg-panel) !important;
 }
 
-/* Secondary & header backgrounds */
 [data-theme="white"] header,
 [data-theme="white"] footer,
 [data-theme="white"] .bg-\[\#141417\],
@@ -239,11 +447,26 @@ body {
 [data-theme="white"] .bg-\[\#1a1a20\],
 [data-theme="white"] .bg-\[\#242427\],
 [data-theme="white"] .bg-\[\#242429\],
-[data-theme="white"] .bg-\[\#25252a\] {
-  background-color: #f8fafc !important;
+[data-theme="white"] .bg-\[\#25252a\],
+[data-theme="amoled-black"] header,
+[data-theme="amoled-black"] footer,
+[data-theme="amoled-black"] .bg-\[\#141417\],
+[data-theme="amoled-black"] .bg-\[\#141418\],
+[data-theme="amoled-black"] .bg-\[\#19191c\],
+[data-theme="amoled-black"] .bg-\[\#19191e\],
+[data-theme="amoled-black"] .bg-\[\#1a1a20\],
+[data-theme="amoled-black"] .bg-\[\#242427\],
+[data-theme="amoled-black"] .bg-\[\#242429\],
+[data-theme="amoled-black"] .bg-\[\#25252a\],
+[data-theme="custom"] header,
+[data-theme="custom"] footer,
+[data-theme="custom"] .bg-\[\#141417\],
+[data-theme="custom"] .bg-\[\#141418\],
+[data-theme="custom"] .bg-\[\#19191c\],
+[data-theme="custom"] .bg-\[\#1b1b22\] {
+  background-color: var(--theme-bg-header) !important;
 }
 
-/* White theme borders */
 [data-theme="white"] .border-\[\#202026\],
 [data-theme="white"] .border-\[\#222228\],
 [data-theme="white"] .border-\[\#22222a\],
@@ -294,106 +517,7 @@ body {
 [data-theme="white"] .border-\[\#444\],
 [data-theme="white"] .border-zinc-800,
 [data-theme="white"] .border-zinc-700,
-[data-theme="white"] .border-zinc-600 {
-  border-color: #e2e8f0 !important;
-}
-
-[data-theme="white"] div.w-\[1px\].bg-\[\#22222a\],
-[data-theme="white"] div.w-\[1px\].bg-\[\#333338\],
-[data-theme="white"] div.h-3.w-\[1px\].bg-\[\#22222a\],
-[data-theme="white"] div.h-4.w-\[1px\].bg-\[\#333338\] {
-  background-color: #cbd5e1 !important;
-}
-
-/* White theme hover states */
-[data-theme="white"] .hover\:bg-\[\#25252a\]:hover,
-[data-theme="white"] .hover\:bg-\[\#25252e\]:hover,
-[data-theme="white"] .hover\:bg-\[\#252530\]:hover,
-[data-theme="white"] .hover\:bg-\[\#282830\]:hover,
-[data-theme="white"] .hover\:bg-\[\#282832\]:hover,
-[data-theme="white"] .hover\:bg-\[\#282834\]:hover,
-[data-theme="white"] .hover\:bg-\[\#2c2c34\]:hover,
-[data-theme="white"] .hover\:bg-\[\#34343d\]:hover,
-[data-theme="white"] .hover\:bg-zinc-800:hover {
-  background-color: #e2e8f0 !important;
-}
-
-/* White theme text */
-[data-theme="white"] .text-slate-100,
-[data-theme="white"] .text-zinc-100,
-[data-theme="white"] .text-zinc-200,
-[data-theme="white"] .text-white {
-  color: #0f172a !important;
-}
-
-[data-theme="white"] .text-zinc-300,
-[data-theme="white"] .text-zinc-400 {
-  color: #334155 !important;
-}
-
-[data-theme="white"] .text-zinc-500,
-[data-theme="white"] .text-zinc-600 {
-  color: #64748b !important;
-}
-
-[data-theme="white"] input:not([type="color"]),
-[data-theme="white"] select,
-[data-theme="white"] textarea:not(.code-editor-textarea) {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-
-[data-theme="white"] select option {
-  background-color: #ffffff !important;
-  color: #0f172a !important;
-}
-
-[data-theme="white"] kbd {
-  background-color: #f1f5f9 !important;
-  color: #0f172a !important;
-  border-color: #cbd5e1 !important;
-}
-
-/* ======================================================== */
-/* 2. AMOLED PITCH BLACK THEME ADAPTER                      */
-/* ======================================================== */
-
-[data-theme="amoled-black"] body {
-  background-color: #000000 !important;
-  color: #e4e4e7 !important;
-}
-
-[data-theme="amoled-black"] .bg-\[\#121214\],
-[data-theme="amoled-black"] .bg-\[\#121215\],
-[data-theme="amoled-black"] .bg-\[\#0c0c0e\],
-[data-theme="amoled-black"] .bg-\[\#0e0e11\],
-[data-theme="amoled-black"] .bg-\[\#101013\],
-[data-theme="amoled-black"] .bg-\[\#111114\],
-[data-theme="amoled-black"] .bg-\[\#141417\],
-[data-theme="amoled-black"] .bg-\[\#0d0d10\],
-[data-theme="amoled-black"] .bg-\[\#0a0a0c\] {
-  background-color: #000000 !important;
-}
-
-[data-theme="amoled-black"] .bg-\[\#16161a\],
-[data-theme="amoled-black"] .bg-\[\#18181b\],
-[data-theme="amoled-black"] .bg-\[\#18181d\],
-[data-theme="amoled-black"] .bg-\[\#1a1a20\],
-[data-theme="amoled-black"] .bg-\[\#1b1b22\],
-[data-theme="amoled-black"] .bg-\[\#1c1c20\],
-[data-theme="amoled-black"] .bg-\[\#1e1e22\] {
-  background-color: #050507 !important;
-}
-
-[data-theme="amoled-black"] .bg-\[\#202028\],
-[data-theme="amoled-black"] .bg-\[\#242427\],
-[data-theme="amoled-black"] .bg-\[\#242429\],
-[data-theme="amoled-black"] .bg-\[\#25252e\],
-[data-theme="amoled-black"] .bg-\[\#282830\] {
-  background-color: #0e0e12 !important;
-}
-
+[data-theme="white"] .border-zinc-600,
 [data-theme="amoled-black"] .border-\[\#202026\],
 [data-theme="amoled-black"] .border-\[\#222228\],
 [data-theme="amoled-black"] .border-\[\#22222a\],
@@ -409,79 +533,7 @@ body {
 [data-theme="amoled-black"] .border-\[\#333338\],
 [data-theme="amoled-black"] .border-\[\#33333d\],
 [data-theme="amoled-black"] .border-\[\#383842\],
-[data-theme="amoled-black"] .border-\[\#393946\] {
-  border-color: #1a1a22 !important;
-}
-
-[data-theme="amoled-black"] input:not([type="color"]),
-[data-theme="amoled-black"] select,
-[data-theme="amoled-black"] textarea:not(.code-editor-textarea) {
-  background-color: #09090c !important;
-  color: #ffffff !important;
-  border-color: #1e1e26 !important;
-}
-
-[data-theme="amoled-black"] select option {
-  background-color: #09090c !important;
-  color: #ffffff !important;
-}
-
-/* ======================================================== */
-/* 3. CUSTOM PALETTE THEME ADAPTER                          */
-/* ======================================================== */
-
-[data-theme="custom"] body {
-  background-color: var(--theme-bg-app) !important;
-  color: var(--theme-text-main) !important;
-}
-
-[data-theme="custom"] .bg-\[\#121214\],
-[data-theme="custom"] .bg-\[\#121215\],
-[data-theme="custom"] .bg-\[\#121216\],
-[data-theme="custom"] .bg-\[\#121212\],
-[data-theme="custom"] .bg-\[\#16161a\],
-[data-theme="custom"] .bg-\[\#18181b\],
-[data-theme="custom"] .bg-\[\#18181c\],
-[data-theme="custom"] .bg-\[\#18181d\],
-[data-theme="custom"] .bg-\[\#1e1e22\],
-[data-theme="custom"] .bg-\[\#202026\],
-[data-theme="custom"] .bg-zinc-950,
-[data-theme="custom"] .bg-zinc-900,
-[data-theme="custom"] .bg-zinc-800 {
-  background-color: var(--theme-bg-panel) !important;
-}
-
-[data-theme="custom"] header,
-[data-theme="custom"] footer,
-[data-theme="custom"] .bg-\[\#141417\],
-[data-theme="custom"] .bg-\[\#141418\],
-[data-theme="custom"] .bg-\[\#19191c\],
-[data-theme="custom"] .bg-\[\#1b1b22\] {
-  background-color: var(--theme-bg-header) !important;
-}
-
-[data-theme="custom"] .bg-\[\#1a1a20\],
-[data-theme="custom"] .bg-\[\#242427\],
-[data-theme="custom"] .bg-\[\#242429\],
-[data-theme="custom"] .bg-\[\#25252a\],
-[data-theme="custom"] .bg-\[\#25252b\],
-[data-theme="custom"] .bg-\[\#2c2c34\] {
-  background-color: var(--theme-bg-sub) !important;
-}
-
-[data-theme="custom"] input:not([type="color"]),
-[data-theme="custom"] select,
-[data-theme="custom"] textarea:not(.code-editor-textarea) {
-  background-color: var(--theme-bg-input) !important;
-  color: var(--theme-text-main) !important;
-  border-color: var(--theme-border) !important;
-}
-
-[data-theme="custom"] select option {
-  background-color: var(--theme-bg-panel) !important;
-  color: var(--theme-text-main) !important;
-}
-
+[data-theme="amoled-black"] .border-\[\#393946\],
 [data-theme="custom"] .border-\[\#202026\],
 [data-theme="custom"] .border-\[\#222228\],
 [data-theme="custom"] .border-\[\#22222a\],
@@ -508,8 +560,46 @@ body {
   border-color: var(--theme-border) !important;
 }
 
+[data-theme="white"] input:not([type="color"]):not([type="range"]):not([type="checkbox"]),
+[data-theme="white"] select,
+[data-theme="white"] textarea:not(.code-editor-textarea),
+[data-theme="amoled-black"] input:not([type="color"]):not([type="range"]):not([type="checkbox"]),
+[data-theme="amoled-black"] select,
+[data-theme="amoled-black"] textarea:not(.code-editor-textarea),
+[data-theme="custom"] input:not([type="color"]):not([type="range"]):not([type="checkbox"]),
+[data-theme="custom"] select,
+[data-theme="custom"] textarea:not(.code-editor-textarea) {
+  background-color: var(--theme-bg-input) !important;
+  color: var(--theme-text-main) !important;
+  border-color: var(--theme-border) !important;
+}
+
+[data-theme="white"] select option,
+[data-theme="amoled-black"] select option,
+[data-theme="custom"] select option {
+  background-color: var(--theme-bg-panel) !important;
+  color: var(--theme-text-main) !important;
+}
+
+[data-theme="white"] .text-slate-100,
+[data-theme="white"] .text-zinc-100,
+[data-theme="white"] .text-zinc-200,
+[data-theme="white"] .text-white {
+  color: var(--theme-text-main) !important;
+}
+
+[data-theme="white"] .text-zinc-300,
+[data-theme="white"] .text-zinc-400 {
+  color: var(--theme-text-sub) !important;
+}
+
+[data-theme="white"] .text-zinc-500,
+[data-theme="white"] .text-zinc-600 {
+  color: var(--theme-text-muted) !important;
+}
+
 /* ======================================================== */
-/* 4. PROTECTED CODE EDITOR STYLING (THEME-INDEPENDENT IDE) */
+/* Protected Code Editor Styling (Theme-Independent IDE)    */
 /* ======================================================== */
 
 .code-editor-workspace,
@@ -547,5 +637,3 @@ textarea.code-editor-textarea,
 .code-editor-pre span {
   /* Retain inline syntax highlighting colors without theme interference */
 }
-
-

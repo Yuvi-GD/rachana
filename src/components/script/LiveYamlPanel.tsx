@@ -89,7 +89,8 @@ const renderYamlLine = (line: string): React.ReactNode => {
   }
 
   const isWidgetType = [
-    'Panel', 'Text', 'Button', 'Image', 'Heading', 'Input', 
+    'Panel', 'Text', 'Button', 'Image', 'Input', 
+    'Select', 'Progress', 'Checkbox', 'Slider',
     'Badge', 'Card', 'Scroll', 'Spacer', 'Divider', 'children', 'content'
   ].includes(key);
 
@@ -372,7 +373,8 @@ export const LiveYamlPanel: React.FC = () => {
   const [format, setFormat] = useState<ScriptFormat>('yaml');
   const [code, setCode] = useState('');
   const [highlightedLineIndex, setHighlightedLineIndex] = useState<number | null>(null);
-  const [isFocused, setIsFocused] = useState(false);
+  const isUserTypingRef = useRef(false);
+  const typingTimeoutRef = useRef<any>(null);
   const [copied, setCopied] = useState(false);
   const [parseError, setParseError] = useState<string | null>(null);
   const [statusMessage, setStatusMessage] = useState<string>('Synced');
@@ -468,16 +470,16 @@ export const LiveYamlPanel: React.FC = () => {
     }
   };
 
-  // Sync from Store -> Code when rootNode changes (e.g. from canvas or global undo/redo)
+  // Sync from Store -> Code when rootNode changes (e.g. from canvas, details panel, or global undo/redo)
   useEffect(() => {
-    if (!isFocused) {
+    if (!isUserTypingRef.current) {
       const generated = generateCodeForFormat(format, rootNode);
       setCode(generated);
       setParseError(null);
       actions.setScriptError(null);
       setStatusMessage('Synced');
     }
-  }, [rootNode, metricsMap, isFocused, format]);
+  }, [rootNode, metricsMap, format]);
 
   // Handle switching format
   const handleFormatChange = (newFormat: ScriptFormat) => {
@@ -516,6 +518,12 @@ export const LiveYamlPanel: React.FC = () => {
   };
 
   const handleCodeChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    isUserTypingRef.current = true;
+    if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    typingTimeoutRef.current = setTimeout(() => {
+      isUserTypingRef.current = false;
+    }, 1500);
+
     const nextCode = e.target.value;
     setCode(nextCode);
     if (autoSync) {
@@ -573,21 +581,21 @@ export const LiveYamlPanel: React.FC = () => {
     // First scan from current line upwards
     for (let i = lineIndex; i >= 0; i--) {
       const line = allLines[i];
-      const idMatch = line.match(/(?:id[:=]\s*["']([^"']+)["']|"id":\s*["']([^"']+)["']|class="[^"]*node-([a-zA-Z0-9_-]+))/);
+      const idMatch = line.match(/(?:id[:=]\s*["']([^"']+)["']|"id":\s*["']([^"']+)["']|data-id=["']([^"']+)["']|#([a-zA-Z0-9_-]+)(?:,|\s*\{)|class="[^"]*node-([a-zA-Z0-9_-]+))/);
       if (idMatch) {
-        foundId = idMatch[1] || idMatch[2] || idMatch[3];
+        foundId = idMatch[1] || idMatch[2] || idMatch[3] || idMatch[4] || idMatch[5];
         break;
       }
-      if (lineIndex - i > 35) break;
+      if (lineIndex - i > 250) break;
     }
 
     // If not found upwards, scan a few lines downwards (e.g. cursor on "- Button:" before "id: '...'")
     if (!foundId) {
-      for (let i = lineIndex; i < Math.min(allLines.length, lineIndex + 12); i++) {
+      for (let i = lineIndex; i < Math.min(allLines.length, lineIndex + 20); i++) {
         const line = allLines[i];
-        const idMatch = line.match(/(?:id[:=]\s*["']([^"']+)["']|"id":\s*["']([^"']+)["']|class="[^"]*node-([a-zA-Z0-9_-]+))/);
+        const idMatch = line.match(/(?:id[:=]\s*["']([^"']+)["']|"id":\s*["']([^"']+)["']|data-id=["']([^"']+)["']|#([a-zA-Z0-9_-]+)(?:,|\s*\{)|class="[^"]*node-([a-zA-Z0-9_-]+))/);
         if (idMatch) {
-          foundId = idMatch[1] || idMatch[2] || idMatch[3];
+          foundId = idMatch[1] || idMatch[2] || idMatch[3] || idMatch[4] || idMatch[5];
           break;
         }
       }
@@ -938,8 +946,6 @@ export const LiveYamlPanel: React.FC = () => {
                 handleEditorCursorChange();
               }
             }}
-            onFocus={() => setIsFocused(true)}
-            onBlur={() => setIsFocused(false)}
             onScroll={handleScroll}
             spellCheck={false}
             className="absolute inset-0 p-2 m-0 bg-transparent font-mono resize-none outline-none overflow-auto code-scrollbar whitespace-pre selection:bg-[#264f78] code-editor-textarea"

@@ -7,7 +7,6 @@ import {
   Grid3X3, 
   Box, 
   Type, 
-  Heading as HeadingIcon,
   MousePointerClick, 
   FormInput,
   Tag,
@@ -20,7 +19,11 @@ import {
   EyeOff,
   Layers,
   Copy,
-  Trash2
+  Trash2,
+  ListFilter,
+  Activity,
+  CheckSquare,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
 import { LayoutNode, LayoutNodeType, isContainerNodeType } from '../../types/layout';
@@ -45,14 +48,20 @@ const getNodeIcon = (type: LayoutNodeType, style?: LayoutNode['style']) => {
       return <Layers className="w-3.5 h-3.5 text-cyan-400" />;
     case 'container':
       return <Box className="w-3.5 h-3.5 text-slate-400" />;
-    case 'heading':
-      return <HeadingIcon className="w-3.5 h-3.5 text-yellow-400" />;
     case 'text':
       return <Type className="w-3.5 h-3.5 text-emerald-400" />;
     case 'button':
       return <MousePointerClick className="w-3.5 h-3.5 text-sky-400" />;
     case 'input':
       return <FormInput className="w-3.5 h-3.5 text-indigo-400" />;
+    case 'select':
+      return <ListFilter className="w-3.5 h-3.5 text-cyan-400" />;
+    case 'progress':
+      return <Activity className="w-3.5 h-3.5 text-emerald-400" />;
+    case 'checkbox':
+      return <CheckSquare className="w-3.5 h-3.5 text-blue-400" />;
+    case 'slider':
+      return <SlidersHorizontal className="w-3.5 h-3.5 text-violet-400" />;
     case 'badge':
       return <Tag className="w-3.5 h-3.5 text-pink-400" />;
     case 'image':
@@ -227,6 +236,8 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({
         actions.reparentNode(draggedNodeId, node.id);
       } else if (pos === 'before' || pos === 'after') {
         actions.reparentNodeAround(draggedNodeId, node.id, pos);
+      } else if (!isRoot) {
+        actions.reparentNodeAround(draggedNodeId, node.id, 'after');
       } else {
         actions.reparentNode(draggedNodeId, node.id);
       }
@@ -380,7 +391,9 @@ export const Hierarchy: React.FC = () => {
   const handleRowContextMenu = (e: React.MouseEvent, node: LayoutNode) => {
     e.preventDefault();
     e.stopPropagation();
-    actions.selectNode(node.id);
+    if (!selectedNodeIds || !selectedNodeIds.includes(node.id)) {
+      actions.selectNode(node.id);
+    }
     setContextMenu({ x: e.clientX, y: e.clientY, node });
   };
 

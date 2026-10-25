@@ -10,7 +10,6 @@ import {
   Trash2, 
   Check, 
   Columns, 
-  Rows, 
   Grid3X3, 
   Box, 
   Type, 
@@ -21,27 +20,34 @@ import {
   MoveHorizontal,
   ChevronRight,
   RotateCcw,
-  Ungroup
+  Ungroup,
+  ListFilter,
+  Activity,
+  CheckSquare,
+  SlidersHorizontal
 } from 'lucide-react';
 
 interface MenuItemDef {
   type: LayoutNodeType;
   label: string;
   icon: React.ReactNode;
-  category: 'Containers' | 'Primitives';
+  category: 'Containers' | 'Primitives' | 'Form Controls';
 }
 
 const MENU_WIDGET_ITEMS: MenuItemDef[] = [
-  { type: 'flex', label: 'Flex Row', icon: <Columns className="w-3.5 h-3.5 text-blue-400" />, category: 'Containers' },
-  { type: 'flex', label: 'Flex Column', icon: <Rows className="w-3.5 h-3.5 text-cyan-400" />, category: 'Containers' },
-  { type: 'grid', label: 'Grid Container', icon: <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />, category: 'Containers' },
-  { type: 'container', label: 'Freeform Canvas', icon: <Box className="w-3.5 h-3.5 text-amber-400" />, category: 'Containers' },
-  { type: 'text', label: 'Text Block', icon: <Type className="w-3.5 h-3.5 text-emerald-400" />, category: 'Primitives' },
+  { type: 'flex', label: 'Flex', icon: <Columns className="w-3.5 h-3.5 text-blue-400" />, category: 'Containers' },
+  { type: 'grid', label: 'Grid', icon: <Grid3X3 className="w-3.5 h-3.5 text-purple-400" />, category: 'Containers' },
+  { type: 'container', label: 'Canvas', icon: <Box className="w-3.5 h-3.5 text-amber-400" />, category: 'Containers' },
+  { type: 'text', label: 'Text', icon: <Type className="w-3.5 h-3.5 text-emerald-400" />, category: 'Primitives' },
   { type: 'button', label: 'Button', icon: <MousePointerClick className="w-3.5 h-3.5 text-sky-400" />, category: 'Primitives' },
-  { type: 'input', label: 'Text Input', icon: <FormInput className="w-3.5 h-3.5 text-indigo-400" />, category: 'Primitives' },
   { type: 'image', label: 'Image', icon: <ImageIcon className="w-3.5 h-3.5 text-orange-400" />, category: 'Primitives' },
   { type: 'divider', label: 'Divider', icon: <Minus className="w-3.5 h-3.5 text-zinc-400" />, category: 'Primitives' },
   { type: 'spacer', label: 'Spacer', icon: <MoveHorizontal className="w-3.5 h-3.5 text-pink-400" />, category: 'Primitives' },
+  { type: 'input', label: 'Text Input', icon: <FormInput className="w-3.5 h-3.5 text-indigo-400" />, category: 'Form Controls' },
+  { type: 'select', label: 'Dropdown', icon: <ListFilter className="w-3.5 h-3.5 text-cyan-400" />, category: 'Form Controls' },
+  { type: 'progress', label: 'Progress Bar', icon: <Activity className="w-3.5 h-3.5 text-emerald-400" />, category: 'Form Controls' },
+  { type: 'checkbox', label: 'Checkbox', icon: <CheckSquare className="w-3.5 h-3.5 text-blue-400" />, category: 'Form Controls' },
+  { type: 'slider', label: 'Range Slider', icon: <SlidersHorizontal className="w-3.5 h-3.5 text-violet-400" />, category: 'Form Controls' },
 ];
 
 export interface ContextMenuProps {
@@ -52,12 +58,13 @@ export interface ContextMenuProps {
 }
 
 export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose }) => {
-  const { rootNode, actions } = useEditorStore();
+  const { rootNode, selectedNodeIds, actions } = useEditorStore();
   const menuRef = useRef<HTMLDivElement>(null);
   const [activeSubmenu, setActiveSubmenu] = useState<'add' | 'replace' | 'wrap' | null>(null);
   const [copied, setCopied] = useState(false);
 
   const isRoot = node.id === rootNode.id;
+  const isMulti = Boolean(selectedNodeIds && selectedNodeIds.length > 1 && selectedNodeIds.includes(node.id));
 
   // Close on outside click or escape
   useEffect(() => {
@@ -130,6 +137,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
 
   const containerItems = MENU_WIDGET_ITEMS.filter((i) => i.category === 'Containers');
   const primitiveItems = MENU_WIDGET_ITEMS.filter((i) => i.category === 'Primitives');
+  const formControlItems = MENU_WIDGET_ITEMS.filter((i) => i.category === 'Form Controls');
 
   const submenuPosClass = isNearRightEdge ? 'right-full top-0 pr-1' : 'left-full top-0 pl-1';
 
@@ -191,6 +199,21 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
                     Primitives
                   </div>
                   {primitiveItems.map((item) => (
+                    <button
+                      key={item.label}
+                      onClick={() => handleAddChild(item.type, item.label)}
+                      className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                    >
+                      {item.icon}
+                      <span>{item.label}</span>
+                    </button>
+                  ))}
+
+                  <div className="border-t border-[#26262e] my-1" />
+                  <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-zinc-500 tracking-wider">
+                    Form Controls
+                  </div>
+                  {formControlItems.map((item) => (
                     <button
                       key={item.label}
                       onClick={() => handleAddChild(item.type, item.label)}
@@ -264,6 +287,21 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
                     <span>{item.label}</span>
                   </button>
                 ))}
+
+                <div className="border-t border-[#26262e] my-1" />
+                <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-zinc-500 tracking-wider">
+                  Form Controls
+                </div>
+                {formControlItems.map((item) => (
+                  <button
+                    key={item.label}
+                    onClick={() => handleReplaceType(item.type, item.label)}
+                    className="w-full px-2.5 py-1 text-left hover:bg-blue-600/30 hover:text-white flex items-center gap-2"
+                  >
+                    {item.icon}
+                    <span>{item.label}</span>
+                  </button>
+                ))}
               </div>
             </div>
           )}
@@ -277,7 +315,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
           <div className="w-full px-2 py-1.5 hover:bg-blue-600/20 hover:text-white flex items-center justify-between cursor-pointer rounded transition-colors">
             <div className="flex items-center gap-2">
               <FolderPlus className="w-3.5 h-3.5 text-sky-400" />
-              <span>Wrap in Container</span>
+              <span>{isMulti ? `Wrap ${selectedNodeIds!.length} Items` : 'Wrap in Container'}</span>
             </div>
             <ChevronRight className="w-3.5 h-3.5 text-zinc-500" />
           </div>
@@ -289,7 +327,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
             >
               <div className="rounded-lg bg-[#18181c] border border-[#2e2e38] shadow-2xl py-1">
                 <div className="px-2.5 py-1 text-[9px] uppercase font-bold text-zinc-500 tracking-wider">
-                  Containers
+                  {isMulti ? `Wrap (${selectedNodeIds!.length} Selected)` : 'Containers'}
                 </div>
                 {containerItems.map((item) => (
                   <button
@@ -322,7 +360,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
 
         <div className="border-t border-[#25252d] my-1" />
 
-        {/* 4. Duplicate (Ctrl+D) */}
+        {/* 5. Duplicate (Ctrl+D) */}
         {!isRoot && (
           <button
             onMouseEnter={() => setActiveSubmenu(null)}
@@ -337,7 +375,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
           </button>
         )}
 
-        {/* 5. Copy YAML */}
+        {/* 6. Copy YAML */}
         <button
           onMouseEnter={() => setActiveSubmenu(null)}
           onClick={handleCopyYaml}
@@ -349,7 +387,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
           </div>
         </button>
 
-        {/* 6. Clear Children (if has children) */}
+        {/* 7. Clear Children (if has children) */}
         {node.children && node.children.length > 0 && (
           <button
             onMouseEnter={() => setActiveSubmenu(null)}
@@ -361,7 +399,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
           </button>
         )}
 
-        {/* 7. Delete Widget / Reset Root */}
+        {/* 8. Delete Widget / Reset Root */}
         <div className="border-t border-[#25252d] my-1" />
         <button
           onMouseEnter={() => setActiveSubmenu(null)}
@@ -378,4 +416,3 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, node, onClose })
     </div>
   );
 };
-

@@ -248,7 +248,7 @@ export const ImportModal: React.FC<ImportModalProps> = ({ isOpen, onClose, onSwi
                     : 'bg-red-950/80 text-red-300 border border-red-800'
                 }`}
               >
-                {parseResult.valid ? `✓ Valid (${parseResult.nodeCount} nodes)` : '✗ Syntax Error'}
+                {parseResult.valid ? `Valid (${parseResult.nodeCount} nodes)` : 'Syntax Error'}
               </span>
             )}
           </div>

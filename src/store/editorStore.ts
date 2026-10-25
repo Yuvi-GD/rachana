@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { ComputedMetrics, LayoutNode, LayoutNodeStyle, LayoutNodeType, isContainerNodeType } from '../types/layout';
 import { LAYOUT_PRESETS } from '../core/presets';
-import { createWidgetPreset } from '../core/defaultStyles';
+import { createWidgetPreset, generateReadableId } from '../core/defaultStyles';
 import { applyThemeToDom } from '../core/themeEngine';
 
 export interface DevicePreset {
@@ -501,15 +501,56 @@ export const editorStore = {
     emitChange();
   },
 
-  updateNodeStyle: (id: string, styleUpdates: Partial<LayoutNodeStyle>) => {
+  updateNodeStyle: (id: string, styleUpdates: Partial<LayoutNodeStyle>, commitHistory: boolean = true) => {
     const rootCopy = clone(state.rootNode);
     let changed = false;
     updateNodeInTree(rootCopy, id, (node) => {
-      node.style = { ...node.style, ...styleUpdates };
+      const updates = { ...styleUpdates };
+      if (updates.flexGrow !== undefined) {
+        updates.fillRatio = updates.flexGrow;
+      } else if (updates.fillRatio !== undefined) {
+        updates.flexGrow = updates.fillRatio;
+      }
+      node.style = { ...node.style, ...updates };
       changed = true;
     });
     if (changed) {
-      pushHistory(rootCopy);
+      if (commitHistory) {
+        pushHistory(rootCopy);
+      } else {
+        state = { ...state, rootNode: rootCopy };
+        emitChange();
+      }
+    }
+  },
+
+  updateSelectedNodesStyle: (styleUpdates: Partial<LayoutNodeStyle>, commitHistory: boolean = true) => {
+    const ids = state.selectedNodeIds && state.selectedNodeIds.length > 0
+      ? state.selectedNodeIds
+      : (state.selectedNodeId ? [state.selectedNodeId] : []);
+    if (ids.length === 0) return;
+
+    const rootCopy = clone(state.rootNode);
+    let changed = false;
+    ids.forEach((id) => {
+      updateNodeInTree(rootCopy, id, (node) => {
+        const updates = { ...styleUpdates };
+        if (updates.flexGrow !== undefined) {
+          updates.fillRatio = updates.flexGrow;
+        } else if (updates.fillRatio !== undefined) {
+          updates.flexGrow = updates.fillRatio;
+        }
+        node.style = { ...node.style, ...updates };
+        changed = true;
+      });
+    });
+    if (changed) {
+      if (commitHistory) {
+        pushHistory(rootCopy);
+      } else {
+        state = { ...state, rootNode: rootCopy };
+        emitChange();
+      }
     }
   },
 
@@ -552,6 +593,7 @@ export const editorStore = {
     targetNode.isExpanded = true;
 
     state.selectedNodeId = newNode.id;
+    state.selectedNodeIds = [newNode.id];
     pushHistory(rootCopy);
   },
 
@@ -589,6 +631,7 @@ export const editorStore = {
     targetNode.isExpanded = true;
 
     state.selectedNodeId = removed.id;
+    state.selectedNodeIds = [removed.id];
     pushHistory(rootCopy);
   },
 
@@ -606,6 +649,7 @@ export const editorStore = {
     }
 
     state.selectedNodeId = newNode.id;
+    state.selectedNodeIds = [newNode.id];
     pushHistory(rootCopy);
   },
 
@@ -630,6 +674,7 @@ export const editorStore = {
     }
 
     state.selectedNodeId = removed.id;
+    state.selectedNodeIds = [removed.id];
     pushHistory(rootCopy);
   },
 
@@ -680,6 +725,19 @@ export const editorStore = {
     const rootCopy = clone(state.rootNode);
     let updated = false;
 
+    // If replacing with a leaf element, unwrap any existing children into siblings
+    const isLeaf = !isContainerNodeType(newType) && newType !== 'button';
+    if (isLeaf) {
+      const parentInfo = findParentOfNode(rootCopy, id);
+      const targetNode = findNodeById(rootCopy, id);
+      if (targetNode && targetNode.children && targetNode.children.length > 0) {
+        if (parentInfo) {
+          parentInfo.parent.children.splice(parentInfo.index + 1, 0, ...targetNode.children);
+        }
+        targetNode.children = [];
+      }
+    }
+
     updateNodeInTree(rootCopy, id, (node) => {
       node.type = newType;
       if (customName) node.name = customName;
@@ -704,23 +762,41 @@ export const editorStore = {
       } else if (newType === 'text') {
         node.style.display = 'flex';
         if (!node.textContent) node.textContent = 'Text';
-      } else if (newType === 'heading') {
-        node.style.display = 'flex';
-        node.style.fontSize = '22px';
-        node.style.fontWeight = '700';
-        if (!node.textContent) node.textContent = 'Heading';
       } else if (newType === 'input') {
         node.style.display = 'flex';
         if (!node.placeholder) node.placeholder = 'Enter text...';
       } else if (newType === 'image') {
         node.style.display = 'flex';
+        node.children = [];
         if (!node.src) node.src = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=400&q=80';
+      } else if (newType === 'select') {
+        node.style.display = 'flex';
+        node.children = [];
+        if (!node.placeholder) node.placeholder = 'Option 1, Option 2, Option 3';
+        if (!node.textContent) node.textContent = 'Option 1';
+      } else if (newType === 'progress') {
+        node.style.display = 'flex';
+        node.children = [];
+        if (!node.textContent) node.textContent = '60';
+        if (!node.placeholder) node.placeholder = '100';
+      } else if (newType === 'checkbox') {
+        node.style.display = 'flex';
+        node.children = [];
+        if (!node.textContent) node.textContent = 'true';
+      } else if (newType === 'slider') {
+        node.style.display = 'flex';
+        node.children = [];
+        if (!node.textContent) node.textContent = '50';
+        if (!node.alt) node.alt = '0';
+        if (!node.placeholder) node.placeholder = '100';
       } else if (newType === 'divider') {
         node.style.display = 'flex';
+        node.children = [];
         node.style.height = '1px';
         node.style.width = '100%';
       } else if (newType === 'spacer') {
         node.style.display = 'flex';
+        node.children = [];
         node.style.flexGrow = '1';
       }
       updated = true;
@@ -744,9 +820,56 @@ export const editorStore = {
         ...state,
         rootNode: newRoot,
         selectedNodeId: newRoot.id,
+        selectedNodeIds: [newRoot.id],
       };
       pushHistory(newRoot);
       return;
+    }
+
+    const isMulti = state.selectedNodeIds && state.selectedNodeIds.length > 1 && state.selectedNodeIds.includes(id);
+    const idsToWrap = isMulti ? state.selectedNodeIds : [id];
+
+    if (idsToWrap.length > 1) {
+      const rootCopy = clone(state.rootNode);
+      const nodesToWrap: LayoutNode[] = [];
+      const parentMap = new Map<string, { parent: LayoutNode; index: number }>();
+
+      for (const targetId of idsToWrap) {
+        if (targetId === rootCopy.id) continue;
+        const pInfo = findParentOfNode(rootCopy, targetId);
+        if (pInfo) {
+          parentMap.set(targetId, pInfo);
+          const n = pInfo.parent.children[pInfo.index];
+          if (n) nodesToWrap.push(n);
+        }
+      }
+
+      if (nodesToWrap.length > 0) {
+        const primaryInfo = parentMap.get(id) || parentMap.get(nodesToWrap[0].id)!;
+        const targetParent = primaryInfo.parent;
+
+        const wrapper = createWidgetPreset(wrapperType, customName || `Wrapper (${wrapperType})`);
+        wrapper.children = nodesToWrap;
+
+        for (const [targetId, pInfo] of parentMap.entries()) {
+          const idx = pInfo.parent.children.findIndex(c => c.id === targetId);
+          if (idx !== -1) {
+            pInfo.parent.children.splice(idx, 1);
+          }
+        }
+
+        const insertIdx = Math.min(primaryInfo.index, targetParent.children.length);
+        targetParent.children.splice(insertIdx, 0, wrapper);
+        targetParent.isExpanded = true;
+
+        state = {
+          ...state,
+          selectedNodeId: wrapper.id,
+          selectedNodeIds: [wrapper.id],
+        };
+        pushHistory(rootCopy);
+        return;
+      }
     }
 
     const rootCopy = clone(state.rootNode);
@@ -758,6 +881,7 @@ export const editorStore = {
         wrapper.children = [target];
         parent.children[idx] = wrapper;
         state.selectedNodeId = wrapper.id;
+        state.selectedNodeIds = [wrapper.id];
         return true;
       }
       for (const child of parent.children) {
@@ -798,7 +922,7 @@ export const editorStore = {
     const rootW = state.screenWidth || 800;
     const rootH = state.screenHeight || 520;
     const newRoot = createWidgetPreset(type, 'Screen Canvas (Root)');
-    newRoot.id = 'root_' + Math.random().toString(36).substring(2, 7);
+    newRoot.id = generateReadableId('root', 'Screen_Canvas');
     newRoot.style.display = 'flex';
     newRoot.style.flexDirection = 'column';
     newRoot.style.width = `${rootW}px`;
@@ -825,7 +949,7 @@ export const editorStore = {
         const dup: LayoutNode = clone(original);
         
         const reassignIds = (n: LayoutNode, isRootOfDuplicate: boolean) => {
-          n.id = 'node_' + Math.random().toString(36).substring(2, 9);
+          n.id = generateReadableId(n.type, isRootOfDuplicate ? generateDuplicateName(n.name) : n.name);
           if (isRootOfDuplicate) {
             n.name = generateDuplicateName(n.name);
           }
@@ -868,7 +992,7 @@ export const editorStore = {
         const original = parent.children[idx];
         const dup: LayoutNode = clone(original);
         const reassign = (n: LayoutNode, isTop: boolean) => {
-          n.id = 'node_' + Math.random().toString(36).substring(2, 9);
+          n.id = generateReadableId(n.type, isTop ? generateDuplicateName(n.name) : n.name);
           if (isTop) n.name = generateDuplicateName(n.name);
           n.children.forEach(c => reassign(c, false));
         };
@@ -961,8 +1085,8 @@ export const editorStore = {
     const parsedH = newRoot.style.height && newRoot.style.height.endsWith('px')
       ? parseInt(newRoot.style.height, 10)
       : (parseInt(newRoot.style.height, 10) || state.screenHeight);
-    const rootW = Math.max(200, parsedW || state.screenWidth || 840);
-    const rootH = Math.max(150, parsedH || state.screenHeight || 540);
+    const rootW = Math.max(200, parsedW || state.screenWidth || 800);
+    const rootH = Math.max(150, parsedH || state.screenHeight || 520);
     newRoot.style.width = `${rootW}px`;
     newRoot.style.height = `${rootH}px`;
     if (isNewDocument) {

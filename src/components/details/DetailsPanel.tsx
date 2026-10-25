@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useEditorStore } from '../../store/editorStore';
+import { LayoutNode, isContainerNodeType } from '../../types/layout';
 import { BoxModelInput } from './BoxModelInput';
 import { FlexControls } from './FlexControls';
 import { GridControls } from './GridControls';
@@ -15,12 +16,16 @@ import {
   BoxSelect, 
   Image as ImageIcon, 
   ChevronRight,
-  AlignLeft,
-  AlignCenter,
-  AlignRight,
+  AlignLeft, 
+  AlignCenter, 
+  AlignRight, 
   AlignJustify,
-  Copy,
-  Check
+  Copy, 
+  Check,
+  ListFilter,
+  Activity,
+  CheckSquare,
+  SlidersHorizontal
 } from 'lucide-react';
 
 interface UnrealSectionHeaderProps {
@@ -62,7 +67,7 @@ const UnrealSectionHeader: React.FC<UnrealSectionHeaderProps> = ({
 );
 
 export const DetailsPanel: React.FC = () => {
-  const { rootNode, selectedNode, metricsMap, zoom, actions } = useEditorStore();
+  const { rootNode, selectedNode, selectedNodeIds, metricsMap, zoom, actions } = useEditorStore();
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({});
   const [showBoxModelDrawer, setShowBoxModelDrawer] = useState(false);
   const [activeColorPicker, setActiveColorPicker] = useState<'background' | 'border' | 'text' | null>(null);
@@ -129,9 +134,7 @@ export const DetailsPanel: React.FC = () => {
     const popoverWidth = 275;
     const popoverHeight = 500;
 
-    // Default: place to the left of the clicked color swatch/button
     let left = rect.left - popoverWidth - 8;
-    // If overflowing left edge of browser window, flip to the right side of the swatch
     if (left < 12) {
       if (rect.right + popoverWidth + 12 <= window.innerWidth) {
         left = rect.right + 8;
@@ -139,10 +142,8 @@ export const DetailsPanel: React.FC = () => {
         left = Math.max(12, window.innerWidth - popoverWidth - 12);
       }
     }
-    // Hard clamp within window horizontal margins
     left = Math.max(12, Math.min(left, window.innerWidth - popoverWidth - 12));
 
-    // Align vertically near swatch, then clamp inside window vertical margins
     let top = rect.top - 24;
     if (top + popoverHeight > window.innerHeight - 12) {
       top = Math.max(12, window.innerHeight - popoverHeight - 12);
@@ -153,7 +154,25 @@ export const DetailsPanel: React.FC = () => {
     setActiveColorPicker(type);
   };
 
-  if (!selectedNode) {
+  // Recursive node lookup
+  const findNode = (node: LayoutNode, id: string): LayoutNode | null => {
+    if (node.id === id) return node;
+    for (const child of node.children) {
+      const found = findNode(child, id);
+      if (found) return found;
+    }
+    return null;
+  };
+
+  const selectedIds = (selectedNodeIds && selectedNodeIds.length > 0)
+    ? selectedNodeIds
+    : (selectedNode ? [selectedNode.id] : []);
+
+  const selectedNodes = selectedIds
+    .map((id) => findNode(rootNode, id))
+    .filter(Boolean) as LayoutNode[];
+
+  if (selectedNodes.length === 0) {
     return (
       <div className="h-full bg-[#18181b] text-zinc-400 p-4 flex flex-col items-center justify-center text-center select-none">
         <Sliders className="w-8 h-8 text-zinc-600 mb-2" />
@@ -165,11 +184,11 @@ export const DetailsPanel: React.FC = () => {
     );
   }
 
-  const { style } = selectedNode;
-  const metrics = metricsMap[selectedNode.id];
-  const isFlex = style.display.includes('flex');
-  const isGrid = style.display.includes('grid');
-  const isRoot = selectedNode.id === rootNode.id;
+  const isMultiSelect = selectedNodes.length > 1;
+  const primaryNode = selectedNodes[selectedNodes.length - 1];
+  const { style } = primaryNode;
+  const metrics = metricsMap[primaryNode.id];
+  const isRoot = !isMultiSelect && primaryNode.id === rootNode.id;
 
   // Relative coordinates to the Screen Canvas
   const rootMetrics = metricsMap[rootNode.id];
@@ -177,84 +196,116 @@ export const DetailsPanel: React.FC = () => {
   const relX = isRoot ? 0 : (rootMetrics && metrics ? Math.round((metrics.boundingRect.left - rootMetrics.boundingRect.left) / effectiveZoom) : 0);
   const relY = isRoot ? 0 : (rootMetrics && metrics ? Math.round((metrics.boundingRect.top - rootMetrics.boundingRect.top) / effectiveZoom) : 0);
 
-  // Context-sensitive category detection
-  const isContainerType = ['container', 'flex', 'grid', 'card', 'scroll'].includes(selectedNode.type);
-  const isTextType = ['text', 'heading'].includes(selectedNode.type);
-  const isButtonType = selectedNode.type === 'button';
-  const isInputType = selectedNode.type === 'input';
-  const isBadgeType = selectedNode.type === 'badge';
-  const isImageType = selectedNode.type === 'image';
-  const isDividerType = selectedNode.type === 'divider';
-  const isSpacerType = selectedNode.type === 'spacer';
+  // Type checks
+  const isPrimaryContainer = isContainerNodeType(primaryNode.type);
+  const isFlexContainer = primaryNode.type === 'flex' || style.display.includes('flex');
+  const isGridContainer = primaryNode.type === 'grid' || style.display.includes('grid');
+
+  // Multi-select common category filters: only show specific sections when all selected items share that category
+  const allAreContainers = selectedNodes.every(n => isContainerNodeType(n.type));
+  const allAreTextBased = selectedNodes.every(n => !isContainerNodeType(n.type) && ['text', 'button', 'input'].includes(n.type));
+  const allAreImages = selectedNodes.every(n => n.type === 'image');
+  const allAreSelects = selectedNodes.every(n => n.type === 'select');
+  const allAreProgress = selectedNodes.every(n => n.type === 'progress');
+  const allAreCheckboxes = selectedNodes.every(n => n.type === 'checkbox');
+  const allAreSliders = selectedNodes.every(n => n.type === 'slider');
+  const allAreFlex = allAreContainers && selectedNodes.every(n => n.style.display.includes('flex') || n.type === 'flex');
+  const allAreGrid = allAreContainers && selectedNodes.every(n => n.style.display.includes('grid') || n.type === 'grid');
 
   const isSectionOpen = (key: string) => !collapsedSections[key];
   const toggleSection = (key: string) => {
     setCollapsedSections((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  const handleStyleChange = (updates: any) => {
-    actions.updateNodeStyle(selectedNode.id, updates);
+  const handleStyleChange = (updates: any, commitHistory: boolean = true) => {
+    if (isMultiSelect) {
+      actions.updateSelectedNodesStyle(updates, commitHistory);
+    } else if (primaryNode) {
+      actions.updateNodeStyle(primaryNode.id, updates, commitHistory);
+    }
+  };
+
+  const handlePropsChange = (updates: Partial<LayoutNode>) => {
+    if (isMultiSelect) {
+      selectedNodes.forEach((n) => actions.updateNodeProps(n.id, updates));
+    } else if (primaryNode) {
+      actions.updateNodeProps(primaryNode.id, updates);
+    }
   };
 
   return (
     <div className="flex flex-col h-full bg-[#18181b] text-zinc-300 border-l border-[#27272a] select-none text-xs overflow-hidden">
       {/* ======================================================== */}
-      {/* 1. STICKY TOP HEADER (Clean Unreal Engine Style) */}
+      {/* 1. STICKY TOP HEADER (Unreal Engine Style)                */}
       {/* ======================================================== */}
       <div className="flex-shrink-0 bg-[#141417] border-b border-[#27272a]">
-        {/* Title and #ID (Reset button removed for root element) */}
+        {/* Title and #ID */}
         <div className="h-8 px-3 flex items-center justify-between border-b border-[#27272a]">
           <div className="flex items-center gap-1.5 min-w-0">
             <span className="font-bold text-zinc-100 text-[11px] uppercase tracking-wider">
-              {isRoot ? 'Root Canvas' : 'Details'}
+              {isMultiSelect ? 'Multi-Selection' : isRoot ? 'Root Canvas' : 'Details'}
             </span>
             <span className="font-mono text-[10px] text-blue-400 bg-blue-950/60 px-1.5 py-0.2 rounded border border-blue-900/50 font-bold truncate">
-              #{selectedNode.id}
+              {isMultiSelect ? `${selectedNodes.length} Elements` : `#${primaryNode.id}`}
             </span>
           </div>
 
-          <span className="font-mono text-[10px] text-zinc-300 bg-[#25252b] px-2 py-0.5 rounded border border-[#33333d] uppercase font-semibold">
-            {selectedNode.type}
+          <span className="font-mono text-[10px] text-zinc-300 bg-[#25252b] px-2 py-0.5 rounded border border-[#33333d] uppercase font-semibold truncate max-w-[140px]">
+            {isMultiSelect ? [...new Set(selectedNodes.map((n) => n.type))].join(', ') : primaryNode.type}
           </span>
         </div>
 
-        {/* Full-width Widget Name Input */}
+        {/* Widget Name Input or Multi-Select Info */}
         <div className="px-3 pt-2 pb-1.5">
           <label className="text-[9px] text-zinc-500 uppercase font-semibold block mb-1">
-            Widget Name
+            {isMultiSelect ? 'Batch Properties Editor' : 'Widget Name'}
           </label>
-          <input
-            type="text"
-            value={selectedNode.name}
-            onChange={(e) => actions.updateNodeProps(selectedNode.id, { name: e.target.value })}
-            placeholder="Widget Name"
-            className="w-full bg-[#222227] hover:bg-[#27272e] focus:bg-[#202026] border border-[#34343e] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-100 font-semibold outline-none transition-colors"
-          />
+          {isMultiSelect ? (
+            <div className="text-[11px] font-mono text-zinc-400 bg-[#1c1c20] border border-[#2e2e38] rounded px-2.5 py-1">
+              Editing {selectedNodes.length} elements simultaneously
+            </div>
+          ) : (
+            <input
+              type="text"
+              value={primaryNode.name}
+              onChange={(e) => handlePropsChange({ name: e.target.value })}
+              placeholder="Widget Name"
+              className="w-full bg-[#222227] hover:bg-[#27272e] focus:bg-[#202026] border border-[#34343e] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-100 font-semibold outline-none transition-colors"
+            />
+          )}
         </div>
 
-        {/* Compact Computed Size & Screen Position Info */}
+        {/* Computed Size & Screen Position Info */}
         <div className="px-3 pb-2 pt-1 flex items-center justify-between text-[11px] font-mono">
           <div className="flex items-center gap-1.5">
-            <span className="text-zinc-500 text-[10px] uppercase font-semibold">Size:</span>
+            <span className="text-zinc-500 text-[10px] uppercase font-semibold">
+              {isMultiSelect ? 'Count:' : 'Size:'}
+            </span>
             <span className="text-emerald-400 font-bold bg-[#14231b] px-2 py-0.5 rounded border border-emerald-800/40">
-              {metrics ? `${Math.round(metrics.boundingRect.width)} * ${Math.round(metrics.boundingRect.height)} px` : '-'}
+              {isMultiSelect
+                ? `${selectedNodes.length} Selected`
+                : metrics
+                ? `${Math.round(metrics.boundingRect.width)} * ${Math.round(metrics.boundingRect.height)} px`
+                : '-'}
             </span>
           </div>
-          <div className="flex items-center gap-1.5" title="Screen Coordinates (Relative to Canvas Root)">
-            <span className="text-zinc-500 text-[10px] uppercase font-semibold">Pos:</span>
+          <div className="flex items-center gap-1.5" title={isMultiSelect ? 'Properties applicable to all selected items' : 'Screen Coordinates (Relative to Canvas Root)'}>
+            <span className="text-zinc-500 text-[10px] uppercase font-semibold">
+              {isMultiSelect ? 'Scope:' : 'Pos:'}
+            </span>
             <span className="text-blue-300 font-medium bg-[#141e2c] px-2 py-0.5 rounded border border-blue-800/40">
-              {metrics ? `X: ${relX}, Y: ${relY}` : '-'}
+              {isMultiSelect ? 'Common Props' : metrics ? `X: ${relX}, Y: ${relY}` : '-'}
             </span>
           </div>
         </div>
       </div>
 
       {/* ======================================================== */}
-      {/* 2. SCROLLABLE PROPERTY SECTIONS (Flat Unreal Engine Style) */}
+      {/* 2. SCROLLABLE PROPERTY SECTIONS                           */}
       {/* ======================================================== */}
       <div className="flex-1 overflow-y-auto space-y-0 custom-scrollbar">
-        {/* SPECIFIC: TEXT CONTENT & HEADING */}
-        {(isTextType || isButtonType || isBadgeType) && (
+        {/* SPECIFIC: TEXT CONTENT FOR TEXT, BUTTON */}
+        {(!isMultiSelect ? ['text', 'button'].includes(primaryNode.type) : allAreTextBased) && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Typography Content"
@@ -264,14 +315,14 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('textContent') && (
               <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div {...getPropHandlers('textContent', selectedNode.textContent || '')}>
+                <div {...getPropHandlers('textContent', primaryNode.textContent || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
                     String Label
                   </label>
                   <input
                     type="text"
-                    value={selectedNode.textContent || ''}
-                    onChange={(e) => actions.updateNodeProps(selectedNode.id, { textContent: e.target.value })}
+                    value={primaryNode.textContent || ''}
+                    onChange={(e) => handlePropsChange({ textContent: e.target.value })}
                     placeholder="Enter text..."
                     className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-100 outline-none"
                   />
@@ -281,37 +332,37 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* SPECIFIC: INPUT FIELD PROPERTIES */}
-        {isInputType && (
+        {/* SPECIFIC: TEXT INPUT ATTRIBUTES */}
+        {primaryNode.type === 'input' && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
-              title="Form Input Attributes"
+              title="Input Attributes"
               icon={<Sliders className="w-3.5 h-3.5 text-indigo-400" />}
               isOpen={isSectionOpen('inputProps')}
               onToggle={() => toggleSection('inputProps')}
             />
             {isSectionOpen('inputProps') && (
               <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div {...getPropHandlers('placeholder', selectedNode.placeholder || '')}>
+                <div {...getPropHandlers('placeholder', primaryNode.placeholder || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
                     Placeholder Text
                   </label>
                   <input
                     type="text"
-                    value={selectedNode.placeholder || ''}
-                    onChange={(e) => actions.updateNodeProps(selectedNode.id, { placeholder: e.target.value })}
+                    value={primaryNode.placeholder || ''}
+                    onChange={(e) => handlePropsChange({ placeholder: e.target.value })}
                     placeholder="e.g. Enter email..."
                     className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2 py-0.5 text-xs text-zinc-100 outline-none"
                   />
                 </div>
-                <div {...getPropHandlers('textContent', selectedNode.textContent || '')}>
+                <div {...getPropHandlers('textContent', primaryNode.textContent || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
                     Default Value
                   </label>
                   <input
                     type="text"
-                    value={selectedNode.textContent || ''}
-                    onChange={(e) => actions.updateNodeProps(selectedNode.id, { textContent: e.target.value })}
+                    value={primaryNode.textContent || ''}
+                    onChange={(e) => handlePropsChange({ textContent: e.target.value })}
                     placeholder="Initial text..."
                     className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2 py-0.5 text-xs text-zinc-100 outline-none"
                   />
@@ -321,8 +372,225 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
+        {/* SPECIFIC: PROGRESS BAR ATTRIBUTES */}
+        {(!isMultiSelect ? primaryNode.type === 'progress' : allAreProgress) && (
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+            <UnrealSectionHeader
+              title="Progress Bar Attributes"
+              icon={<Activity className="w-3.5 h-3.5 text-emerald-400" />}
+              isOpen={isSectionOpen('progressProps')}
+              onToggle={() => toggleSection('progressProps')}
+            />
+            {isSectionOpen('progressProps') && (
+              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[9px] text-zinc-400 uppercase font-semibold">
+                      Current Value
+                    </label>
+                    <span className="text-[10px] font-mono text-emerald-400 font-bold">
+                      {primaryNode.textContent || '60'} / {primaryNode.placeholder || '100'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min="0"
+                      max={parseFloat(primaryNode.placeholder || '100') || 100}
+                      value={parseFloat(primaryNode.textContent || '60')}
+                      onChange={(e) => handlePropsChange({ textContent: e.target.value })}
+                      className="flex-1 accent-blue-600 cursor-pointer"
+                    />
+                    <input
+                      type="number"
+                      min="0"
+                      max={parseFloat(primaryNode.placeholder || '100') || 100}
+                      value={primaryNode.textContent || '60'}
+                      onChange={(e) => handlePropsChange({ textContent: e.target.value })}
+                      className="w-16 bg-[#1c1c20] border border-[#3c3c47] rounded px-1.5 py-0.5 text-xs font-mono text-zinc-100 text-center outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
+                    Max Value
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    value={primaryNode.placeholder || '100'}
+                    onChange={(e) => handlePropsChange({ placeholder: e.target.value })}
+                    placeholder="100"
+                    className="w-full bg-[#1c1c20] hover:bg-[#222227] border border-[#3c3c47] rounded px-2 py-0.5 text-xs text-zinc-100 outline-none font-mono"
+                  />
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SPECIFIC: RANGE SLIDER ATTRIBUTES */}
+        {(!isMultiSelect ? primaryNode.type === 'slider' : allAreSliders) && (
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+            <UnrealSectionHeader
+              title="Slider Attributes"
+              icon={<SlidersHorizontal className="w-3.5 h-3.5 text-violet-400" />}
+              isOpen={isSectionOpen('sliderProps')}
+              onToggle={() => toggleSection('sliderProps')}
+            />
+            {isSectionOpen('sliderProps') && (
+              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[9px] text-zinc-400 uppercase font-semibold">
+                      Current Value
+                    </label>
+                    <span className="text-[10px] font-mono text-violet-400 font-bold">
+                      {primaryNode.textContent || '50'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="range"
+                      min={parseFloat(primaryNode.alt || '0') || 0}
+                      max={parseFloat(primaryNode.placeholder || '100') || 100}
+                      value={parseFloat(primaryNode.textContent || '50')}
+                      onChange={(e) => handlePropsChange({ textContent: e.target.value })}
+                      className="flex-1 accent-blue-600 cursor-pointer"
+                    />
+                    <input
+                      type="number"
+                      min={parseFloat(primaryNode.alt || '0') || 0}
+                      max={parseFloat(primaryNode.placeholder || '100') || 100}
+                      value={primaryNode.textContent || '50'}
+                      onChange={(e) => handlePropsChange({ textContent: e.target.value })}
+                      className="w-16 bg-[#1c1c20] border border-[#3c3c47] rounded px-1.5 py-0.5 text-xs font-mono text-zinc-100 text-center outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
+                      Min
+                    </label>
+                    <input
+                      type="number"
+                      value={primaryNode.alt || '0'}
+                      onChange={(e) => handlePropsChange({ alt: e.target.value })}
+                      className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2 py-0.5 text-xs text-zinc-100 outline-none font-mono"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
+                      Max
+                    </label>
+                    <input
+                      type="number"
+                      value={primaryNode.placeholder || '100'}
+                      onChange={(e) => handlePropsChange({ placeholder: e.target.value })}
+                      className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2 py-0.5 text-xs text-zinc-100 outline-none font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SPECIFIC: DROPDOWN SELECT ATTRIBUTES */}
+        {(!isMultiSelect ? primaryNode.type === 'select' : allAreSelects) && (
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+            <UnrealSectionHeader
+              title="Dropdown Options"
+              icon={<ListFilter className="w-3.5 h-3.5 text-cyan-400" />}
+              isOpen={isSectionOpen('selectProps')}
+              onToggle={() => toggleSection('selectProps')}
+            />
+            {isSectionOpen('selectProps') && (
+              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
+                <div>
+                  <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
+                    Options List (comma-separated)
+                  </label>
+                  <input
+                    type="text"
+                    value={primaryNode.placeholder || 'Option 1, Option 2, Option 3'}
+                    onChange={(e) => handlePropsChange({ placeholder: e.target.value })}
+                    placeholder="Option 1, Option 2, Option 3"
+                    className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2 py-1 text-xs text-zinc-100 outline-none font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
+                    Selected Value (Default)
+                  </label>
+                  <select
+                    value={primaryNode.textContent || (primaryNode.placeholder || 'Option 1').split(',')[0].trim()}
+                    onChange={(e) => handlePropsChange({ textContent: e.target.value })}
+                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#3c3c47] rounded px-2 py-1 text-xs text-zinc-100 outline-none cursor-pointer"
+                  >
+                    {(primaryNode.placeholder || 'Option 1, Option 2, Option 3')
+                      .split(',')
+                      .map((o) => o.trim())
+                      .filter(Boolean)
+                      .map((opt) => (
+                        <option key={opt} value={opt} className="bg-[#1c1c20] text-zinc-100">
+                          {opt}
+                        </option>
+                      ))}
+                  </select>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* SPECIFIC: CHECKBOX ATTRIBUTES */}
+        {(!isMultiSelect ? primaryNode.type === 'checkbox' : allAreCheckboxes) && (
+          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+            <UnrealSectionHeader
+              title="Checkbox Attributes"
+              icon={<CheckSquare className="w-3.5 h-3.5 text-blue-400" />}
+              isOpen={isSectionOpen('checkboxProps')}
+              onToggle={() => toggleSection('checkboxProps')}
+            />
+            {isSectionOpen('checkboxProps') && (
+              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
+                <div>
+                  <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
+                    Label Text
+                  </label>
+                  <input
+                    type="text"
+                    value={primaryNode.name}
+                    onChange={(e) => handlePropsChange({ name: e.target.value })}
+                    placeholder="Checkbox Label"
+                    className="w-full bg-[#1c1c20] border border-[#3c3c47] rounded px-2 py-1 text-xs text-zinc-100 outline-none"
+                  />
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] text-zinc-300 font-semibold uppercase">Default Checked</span>
+                  <button
+                    type="button"
+                    onClick={() => handlePropsChange({ textContent: primaryNode.textContent === 'true' ? 'false' : 'true' })}
+                    className={`px-3 py-1 rounded border text-[10px] font-semibold transition-colors ${
+                      primaryNode.textContent === 'true'
+                        ? 'bg-blue-600/30 border-blue-500 text-blue-300 shadow-xs'
+                        : 'bg-[#1c1c22] hover:bg-[#24242c] border-[#2e2e38] text-zinc-400'
+                    }`}
+                  >
+                    {primaryNode.textContent === 'true' ? 'Checked' : 'Unchecked'}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* SPECIFIC: IMAGE MEDIA PROPERTIES */}
-        {isImageType && (
+        {(!isMultiSelect ? primaryNode.type === 'image' : allAreImages) && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Media Assets"
@@ -332,14 +600,14 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('mediaProps') && (
               <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div {...getPropHandlers('src', selectedNode.src || '')}>
+                <div {...getPropHandlers('src', primaryNode.src || '')}>
                   <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-0.5">
                     Image Source URL
                   </label>
                   <input
                     type="text"
-                    value={selectedNode.src || ''}
-                    onChange={(e) => actions.updateNodeProps(selectedNode.id, { src: e.target.value })}
+                    value={primaryNode.src || ''}
+                    onChange={(e) => handlePropsChange({ src: e.target.value })}
                     placeholder="https://... or data:image/..."
                     className="w-full bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#3c3c47] focus:border-blue-500 rounded px-2 py-0.5 text-xs text-zinc-100 outline-none font-mono"
                   />
@@ -365,265 +633,111 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 1. SPACING & BOX MODEL */}
-        {!isDividerType && (
+        {/* 1. CHILD LAYOUT (FLEX & GRID ITEM) - VISIBLE ON ALL NON-ROOT ELEMENTS */}
+        {!isRoot && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
-              title="Spacing & Box Model"
-              icon={<BoxSelect className="w-3.5 h-3.5 text-amber-400" />}
-              isOpen={isSectionOpen('boxModel')}
-              onToggle={() => toggleSection('boxModel')}
-              rightContent={
-                metrics && (
-                  <span className="text-[10px] font-mono text-zinc-400">
-                    {Math.round(metrics.contentBox.width)}×{Math.round(metrics.contentBox.height)}px
-                  </span>
-                )
-              }
+              title="Child Layout (Flex & Grid Item)"
+              icon={<Sliders className="w-3.5 h-3.5 text-blue-400" />}
+              isOpen={isSectionOpen('childLayout')}
+              onToggle={() => toggleSection('childLayout')}
             />
-            {isSectionOpen('boxModel') && (
-              <div className="p-2.5 bg-[#17171b]/40">
-                <BoxModelInput
-                  label="Geometry"
-                  margin={style.margin}
-                  padding={style.padding}
-                  borderWidth={style.borderWidth}
-                  gap={style.gap}
-                  rowGap={style.rowGap}
-                  columnGap={style.columnGap}
-                  contentWidth={metrics?.contentBox.width}
-                  contentHeight={metrics?.contentBox.height}
-                  mode="edit"
-                  onMarginChange={(m) => handleStyleChange({ margin: m })}
-                  onPaddingChange={(p) => handleStyleChange({ padding: p })}
-                  onBorderChange={(b) => handleStyleChange({ borderWidth: b })}
-                  onGapChange={isContainerType ? (updates) => handleStyleChange(updates) : undefined}
-                />
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 2. POSITION & SIZING */}
-        {!isDividerType && (
-          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
-            <UnrealSectionHeader
-              title="Position & Sizing"
-              icon={<Move className="w-3.5 h-3.5 text-emerald-400" />}
-              isOpen={isSectionOpen('position')}
-              onToggle={() => toggleSection('position')}
-            />
-            {isSectionOpen('position') && (
-              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                {/* Position and Z-Index side by side */}
+            {isSectionOpen('childLayout') && (
+              <div className="p-2.5 space-y-2.5 bg-[#17171b]/40">
+                {/* 2x2 Grid for the 4 input fields */}
                 <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('position', style.position)}>
-                    <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
-                      Position
-                    </label>
-                    <select
-                      value={style.position === 'static' ? 'relative' : (style.position || 'relative')}
-                      onChange={(e) => handleStyleChange({ position: e.target.value as any })}
-                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
-                    >
-                      <option value="relative">relative (Flow Position)</option>
-                      <option value="absolute">absolute (Parent Origin)</option>
-                      <option value="fixed">fixed (Screen Origin)</option>
-                      <option value="sticky">sticky (Scroll Pin)</option>
-                    </select>
+                  <div {...getPropHandlers('flexGrow', style.flexGrow || '0')}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Flex Grow / Fill</label>
+                    <input
+                      type="text"
+                      value={style.flexGrow || '0'}
+                      onChange={(e) => handleStyleChange({ flexGrow: e.target.value, fillRatio: e.target.value })}
+                      placeholder="0"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2 py-1 text-xs text-blue-300 outline-none font-mono"
+                    />
                   </div>
 
-                  <div {...getPropHandlers('zIndex', style.zIndex)}>
-                    <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
-                      Z-Index
-                    </label>
+                  <div {...getPropHandlers('flexShrink', style.flexShrink || '1')}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Flex Shrink</label>
+                    <input
+                      type="text"
+                      value={style.flexShrink || '1'}
+                      onChange={(e) => handleStyleChange({ flexShrink: e.target.value })}
+                      placeholder="1"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
+                    />
+                  </div>
+
+                  <div {...getPropHandlers('flexBasis', style.flexBasis || 'auto')}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Flex Basis</label>
                     <div className="flex items-center gap-1">
                       <input
                         type="text"
-                        value={style.zIndex || 'auto'}
-                        onChange={(e) => handleStyleChange({ zIndex: e.target.value })}
+                        value={style.flexBasis || 'auto'}
+                        onChange={(e) => handleStyleChange({ flexBasis: e.target.value })}
                         placeholder="auto"
                         className="flex-1 bg-[#1c1c20] hover:bg-[#23232a] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono min-w-0"
                       />
                       <button
                         type="button"
-                        onClick={() => handleStyleChange({ zIndex: style.zIndex === 'auto' || !style.zIndex ? '1' : 'auto' })}
-                        className={`px-1.5 py-1 rounded text-[10px] font-mono font-semibold transition-all flex-shrink-0 border ${
-                          style.zIndex === 'auto' || !style.zIndex
-                            ? 'bg-blue-600/25 border-blue-500/60 text-blue-300 shadow-xs'
-                            : 'bg-[#222227] hover:bg-[#2b2b33] border-[#34343d] text-zinc-400 hover:text-zinc-200'
+                        onClick={() => handleStyleChange({ flexBasis: style.flexBasis === 'auto' || !style.flexBasis ? '100px' : 'auto' })}
+                        className={`px-1.5 py-1 rounded text-[10px] font-mono font-medium transition-all flex-shrink-0 border ${
+                          style.flexBasis === 'auto' || !style.flexBasis
+                            ? 'bg-blue-600/20 border-blue-500/50 text-blue-300 font-semibold'
+                            : 'bg-[#1c1c22] hover:bg-[#24242c] border-[#2e2e38] text-zinc-400 hover:text-zinc-200'
                         }`}
-                        title={style.zIndex === 'auto' || !style.zIndex ? 'Switch to numeric value' : 'Set z-index to auto'}
+                        title={style.flexBasis === 'auto' || !style.flexBasis ? 'Switch to value' : 'Set to auto'}
                       >
                         Auto
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Width & Height side by side */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('width', style.width)}>
-                    <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-                      Width
-                    </label>
-                    <UnitInput
-                      value={style.width}
-                      onChange={(val) => handleStyleChange({ width: val })}
-                      units={['px', '%', 'vw', 'rem']}
-                      allowAuto={true}
-                      placeholder="auto"
-                    />
-                  </div>
-
-                  <div {...getPropHandlers('height', style.height)}>
-                    <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-                      Height
-                    </label>
-                    <UnitInput
-                      value={style.height}
-                      onChange={(val) => handleStyleChange({ height: val })}
-                      units={['px', '%', 'vh', 'rem']}
-                      allowAuto={true}
-                      placeholder="auto"
-                    />
-                  </div>
-                </div>
-
-                {/* Min Width & Max Width side by side */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('minWidth', style.minWidth)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Min Width</label>
-                    <UnitInput
-                      value={style.minWidth}
-                      onChange={(val) => handleStyleChange({ minWidth: val })}
-                      units={['px', '%', 'vw']}
-                      allowAuto={true}
-                      placeholder="auto"
-                    />
-                  </div>
-
-                  <div {...getPropHandlers('maxWidth', style.maxWidth)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Max Width</label>
-                    <UnitInput
-                      value={style.maxWidth}
-                      onChange={(val) => handleStyleChange({ maxWidth: val })}
-                      units={['px', '%', 'vw']}
-                      allowNone={true}
-                      placeholder="none"
-                    />
-                  </div>
-                </div>
-
-                {/* Min Height & Max Height side by side */}
-                <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('minHeight', style.minHeight)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Min Height</label>
-                    <UnitInput
-                      value={style.minHeight}
-                      onChange={(val) => handleStyleChange({ minHeight: val })}
-                      units={['px', '%', 'vh']}
-                      allowAuto={true}
-                      placeholder="auto"
-                    />
-                  </div>
-
-                  <div {...getPropHandlers('maxHeight', style.maxHeight)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Max Height</label>
-                    <UnitInput
-                      value={style.maxHeight}
-                      onChange={(val) => handleStyleChange({ maxHeight: val })}
-                      units={['px', '%', 'vh']}
-                      allowNone={true}
-                      placeholder="none"
-                    />
-                  </div>
-                </div>
-
-                {/* Anchor Offsets (Top, Right, Bottom, Left) */}
-                <div className="pt-2 border-t border-[#292930]">
-                  <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1.5">
-                    Anchor Offsets ({style.position || 'relative'})
-                  </label>
-                  <div className="grid grid-cols-2 gap-2">
-                    {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
-                      <div key={side} {...getPropHandlers(side, style[side])}>
-                        <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">{side}</label>
-                        <UnitInput
-                          value={style[side]}
-                          onChange={(val) => handleStyleChange({ [side]: val })}
-                          units={['px', '%', 'vw', 'vh']}
-                          allowAuto={true}
-                          placeholder="auto"
-                        />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-        )}
-
-        {/* 3. CHILD ALIGNMENT & FILL (Containers Only) */}
-        {isContainerType && (
-          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
-            <UnrealSectionHeader
-              title="Child Alignment & Fill"
-              icon={<Sliders className="w-3.5 h-3.5 text-blue-400" />}
-              isOpen={isSectionOpen('layoutFlow')}
-              onToggle={() => toggleSection('layoutFlow')}
-            />
-            {isSectionOpen('layoutFlow') && (
-              <div className="p-2.5 space-y-2 bg-[#17171b]/40">
-                <div className="flex items-center justify-between mb-0.5">
-                  <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
-                    Child Slot Properties
-                  </span>
-                  <span className="text-[9px] font-mono text-zinc-500">
-                    flow: {style.flow || (isFlex ? (style.flexDirection === 'row' ? 'ROW' : 'COLUMN') : 'NONE')}
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('fillRatio', style.fillRatio || style.flexGrow || '0')}>
-                    <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
-                      Fill Ratio (flex-grow)
-                    </label>
+                  <div {...getPropHandlers('order', style.order || '0')}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Order</label>
                     <input
-                      type="number"
-                      step="0.1"
-                      min="0"
-                      value={style.fillRatio || style.flexGrow || '0'}
-                      onChange={(e) => handleStyleChange({ fillRatio: e.target.value, flexGrow: e.target.value })}
+                      type="text"
+                      value={style.order || '0'}
+                      onChange={(e) => handleStyleChange({ order: e.target.value })}
                       placeholder="0"
-                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-blue-300 outline-none font-mono"
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2 py-1 text-xs text-zinc-200 outline-none font-mono"
                     />
                   </div>
+                </div>
 
-                  <div>
-                    <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
-                      Content Align
+                {/* Align Self */}
+                <div {...getPropHandlers('alignSelf', style.alignSelf || 'auto')}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] uppercase font-semibold text-zinc-400">
+                      Align Self
                     </label>
-                    <div className="grid grid-cols-3 gap-1">
-                      {(['START', 'CENTER', 'END'] as const).map((align) => {
-                        const isActive = (style.contentAlign || 'START') === align;
-                        return (
-                          <button
-                            type="button"
-                            key={align}
-                            onClick={() => handleStyleChange({ contentAlign: align })}
-                            className={`py-1 rounded border text-[9px] font-semibold transition-colors text-center ${
-                              isActive
-                                ? 'bg-blue-600/30 border-blue-500 text-blue-200'
-                                : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
-                            }`}
-                          >
-                            {align}
-                          </button>
-                        );
-                      })}
-                    </div>
+                    <span className="text-[9px] font-mono text-zinc-500">{style.alignSelf || 'auto'}</span>
+                  </div>
+                  <div className="grid grid-cols-5 gap-1">
+                    {[
+                      { val: 'auto', label: 'Auto' },
+                      { val: 'flex-start', label: 'Start' },
+                      { val: 'center', label: 'Center' },
+                      { val: 'flex-end', label: 'End' },
+                      { val: 'stretch', label: 'Stretch' },
+                    ].map((item) => {
+                      const isActive = (style.alignSelf || 'auto') === item.val;
+                      return (
+                        <button
+                          key={item.val}
+                          type="button"
+                          onClick={() => handleStyleChange({ alignSelf: item.val as any })}
+                          title={`align-self: ${item.val}`}
+                          className={`py-1 rounded border text-[10px] font-medium transition-colors text-center ${
+                            isActive
+                              ? 'bg-blue-600/30 border-blue-500 text-blue-300 font-semibold shadow-sm'
+                              : 'bg-[#242429] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#2b2b32]'
+                          }`}
+                        >
+                          {item.label}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -631,11 +745,11 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 4. FLEXBOX & GRID CONTROLS */}
-        {isFlex && (
+        {/* 2. CONTAINER LAYOUT (FLEXBOX & GRID CONTROLS) */}
+        {(!isMultiSelect ? (isPrimaryContainer && isFlexContainer) : allAreFlex) && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
-              title="Flexbox Parameters"
+              title="Flex Container Layout"
               icon={<Sliders className="w-3.5 h-3.5 text-blue-400" />}
               isOpen={isSectionOpen('flexbox')}
               onToggle={() => toggleSection('flexbox')}
@@ -648,10 +762,10 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {isGrid && (
+        {(!isMultiSelect ? (isPrimaryContainer && isGridContainer) : allAreGrid) && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
-              title="Grid Parameters"
+              title="Grid Container Layout"
               icon={<LayoutGrid className="w-3.5 h-3.5 text-purple-400" />}
               isOpen={isSectionOpen('grid')}
               onToggle={() => toggleSection('grid')}
@@ -664,166 +778,387 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 4. STYLE & APPEARANCE */}
-        {!isSpacerType && (
-          <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
-            <UnrealSectionHeader
-              title="Appearance & Materials"
-              icon={<PaletteIcon className="w-3.5 h-3.5 text-pink-400" />}
-              isOpen={isSectionOpen('appearance')}
-              onToggle={() => toggleSection('appearance')}
-            />
-            {isSectionOpen('appearance') && (
-              <div className="p-2.5 space-y-3 bg-[#17171b]/40">
-                {/* Background Color Alone */}
-                <div {...getPropHandlers('backgroundColor', style.backgroundColor)}>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-semibold text-zinc-400 uppercase">
-                      Background Color
-                    </label>
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenColorPicker(e, 'background')}
-                      className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold uppercase"
-                    >
-                      Open Palette
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={style.backgroundColor}
-                      onChange={(e) => handleStyleChange({ backgroundColor: e.target.value })}
-                      placeholder="#000000 or transparent"
-                      className="flex-1 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenColorPicker(e, 'background')}
-                      style={{
-                        backgroundColor: style.backgroundColor === 'transparent' ? 'transparent' : style.backgroundColor,
-                      }}
-                      title="Open full RGB/HSV Color Palette Window"
-                      className="w-7 h-7 rounded border border-[#444] cursor-pointer hover:scale-105 transition-transform flex items-center justify-center relative shadow-sm"
-                    >
-                      {style.backgroundColor === 'transparent' && (
-                        <span className="text-[9px] text-red-500 font-bold">×</span>
+        {/* 3. SPACING & BOX MODEL (SHOWN ON ALL NODES) */}
+        <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+          <UnrealSectionHeader
+            title="Spacing & Box Model"
+            icon={<BoxSelect className="w-3.5 h-3.5 text-amber-400" />}
+            isOpen={isSectionOpen('boxModel')}
+            onToggle={() => toggleSection('boxModel')}
+            rightContent={
+              metrics && !isMultiSelect && (
+                <span className="text-[10px] font-mono text-zinc-400">
+                  {Math.round(metrics.contentBox.width)}×{Math.round(metrics.contentBox.height)}px
+                </span>
+              )
+            }
+          />
+          {isSectionOpen('boxModel') && (
+            <div className="p-2.5 bg-[#17171b]/40">
+              <BoxModelInput
+                label="Geometry"
+                margin={style.margin}
+                padding={style.padding}
+                borderWidth={style.borderWidth}
+                gap={style.gap}
+                rowGap={style.rowGap}
+                columnGap={style.columnGap}
+                contentWidth={metrics?.contentBox.width}
+                contentHeight={metrics?.contentBox.height}
+                mode="edit"
+                onMarginChange={(m) => handleStyleChange({ margin: m })}
+                onPaddingChange={(p) => handleStyleChange({ padding: p })}
+                onBorderChange={(b) => handleStyleChange({ borderWidth: b })}
+                onGapChange={isPrimaryContainer ? (updates) => handleStyleChange(updates) : undefined}
+              />
+            </div>
+          )}
+        </div>
+
+        {/* 4. POSITION & SIZING (SHOWN ON ALL NODES) */}
+        <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+          <UnrealSectionHeader
+            title="Position & Sizing"
+            icon={<Move className="w-3.5 h-3.5 text-emerald-400" />}
+            isOpen={isSectionOpen('position')}
+            onToggle={() => toggleSection('position')}
+          />
+          {isSectionOpen('position') && (
+            <div className="p-2.5 space-y-2 bg-[#17171b]/40">
+              {/* Position and Z-Index side by side */}
+              <div className="grid grid-cols-2 gap-2">
+                <div {...getPropHandlers('position', style.position)}>
+                  <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
+                    Position
+                  </label>
+                  <select
+                    value={style.position === 'static' ? 'relative' : (style.position || 'relative')}
+                    onChange={(e) => handleStyleChange({ position: e.target.value as any })}
+                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                  >
+                    <option value="relative">relative (Flow Position)</option>
+                    <option value="absolute">absolute (Parent Origin)</option>
+                    <option value="fixed">fixed (Screen Origin)</option>
+                    <option value="sticky">sticky (Scroll Pin)</option>
+                  </select>
+                </div>
+
+                <div {...getPropHandlers('zIndex', style.zIndex)}>
+                  <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
+                    Z-Index
+                  </label>
+                  <div className="flex items-center gap-1">
+                    <div className="flex-1 flex items-center rounded border border-[#34343d] bg-[#1c1c20] focus-within:border-blue-500 overflow-hidden min-w-0 transition-colors">
+                      {style.zIndex === 'auto' || !style.zIndex ? (
+                        <div
+                          onClick={() => handleStyleChange({ zIndex: '1' })}
+                          className="flex-1 px-2 py-1 text-xs font-mono text-zinc-300 font-medium select-none cursor-pointer hover:text-white"
+                          title="Click to edit numeric value"
+                        >
+                          auto
+                        </div>
+                      ) : (
+                        <input
+                          type="text"
+                          inputMode="numeric"
+                          value={style.zIndex}
+                          onChange={(e) => {
+                            const raw = e.target.value.trim();
+                            if (/^0+[1-9]/.test(raw)) {
+                              handleStyleChange({ zIndex: raw.replace(/^0+/, '') });
+                            } else {
+                              handleStyleChange({ zIndex: raw });
+                            }
+                          }}
+                          onBlur={() => {
+                            if (!style.zIndex || style.zIndex.trim() === '') {
+                              handleStyleChange({ zIndex: 'auto' });
+                            }
+                          }}
+                          placeholder="auto"
+                          className="w-full bg-transparent px-2 py-1 text-xs text-zinc-100 outline-none font-mono placeholder:text-zinc-600 min-w-0"
+                        />
                       )}
-                    </button>
-                  </div>
-                </div>
-
-                {/* Border Color Alone */}
-                <div {...getPropHandlers('borderColor', style.borderColor)}>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] font-semibold text-zinc-400 uppercase">
-                      Border Color
-                    </label>
+                    </div>
                     <button
                       type="button"
-                      onClick={(e) => handleOpenColorPicker(e, 'border')}
-                      className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold uppercase"
+                      onClick={() => handleStyleChange({ zIndex: style.zIndex === 'auto' || !style.zIndex ? '1' : 'auto' })}
+                      className={`px-1.5 py-1 rounded text-[10px] font-mono font-medium transition-all flex-shrink-0 border ${
+                        style.zIndex === 'auto' || !style.zIndex
+                          ? 'bg-blue-600/20 border-blue-500/50 text-blue-300 font-semibold'
+                          : 'bg-[#1c1c22] hover:bg-[#24242c] border-[#2e2e38] text-zinc-400 hover:text-zinc-200'
+                      }`}
+                      title={style.zIndex === 'auto' || !style.zIndex ? 'Switch to numeric value' : 'Set z-index to auto'}
                     >
-                      Open Palette
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      value={style.borderColor}
-                      onChange={(e) => handleStyleChange({ borderColor: e.target.value })}
-                      placeholder="#3f3f46 or transparent"
-                      className="flex-1 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
-                    />
-                    <button
-                      type="button"
-                      onClick={(e) => handleOpenColorPicker(e, 'border')}
-                      style={{
-                        backgroundColor: style.borderColor === 'transparent' ? 'transparent' : style.borderColor,
-                      }}
-                      title="Open full RGB/HSV Color Palette Window"
-                      className="w-7 h-7 rounded border border-[#444] cursor-pointer hover:scale-105 transition-transform flex items-center justify-center relative shadow-sm"
-                    >
-                      {style.borderColor === 'transparent' && (
-                        <span className="text-[9px] text-red-500 font-bold">×</span>
-                      )}
+                      Auto
                     </button>
                   </div>
                 </div>
+              </div>
 
-                {/* Borders & Shape: Style & Radius Grouped Together */}
-                <div className="bg-[#1a1a1e] p-2 rounded border border-[#2b2b36] space-y-2">
-                  <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400 block">
-                    Borders & Shape
-                  </span>
-                  <div className="grid grid-cols-2 gap-2">
-                    <div {...getPropHandlers('borderStyle', style.borderStyle)}>
-                      <label className="text-[9px] text-zinc-500 uppercase block mb-1">Style</label>
-                      <select
-                        value={style.borderStyle}
-                        onChange={(e) => handleStyleChange({ borderStyle: e.target.value as any })}
-                        className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
-                      >
-                        <option value="solid">solid</option>
-                        <option value="dashed">dashed</option>
-                        <option value="dotted">dotted</option>
-                        <option value="none">none</option>
-                      </select>
-                    </div>
-
-                    <div {...getPropHandlers('borderRadius', style.borderRadius)}>
-                      <label className="text-[9px] text-zinc-500 uppercase block mb-1">Corner Radius</label>
-                      <UnitInput
-                        value={style.borderRadius}
-                        onChange={(val) => handleStyleChange({ borderRadius: val })}
-                        units={['px', '%', 'rem']}
-                        placeholder="0"
-                      />
-                    </div>
-                  </div>
-                </div>
-
-                {/* Opacity */}
-                <div {...getPropHandlers('opacity', style.opacity)}>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="text-[10px] text-zinc-400">Opacity</label>
-                    <span className="text-[10px] font-mono text-zinc-400">
-                      {Math.round(parseFloat(style.opacity || '1') * 100)}%
-                    </span>
-                  </div>
-                  <input
-                    type="range"
-                    min="0"
-                    max="1"
-                    step="0.05"
-                    value={style.opacity || '1'}
-                    onChange={(e) => handleStyleChange({ opacity: e.target.value })}
-                    className="w-full accent-blue-600 cursor-pointer"
+              {/* Width & Height side by side */}
+              <div className="grid grid-cols-2 gap-2">
+                <div {...getPropHandlers('width', style.width)}>
+                  <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
+                    Width
+                  </label>
+                  <UnitInput
+                    value={style.width}
+                    onChange={(val) => handleStyleChange({ width: val })}
+                    units={['px', '%', 'vw', 'rem']}
+                    allowAuto={true}
+                    placeholder="auto"
                   />
                 </div>
 
-                {/* Cursor */}
-                <div {...getPropHandlers('cursor', style.cursor || 'default')}>
-                  <label className="text-[10px] text-zinc-400 block mb-1">Cursor</label>
-                  <select
-                    value={style.cursor || 'default'}
-                    onChange={(e) => handleStyleChange({ cursor: e.target.value })}
-                    className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
-                  >
-                    <option value="default">default</option>
-                    <option value="pointer">pointer (Hand / Clickable)</option>
-                    <option value="text">text (I-beam)</option>
-                    <option value="move">move (4-way Grab)</option>
-                    <option value="not-allowed">not-allowed (Disabled)</option>
-                  </select>
+                <div {...getPropHandlers('height', style.height)}>
+                  <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
+                    Height
+                  </label>
+                  <UnitInput
+                    value={style.height}
+                    onChange={(val) => handleStyleChange({ height: val })}
+                    units={['px', '%', 'vh', 'rem']}
+                    allowAuto={true}
+                    placeholder="auto"
+                  />
                 </div>
               </div>
-            )}
-          </div>
-        )}
 
-        {/* 7. TYPOGRAPHY STYLING */}
-        {(isTextType || isButtonType || isInputType || isBadgeType) && (
+              {/* Min Width & Max Width side by side */}
+              <div className="grid grid-cols-2 gap-2">
+                <div {...getPropHandlers('minWidth', style.minWidth)}>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Min Width</label>
+                  <UnitInput
+                    value={style.minWidth}
+                    onChange={(val) => handleStyleChange({ minWidth: val })}
+                    units={['px', '%', 'vw']}
+                    allowAuto={true}
+                    placeholder="auto"
+                  />
+                </div>
+
+                <div {...getPropHandlers('maxWidth', style.maxWidth)}>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Max Width</label>
+                  <UnitInput
+                    value={style.maxWidth}
+                    onChange={(val) => handleStyleChange({ maxWidth: val })}
+                    units={['px', '%', 'vw']}
+                    allowNone={true}
+                    placeholder="none"
+                  />
+                </div>
+              </div>
+
+              {/* Min Height & Max Height side by side */}
+              <div className="grid grid-cols-2 gap-2">
+                <div {...getPropHandlers('minHeight', style.minHeight)}>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Min Height</label>
+                  <UnitInput
+                    value={style.minHeight}
+                    onChange={(val) => handleStyleChange({ minHeight: val })}
+                    units={['px', '%', 'vh']}
+                    allowAuto={true}
+                    placeholder="auto"
+                  />
+                </div>
+
+                <div {...getPropHandlers('maxHeight', style.maxHeight)}>
+                  <label className="text-[10px] text-zinc-400 block mb-1">Max Height</label>
+                  <UnitInput
+                    value={style.maxHeight}
+                    onChange={(val) => handleStyleChange({ maxHeight: val })}
+                    units={['px', '%', 'vh']}
+                    allowNone={true}
+                    placeholder="none"
+                  />
+                </div>
+              </div>
+
+              {/* Anchor Offsets (Top, Right, Bottom, Left) */}
+              <div className="pt-2 border-t border-[#292930]">
+                <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1.5">
+                  Anchor Offsets ({style.position || 'relative'})
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  {(['top', 'right', 'bottom', 'left'] as const).map((side) => (
+                    <div key={side} {...getPropHandlers(side, style[side])}>
+                      <label className="text-[9px] text-zinc-500 uppercase block mb-0.5">{side}</label>
+                      <UnitInput
+                        value={style[side]}
+                        onChange={(val) => handleStyleChange({ [side]: val })}
+                        units={['px', '%', 'vw', 'vh']}
+                        allowAuto={true}
+                        placeholder="auto"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 5. APPEARANCE & MATERIALS (SHOWN ON ALL NODES) */}
+        <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
+          <UnrealSectionHeader
+            title="Appearance & Materials"
+            icon={<PaletteIcon className="w-3.5 h-3.5 text-pink-400" />}
+            isOpen={isSectionOpen('appearance')}
+            onToggle={() => toggleSection('appearance')}
+          />
+          {isSectionOpen('appearance') && (
+            <div className="p-2.5 space-y-3 bg-[#17171b]/40">
+              {/* Background Color */}
+              <div {...getPropHandlers('backgroundColor', style.backgroundColor)}>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-semibold text-zinc-400 uppercase">
+                    Background Color
+                  </label>
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenColorPicker(e, 'background')}
+                    className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold uppercase"
+                  >
+                    Open Palette
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={style.backgroundColor}
+                    onChange={(e) => handleStyleChange({ backgroundColor: e.target.value })}
+                    placeholder="#000000 or transparent"
+                    className="w-32 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenColorPicker(e, 'background')}
+                    style={{
+                      backgroundColor: style.backgroundColor === 'transparent' ? 'transparent' : style.backgroundColor,
+                    }}
+                    title="Open full RGB/HSV Color Palette Window"
+                    className="flex-1 h-7 min-w-[56px] rounded border border-[#444] cursor-pointer hover:scale-[1.02] transition-transform flex items-center justify-center relative shadow-sm"
+                  >
+                    {style.backgroundColor === 'transparent' && (
+                      <span className="text-[9px] text-red-500 font-bold">x</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Border Color */}
+              <div {...getPropHandlers('borderColor', style.borderColor)}>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] font-semibold text-zinc-400 uppercase">
+                    Border Color
+                  </label>
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenColorPicker(e, 'border')}
+                    className="text-[9px] text-blue-400 hover:text-blue-300 font-semibold uppercase"
+                  >
+                    Open Palette
+                  </button>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={style.borderColor}
+                    onChange={(e) => handleStyleChange({ borderColor: e.target.value })}
+                    placeholder="#3f3f46 or transparent"
+                    className="w-32 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
+                  />
+                  <button
+                    type="button"
+                    onClick={(e) => handleOpenColorPicker(e, 'border')}
+                    style={{
+                      backgroundColor: style.borderColor === 'transparent' ? 'transparent' : style.borderColor,
+                    }}
+                    title="Open full RGB/HSV Color Palette Window"
+                    className="flex-1 h-7 min-w-[56px] rounded border border-[#444] cursor-pointer hover:scale-[1.02] transition-transform flex items-center justify-center relative shadow-sm"
+                  >
+                    {style.borderColor === 'transparent' && (
+                      <span className="text-[9px] text-red-500 font-bold">x</span>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Borders & Shape: Style & Radius Grouped Together */}
+              <div className="bg-[#1a1a1e] p-2 rounded border border-[#2b2b36] space-y-2">
+                <span className="text-[9px] uppercase tracking-wider font-bold text-zinc-400 block">
+                  Borders & Shape
+                </span>
+                <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('borderStyle', style.borderStyle)}>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-1">Style</label>
+                    <select
+                      value={style.borderStyle}
+                      onChange={(e) => handleStyleChange({ borderStyle: e.target.value as any })}
+                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                    >
+                      <option value="solid">solid</option>
+                      <option value="dashed">dashed</option>
+                      <option value="dotted">dotted</option>
+                      <option value="none">none</option>
+                    </select>
+                  </div>
+
+                  <div {...getPropHandlers('borderRadius', style.borderRadius)}>
+                    <label className="text-[9px] text-zinc-500 uppercase block mb-1">Corner Radius</label>
+                    <UnitInput
+                      value={style.borderRadius}
+                      onChange={(val) => handleStyleChange({ borderRadius: val })}
+                      units={['px', '%', 'rem']}
+                      placeholder="0"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Opacity */}
+              <div {...getPropHandlers('opacity', style.opacity)}>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="text-[10px] text-zinc-400">Opacity</label>
+                  <span className="text-[10px] font-mono text-zinc-400">
+                    {Math.round(parseFloat((style.opacity !== undefined && style.opacity !== '') ? style.opacity : '1') * 100)}%
+                  </span>
+                </div>
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.05"
+                  value={(style.opacity !== undefined && style.opacity !== '') ? style.opacity : '1'}
+                  onChange={(e) => handleStyleChange({ opacity: e.target.value }, false)}
+                  onPointerUp={(e) => handleStyleChange({ opacity: (e.target as HTMLInputElement).value }, true)}
+                  onKeyUp={(e) => handleStyleChange({ opacity: (e.target as HTMLInputElement).value }, true)}
+                  className="w-full accent-blue-600 cursor-pointer"
+                />
+              </div>
+
+              {/* Cursor */}
+              <div {...getPropHandlers('cursor', style.cursor || 'default')}>
+                <label className="text-[10px] text-zinc-400 block mb-1">Cursor</label>
+                <select
+                  value={style.cursor || 'default'}
+                  onChange={(e) => handleStyleChange({ cursor: e.target.value })}
+                  className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
+                >
+                  <option value="default">default</option>
+                  <option value="pointer">pointer (Hand / Clickable)</option>
+                  <option value="text">text (I-beam)</option>
+                  <option value="move">move (4-way Grab)</option>
+                  <option value="not-allowed">not-allowed (Disabled)</option>
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* 6. TYPOGRAPHY STYLING (SHOWN STRICTLY ON TEXT-BEARING ELEMENTS) */}
+        {(!isMultiSelect ? (!isPrimaryContainer && ['text', 'button', 'input'].includes(primaryNode.type)) : allAreTextBased) && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Typography Styling"
@@ -851,7 +1186,7 @@ export const DetailsPanel: React.FC = () => {
                       value={style.color}
                       onChange={(e) => handleStyleChange({ color: e.target.value })}
                       placeholder="#ffffff or transparent"
-                      className="flex-1 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
+                      className="w-32 bg-[#1c1c20] hover:bg-[#222227] focus:bg-[#1a1a20] border border-[#34343d] focus:border-blue-500 rounded px-2.5 py-1 text-xs text-zinc-200 outline-none font-mono"
                     />
                     <button
                       type="button"
@@ -860,32 +1195,31 @@ export const DetailsPanel: React.FC = () => {
                         backgroundColor: style.color === 'transparent' ? 'transparent' : style.color,
                       }}
                       title="Open full RGB/HSV Color Palette Window"
-                      className="w-7 h-7 rounded border border-[#444] cursor-pointer hover:scale-105 transition-transform flex items-center justify-center relative shadow-sm"
+                      className="flex-1 h-7 min-w-[56px] rounded border border-[#444] cursor-pointer hover:scale-[1.02] transition-transform flex items-center justify-center relative shadow-sm"
                     >
                       {style.color === 'transparent' && (
-                        <span className="text-[8px] text-red-500 font-bold">×</span>
+                        <span className="text-[8px] text-red-500 font-bold">x</span>
                       )}
                     </button>
                   </div>
                 </div>
 
-                {/* Font Size */}
-                <div {...getPropHandlers('fontSize', style.fontSize)}>
-                  <label className="text-[10px] text-zinc-400 block mb-0.5">Font Size</label>
-                  <UnitInput
-                    value={style.fontSize}
-                    onChange={(val) => handleStyleChange({ fontSize: val })}
-                    units={['px', 'rem', '%']}
-                    placeholder="14"
-                  />
-                </div>
-
-                {/* Font Weight & Text Align as Button Group */}
+                {/* Font Size & Font Weight side by side in one line */}
                 <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('fontSize', style.fontSize)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Font Size</label>
+                    <UnitInput
+                      value={style.fontSize}
+                      onChange={(val) => handleStyleChange({ fontSize: val })}
+                      units={['px', 'rem', '%']}
+                      placeholder="14"
+                    />
+                  </div>
+
                   <div {...getPropHandlers('fontWeight', style.fontWeight)}>
                     <label className="text-[10px] text-zinc-400 block mb-1">Font Weight</label>
                     <select
-                      value={style.fontWeight}
+                      value={style.fontWeight || '400'}
                       onChange={(e) => handleStyleChange({ fontWeight: e.target.value })}
                       className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer"
                     >
@@ -897,31 +1231,90 @@ export const DetailsPanel: React.FC = () => {
                       <option value="800">800 (Extra-Bold)</option>
                     </select>
                   </div>
+                </div>
 
-                  <div {...getPropHandlers('textAlign', style.textAlign)}>
-                    <label className="text-[10px] text-zinc-400 block mb-1">Text Align</label>
-                    <div className="grid grid-cols-4 gap-0.5 bg-[#17171b] p-0.5 rounded border border-[#34343d]">
-                      {[
-                        { val: 'left', icon: <AlignLeft className="w-3.5 h-3.5" />, title: 'Align Left' },
-                        { val: 'center', icon: <AlignCenter className="w-3.5 h-3.5" />, title: 'Align Center' },
-                        { val: 'right', icon: <AlignRight className="w-3.5 h-3.5" />, title: 'Align Right' },
-                        { val: 'justify', icon: <AlignJustify className="w-3.5 h-3.5" />, title: 'Justify' },
-                      ].map((align) => (
+                {/* Line Height & Letter Spacing side by side */}
+                <div className="grid grid-cols-2 gap-2">
+                  <div {...getPropHandlers('lineHeight', style.lineHeight)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Line Height</label>
+                    <UnitInput
+                      value={style.lineHeight}
+                      onChange={(val) => handleStyleChange({ lineHeight: val })}
+                      units={['', 'px', 'rem']}
+                      placeholder="normal"
+                    />
+                  </div>
+
+                  <div {...getPropHandlers('letterSpacing', style.letterSpacing)}>
+                    <label className="text-[10px] text-zinc-400 block mb-1">Letter Spacing</label>
+                    <UnitInput
+                      value={style.letterSpacing}
+                      onChange={(val) => handleStyleChange({ letterSpacing: val })}
+                      units={['px', 'rem', 'em']}
+                      placeholder="normal"
+                    />
+                  </div>
+                </div>
+
+                {/* Text Align on its own separate line */}
+                <div {...getPropHandlers('textAlign', style.textAlign)}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] text-zinc-400 block">Text Align</label>
+                    <span className="text-[10px] font-mono text-zinc-500">{style.textAlign || 'left'}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      { val: 'left', icon: <AlignLeft className="w-3.5 h-3.5" />, title: 'Align Left' },
+                      { val: 'center', icon: <AlignCenter className="w-3.5 h-3.5" />, title: 'Align Center' },
+                      { val: 'right', icon: <AlignRight className="w-3.5 h-3.5" />, title: 'Align Right' },
+                      { val: 'justify', icon: <AlignJustify className="w-3.5 h-3.5" />, title: 'Justify' },
+                    ].map((align) => (
+                      <button
+                        key={align.val}
+                        type="button"
+                        onClick={() => handleStyleChange({ textAlign: align.val as any })}
+                        title={align.title}
+                        className={`flex items-center justify-center py-1.5 rounded border text-xs transition-colors ${
+                          (style.textAlign || 'left') === align.val
+                            ? 'bg-blue-600/30 border-blue-500 text-blue-200 shadow-sm font-bold'
+                            : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#25252e]'
+                        }`}
+                      >
+                        {align.icon}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Text Transform on its own line */}
+                <div {...getPropHandlers('textTransform', style.textTransform)}>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[10px] text-zinc-400 block">Text Transform</label>
+                    <span className="text-[10px] font-mono text-zinc-500">{style.textTransform || 'none'}</span>
+                  </div>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      { val: 'none', label: 'None' },
+                      { val: 'uppercase', label: 'UPPER' },
+                      { val: 'lowercase', label: 'lower' },
+                      { val: 'capitalize', label: 'Capital' },
+                    ].map((tt) => {
+                      const isActive = (style.textTransform || 'none') === tt.val;
+                      return (
                         <button
-                          key={align.val}
+                          key={tt.val}
                           type="button"
-                          onClick={() => handleStyleChange({ textAlign: align.val as any })}
-                          title={align.title}
-                          className={`flex items-center justify-center py-1 rounded text-xs transition-colors ${
-                            style.textAlign === align.val
-                              ? 'bg-blue-600 text-white shadow-sm font-bold'
-                              : 'text-zinc-400 hover:text-zinc-200 hover:bg-[#25252e]'
+                          onClick={() => handleStyleChange({ textTransform: tt.val as any })}
+                          className={`py-1 rounded border text-[10px] font-medium transition-colors text-center ${
+                            isActive
+                              ? 'bg-blue-600/30 border-blue-500 text-blue-200 font-bold shadow-sm'
+                              : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#25252e]'
                           }`}
                         >
-                          {align.icon}
+                          {tt.label}
                         </button>
-                      ))}
-                    </div>
+                      );
+                    })}
                   </div>
                 </div>
               </div>
@@ -929,8 +1322,8 @@ export const DetailsPanel: React.FC = () => {
           </div>
         )}
 
-        {/* 8. OVERFLOW & SCROLLING */}
-        {isContainerType && (
+        {/* 7. OVERFLOW & SCROLLING (FOR CONTAINERS) */}
+        {(!isMultiSelect ? isPrimaryContainer : allAreContainers) && (
           <div className="mb-3.5 pb-1 border-b border-[#292934]/40">
             <UnrealSectionHeader
               title="Overflow & Clipping"
@@ -1023,7 +1416,7 @@ export const DetailsPanel: React.FC = () => {
         )}
       </div>
 
-      {/* Docked Collapsible Box Model Inspector (DevTools Concentric Diagram) */}
+      {/* Docked Collapsible Box Model Inspector */}
       <div className="flex-shrink-0 border-t border-[#292934] bg-[#161619]">
         <div
           onClick={() => setShowBoxModelDrawer(!showBoxModelDrawer)}
@@ -1126,15 +1519,13 @@ export const DetailsPanel: React.FC = () => {
         </div>
       )}
 
-      {/* Anchored Popover Window for Full RGB/HSV Color Palette (No Background Blur) */}
+      {/* Anchored Popover Window for Full RGB/HSV Color Palette */}
       {activeColorPicker && colorPickerPos && (
         <>
-          {/* Transparent click catcher to close popover */}
           <div 
             className="fixed inset-0 z-40 bg-transparent"
             onClick={() => setActiveColorPicker(null)}
           />
-          {/* Floating Window positioned near clicked swatch */}
           <div 
             style={{ 
               left: `${colorPickerPos.left}px`, 

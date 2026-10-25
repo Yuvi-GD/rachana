@@ -1,17 +1,20 @@
 import React, { useState } from 'react';
 import { 
   Columns, 
-  Rows,
   Grid3X3, 
   Box, 
   Type, 
   MousePointerClick, 
   FormInput,
-  Minus,
+  Minus, 
   Image, 
   MoveHorizontal,
   GripVertical,
-  Info
+  Info,
+  ListFilter,
+  Activity,
+  CheckSquare,
+  SlidersHorizontal
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
 import { LayoutNodeType } from '../../types/layout';
@@ -20,7 +23,7 @@ interface PaletteItem {
   type: LayoutNodeType;
   label: string;
   icon: React.ReactNode;
-  category: 'Containers' | 'Primitives';
+  category: 'Containers' | 'Primitives' | 'Form Controls';
   description: string;
   cssSnippet: string;
 }
@@ -28,42 +31,34 @@ interface PaletteItem {
 const PALETTE_ITEMS: PaletteItem[] = [
   {
     type: 'flex',
-    label: 'Flex Row',
+    label: 'Flex',
     icon: <Columns className="w-4 h-4 text-blue-400" />,
     category: 'Containers',
-    description: '1D horizontal flexbox container. Arranges child items in a row with gap and alignment controls.',
+    description: '1D flexible layout container. Switch between Row and Column direction or toggle Reverse in Details panel.',
     cssSnippet: 'display: flex;\nflex-direction: row;\ngap: 12px;',
   },
   {
-    type: 'flex',
-    label: 'Flex Column',
-    icon: <Rows className="w-4 h-4 text-cyan-400" />,
-    category: 'Containers',
-    description: '1D vertical flexbox container. Stacks child items vertically with gap and stretch controls.',
-    cssSnippet: 'display: flex;\nflex-direction: column;\ngap: 12px;',
-  },
-  {
     type: 'grid',
-    label: 'Grid Container',
+    label: 'Grid',
     icon: <Grid3X3 className="w-4 h-4 text-purple-400" />,
     category: 'Containers',
-    description: '2D matrix CSS grid container. Aligns children into customizable column and row tracks.',
+    description: '2D matrix layout container for arranging child widgets into columns and rows.',
     cssSnippet: 'display: grid;\ngrid-template-columns: 1fr 1fr;\ngap: 12px;',
   },
   {
     type: 'container',
-    label: 'Freeform Canvas',
+    label: 'Canvas',
     icon: <Box className="w-4 h-4 text-amber-400" />,
     category: 'Containers',
-    description: 'Coordinate-based positioning container (position: relative). Child items can be freely pinned or absolutely positioned.',
-    cssSnippet: 'position: relative;\ndisplay: block;\nmin-height: 180px;',
+    description: 'Coordinate-based positioning container (position: relative). Child items can be freely pinned or offset.',
+    cssSnippet: 'position: relative;\ndisplay: flex;\nmin-height: 180px;',
   },
   {
     type: 'text',
-    label: 'Text Block',
+    label: 'Text',
     icon: <Type className="w-4 h-4 text-emerald-400" />,
     category: 'Primitives',
-    description: 'Base typography element (p / span / heading). Style font size, weight, and alignment.',
+    description: 'Base text element for paragraphs, labels, and spans with typography styling.',
     cssSnippet: 'font-size: 14px;\nfont-weight: 400;\ncolor: #f4f4f5;',
   },
   {
@@ -73,14 +68,6 @@ const PALETTE_ITEMS: PaletteItem[] = [
     category: 'Primitives',
     description: 'Interactive button widget with padding, background, border, and click styling.',
     cssSnippet: 'display: inline-flex;\npadding: 8px 16px;\ncursor: pointer;',
-  },
-  {
-    type: 'input',
-    label: 'Text Input',
-    icon: <FormInput className="w-4 h-4 text-indigo-400" />,
-    category: 'Primitives',
-    description: 'Form text input element with customizable placeholder and input value.',
-    cssSnippet: 'display: block;\npadding: 8px 12px;\nborder: 1px solid #3f3f46;',
   },
   {
     type: 'image',
@@ -105,6 +92,46 @@ const PALETTE_ITEMS: PaletteItem[] = [
     category: 'Primitives',
     description: 'Flexible spacer configured with flex-grow: 1 to distribute space between siblings.',
     cssSnippet: 'flex-grow: 1;\nmin-width: 16px;',
+  },
+  {
+    type: 'input',
+    label: 'Text Input',
+    icon: <FormInput className="w-4 h-4 text-indigo-400" />,
+    category: 'Form Controls',
+    description: 'Form text input element with customizable placeholder and input value.',
+    cssSnippet: 'display: block;\npadding: 8px 12px;\nborder: 1px solid #3f3f46;',
+  },
+  {
+    type: 'select',
+    label: 'Dropdown',
+    icon: <ListFilter className="w-4 h-4 text-cyan-400" />,
+    category: 'Form Controls',
+    description: 'Native HTML select dropdown menu for selecting from a list of options.',
+    cssSnippet: 'padding: 6px 10px;\nborder: 1px solid #34343d;\ncursor: pointer;',
+  },
+  {
+    type: 'progress',
+    label: 'Progress Bar',
+    icon: <Activity className="w-4 h-4 text-emerald-400" />,
+    category: 'Form Controls',
+    description: 'Progress bar indicator for completion or loading states.',
+    cssSnippet: 'width: 180px;\nheight: 10px;\naccent-color: #3b82f6;',
+  },
+  {
+    type: 'checkbox',
+    label: 'Checkbox',
+    icon: <CheckSquare className="w-4 h-4 text-blue-400" />,
+    category: 'Form Controls',
+    description: 'Native boolean checkbox input with accompanying text label.',
+    cssSnippet: 'display: flex;\nalign-items: center;\ngap: 8px;',
+  },
+  {
+    type: 'slider',
+    label: 'Range Slider',
+    icon: <SlidersHorizontal className="w-4 h-4 text-violet-400" />,
+    category: 'Form Controls',
+    description: 'Native range slider track for continuous numeric value adjustments.',
+    cssSnippet: 'width: 160px;\nheight: 24px;\ncursor: pointer;',
   },
 ];
 
@@ -131,7 +158,7 @@ export const Palette: React.FC = () => {
     (window as any).__draggedPaletteWidget = null;
   };
 
-  const categories = ['Containers', 'Primitives'] as const;
+  const categories = ['Containers', 'Primitives', 'Form Controls'] as const;
 
   return (
     <div className="relative flex flex-col h-full bg-[#1e1e22] text-zinc-300 border-r border-[#27272a] select-none">
