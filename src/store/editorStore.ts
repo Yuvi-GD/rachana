@@ -23,6 +23,7 @@ export const DEVICE_PRESETS: DevicePreset[] = [
 export interface EditorState {
   rootNode: LayoutNode;
   selectedNodeId: string | null;
+  selectedNodeIds: string[];
   hoveredNodeId: string | null;
   zoom: number;
   panOffset: { x: number; y: number };
@@ -123,6 +124,7 @@ const initialBottomHeight = typeof window !== 'undefined'
 let state: EditorState = {
   rootNode: JSON.parse(JSON.stringify(LAYOUT_PRESETS[0].rootNode)),
   selectedNodeId: LAYOUT_PRESETS[0].rootNode.id,
+  selectedNodeIds: [LAYOUT_PRESETS[0].rootNode.id],
   hoveredNodeId: null,
   zoom: 1,
   panOffset: { x: 50, y: 50 },
@@ -238,14 +240,73 @@ function findParentOfNode(root: LayoutNode, targetId: string): { parent: LayoutN
   return null;
 }
 
+function generateDuplicateName(originalName: string): string {
+  const clean = (originalName || 'Element').replace(/\s*\(Copy\)+/gi, '').trim();
+  const match = clean.match(/^(.*)_(\d+)$/);
+  if (match) {
+    const base = match[1];
+    const num = parseInt(match[2], 10) + 1;
+    return `${base}_${num}`;
+  }
+  return `${clean}_0`;
+}
+
+function collectAllNodeIds(node: LayoutNode): string[] {
+  const ids: string[] = [node.id];
+  for (const child of node.children) {
+    ids.push(...collectAllNodeIds(child));
+  }
+  return ids;
+}
+
 export const editorStore = {
   getState: () => state,
 
   selectNode: (id: string | null) => {
-    if (state.selectedNodeId !== id) {
-      state = { ...state, selectedNodeId: id };
-      emitChange();
+    state = {
+      ...state,
+      selectedNodeId: id,
+      selectedNodeIds: id ? [id] : [],
+    };
+    emitChange();
+  },
+
+  toggleSelectNode: (id: string) => {
+    const current = state.selectedNodeIds || [];
+    let updated: string[];
+    if (current.includes(id)) {
+      updated = current.filter(item => item !== id);
+    } else {
+      updated = [...current, id];
     }
+    const newSelectedId = updated.length > 0 ? updated[updated.length - 1] : null;
+    state = {
+      ...state,
+      selectedNodeId: newSelectedId,
+      selectedNodeIds: updated,
+    };
+    emitChange();
+  },
+
+  selectNodeRange: (targetId: string) => {
+    const allIds = collectAllNodeIds(state.rootNode);
+    const pivotId = state.selectedNodeId || targetId;
+    const idxA = allIds.indexOf(pivotId);
+    const idxB = allIds.indexOf(targetId);
+    if (idxA === -1 || idxB === -1) {
+      state = { ...state, selectedNodeId: targetId, selectedNodeIds: [targetId] };
+      emitChange();
+      return;
+    }
+    const start = Math.min(idxA, idxB);
+    const end = Math.max(idxA, idxB);
+    const range = allIds.slice(start, end + 1);
+    state = {
+      ...state,
+      selectedNodeId: targetId,
+      selectedNodeIds: range,
+    };
+    emitChange();
   },
 
   setHoveredNode: (id: string | null) => {
@@ -579,11 +640,38 @@ export const editorStore = {
       // Clear root children (Reset / Clear canvas)
       rootCopy.children = [];
       state.selectedNodeId = rootCopy.id;
+      state.selectedNodeIds = [rootCopy.id];
       pushHistory(rootCopy);
       return;
     }
     if (deleteNodeFromTree(rootCopy, id)) {
       state.selectedNodeId = rootCopy.id;
+      state.selectedNodeIds = [rootCopy.id];
+      pushHistory(rootCopy);
+    }
+  },
+
+  deleteSelectedNodes: () => {
+    const ids = state.selectedNodeIds && state.selectedNodeIds.length > 0 
+      ? state.selectedNodeIds
+      : (state.selectedNodeId ? [state.selectedNodeId] : []);
+    
+    if (ids.length === 0) return;
+    const rootCopy = clone(state.rootNode);
+    let changed = false;
+
+    ids.forEach(id => {
+      if (id === rootCopy.id) {
+        rootCopy.children = [];
+        changed = true;
+      } else if (deleteNodeFromTree(rootCopy, id)) {
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      state.selectedNodeId = rootCopy.id;
+      state.selectedNodeIds = [rootCopy.id];
       pushHistory(rootCopy);
     }
   },
@@ -602,25 +690,31 @@ export const editorStore = {
         node.style.display = 'grid';
         if (!node.style.gridTemplateColumns) node.style.gridTemplateColumns = '1fr 1fr';
       } else if (newType === 'container') {
-        node.style.display = 'block';
-        node.style.flow = 'NONE';
+        node.style.display = 'flex';
+        node.style.flexDirection = 'column';
+        node.style.flow = 'COLUMN';
       } else if (newType === 'card') {
-        node.style.display = 'block';
+        node.style.display = 'flex';
+        node.style.flexDirection = 'column';
+        node.style.flow = 'COLUMN';
         node.style.backgroundColor = '#1f1f26';
         node.style.borderColor = '#2e2e38';
         node.style.borderRadius = '8px';
       } else if (newType === 'scroll') {
-        node.style.display = 'block';
+        node.style.display = 'flex';
+        node.style.flexDirection = 'column';
         node.style.overflowY = 'auto';
       } else if (newType === 'button') {
-        node.style.display = 'inline-block';
+        node.style.display = 'flex';
+        node.style.alignItems = 'center';
+        node.style.justifyContent = 'center';
         node.style.cursor = 'pointer';
         if (!node.textContent) node.textContent = 'Button';
       } else if (newType === 'text') {
-        node.style.display = 'block';
+        node.style.display = 'flex';
         if (!node.textContent) node.textContent = 'Text';
       } else if (newType === 'heading') {
-        node.style.display = 'block';
+        node.style.display = 'flex';
         node.style.fontSize = '22px';
         node.style.fontWeight = '700';
         if (!node.textContent) node.textContent = 'Heading';
@@ -673,11 +767,13 @@ export const editorStore = {
     }
   },
 
-  resetRootCanvas: (type: LayoutNodeType = 'container') => {
+  resetRootCanvas: (type: LayoutNodeType = 'flex') => {
     const rootW = state.screenWidth || 800;
     const rootH = state.screenHeight || 520;
     const newRoot = createWidgetPreset(type, 'Screen Canvas (Root)');
     newRoot.id = 'root_' + Math.random().toString(36).substring(2, 7);
+    newRoot.style.display = 'flex';
+    newRoot.style.flexDirection = 'column';
     newRoot.style.width = `${rootW}px`;
     newRoot.style.height = `${rootH}px`;
     newRoot.children = [];
@@ -692,7 +788,7 @@ export const editorStore = {
   },
 
   duplicateNode: (id: string) => {
-    if (id === state.rootNode.id) return;
+    if (!id || id === state.rootNode.id) return;
     const rootCopy = clone(state.rootNode);
 
     function findAndDuplicate(parent: LayoutNode): boolean {
@@ -701,14 +797,17 @@ export const editorStore = {
         const original = parent.children[idx];
         const dup: LayoutNode = clone(original);
         
-        const reassignIds = (n: LayoutNode) => {
+        const reassignIds = (n: LayoutNode, isRootOfDuplicate: boolean) => {
           n.id = 'node_' + Math.random().toString(36).substring(2, 9);
-          n.name = `${n.name} (Copy)`;
-          n.children.forEach(reassignIds);
+          if (isRootOfDuplicate) {
+            n.name = generateDuplicateName(n.name);
+          }
+          n.children.forEach(c => reassignIds(c, false));
         };
-        reassignIds(dup);
+        reassignIds(dup, true);
         parent.children.splice(idx + 1, 0, dup);
         state.selectedNodeId = dup.id;
+        state.selectedNodeIds = [dup.id];
         return true;
       }
       for (const child of parent.children) {
@@ -718,6 +817,53 @@ export const editorStore = {
     }
 
     if (findAndDuplicate(rootCopy)) {
+      pushHistory(rootCopy);
+    }
+  },
+
+  duplicateSelectedNodes: () => {
+    const ids = state.selectedNodeIds && state.selectedNodeIds.length > 0 
+      ? state.selectedNodeIds.filter(id => id !== state.rootNode.id)
+      : (state.selectedNodeId && state.selectedNodeId !== state.rootNode.id ? [state.selectedNodeId] : []);
+    
+    if (ids.length === 0) return;
+    if (ids.length === 1) {
+      editorStore.duplicateNode(ids[0]);
+      return;
+    }
+
+    const rootCopy = clone(state.rootNode);
+    const newDuplicatedIds: string[] = [];
+
+    function duplicateInTree(parent: LayoutNode, targetId: string): boolean {
+      const idx = parent.children.findIndex(c => c.id === targetId);
+      if (idx !== -1) {
+        const original = parent.children[idx];
+        const dup: LayoutNode = clone(original);
+        const reassign = (n: LayoutNode, isTop: boolean) => {
+          n.id = 'node_' + Math.random().toString(36).substring(2, 9);
+          if (isTop) n.name = generateDuplicateName(n.name);
+          n.children.forEach(c => reassign(c, false));
+        };
+        reassign(dup, true);
+        newDuplicatedIds.push(dup.id);
+        parent.children.splice(idx + 1, 0, dup);
+        return true;
+      }
+      for (const child of parent.children) {
+        if (duplicateInTree(child, targetId)) return true;
+      }
+      return false;
+    }
+
+    let anyDuplicated = false;
+    ids.forEach(id => {
+      if (duplicateInTree(rootCopy, id)) anyDuplicated = true;
+    });
+
+    if (anyDuplicated) {
+      state.selectedNodeId = newDuplicatedIds[newDuplicatedIds.length - 1] || null;
+      state.selectedNodeIds = newDuplicatedIds;
       pushHistory(rootCopy);
     }
   },

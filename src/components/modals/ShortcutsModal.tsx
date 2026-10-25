@@ -18,6 +18,7 @@ const SHORTCUT_GROUPS: ShortcutCategory[] = [
   {
     title: 'General & Navigation',
     items: [
+      { keys: ['F1'], description: 'Open Layout & Architecture Guide' },
       { keys: ['?'], description: 'Open Keyboard Shortcuts cheatsheet' },
       { keys: ['Ctrl', ','], description: 'Open Studio Settings' },
       { keys: ['Esc'], description: 'Stop Simulation / Close Modal / Deselect' },
@@ -39,9 +40,11 @@ const SHORTCUT_GROUPS: ShortcutCategory[] = [
       { keys: ['Ctrl', 'Z'], description: 'Undo canvas layout change' },
       { keys: ['Ctrl', 'Y'], description: 'Redo canvas layout change' },
       { keys: ['Ctrl', 'Shift', 'Z'], description: 'Redo alternative' },
-      { keys: ['Ctrl', 'D'], description: 'Duplicate selected element' },
-      { keys: ['Del'], description: 'Delete selected element' },
-      { keys: ['Backspace'], description: 'Delete selected element' },
+      { keys: ['Ctrl', 'D'], description: 'Duplicate selected element(s) with _0, _1 naming' },
+      { keys: ['Del'], description: 'Delete selected element(s)' },
+      { keys: ['Backspace'], description: 'Delete selected element(s)' },
+      { keys: ['Ctrl / ⌘', 'Click'], description: 'Toggle multi-selection in tree list' },
+      { keys: ['Shift', 'Click'], description: 'Select range of items in tree list' },
       { keys: ['Single Click Canvas'], description: 'Deselect current element' },
     ],
   },

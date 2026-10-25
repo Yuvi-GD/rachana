@@ -8,7 +8,7 @@ export const defaultSpacing = (val: string = '0px'): SpacingSides => ({
 });
 
 export const createCleanNodeStyle = (overrides?: Partial<LayoutNodeStyle>): LayoutNodeStyle => ({
-  display: 'block',
+  display: 'flex',
   position: 'relative',
   boxSizing: 'border-box',
   overflow: 'visible',
@@ -34,7 +34,7 @@ export const createCleanNodeStyle = (overrides?: Partial<LayoutNodeStyle>): Layo
   margin: defaultSpacing('0px'),
   padding: defaultSpacing('0px'),
 
-  flexDirection: 'row',
+  flexDirection: 'column',
   flexWrap: 'nowrap',
   justifyContent: 'flex-start',
   alignItems: 'stretch',
@@ -80,7 +80,7 @@ export const createCleanNodeStyle = (overrides?: Partial<LayoutNodeStyle>): Layo
 });
 
 export const createDefaultStyle = (overrides?: Partial<LayoutNodeStyle>): LayoutNodeStyle => ({
-  display: 'block',
+  display: 'flex',
   position: 'relative',
   boxSizing: 'border-box',
   overflow: 'visible',
@@ -106,7 +106,7 @@ export const createDefaultStyle = (overrides?: Partial<LayoutNodeStyle>): Layout
   margin: defaultSpacing('0px'),
   padding: defaultSpacing('8px'),
 
-  flexDirection: 'row',
+  flexDirection: 'column',
   flexWrap: 'nowrap',
   justifyContent: 'flex-start',
   alignItems: 'stretch',
@@ -155,31 +155,33 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
   const id = 'node_' + Math.random().toString(36).substring(2, 9);
   
   switch (type) {
-    case 'flex':
+    case 'flex': {
+      const isCol = Boolean(customName && customName.toLowerCase().includes('column'));
       return {
         id,
-        name: customName || 'Flex Container',
+        name: customName || 'Flex Row',
         type: 'flex',
         isExpanded: true,
         style: createDefaultStyle({
           display: 'flex',
-          flexDirection: 'row',
+          flexDirection: isCol ? 'column' : 'row',
           flexWrap: 'nowrap',
           justifyContent: 'flex-start',
-          alignItems: 'center',
+          alignItems: isCol ? 'stretch' : 'center',
           gap: '12px',
           padding: defaultSpacing('16px'),
-          backgroundColor: 'rgba(23, 37, 84, 0.4)',
-          borderColor: '#2563eb',
+          backgroundColor: isCol ? 'rgba(8, 145, 178, 0.25)' : 'rgba(23, 37, 84, 0.4)',
+          borderColor: isCol ? '#06b6d4' : '#2563eb',
           minHeight: '80px',
         }),
         children: [],
       };
+    }
 
     case 'grid':
       return {
         id,
-        name: customName || 'Grid 2x2',
+        name: customName || 'Grid Container',
         type: 'grid',
         isExpanded: true,
         style: createDefaultStyle({
@@ -195,21 +197,25 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         children: [],
       };
 
-    case 'container':
+    case 'container': {
+      const isCanvas = Boolean(customName && (customName.toLowerCase().includes('canvas') || customName.toLowerCase().includes('freeform')));
       return {
         id,
-        name: customName || 'Block Container',
-        type: 'container',
+        name: customName || (isCanvas ? 'Freeform Canvas' : 'Flex Column'),
+        type: isCanvas ? 'container' : 'flex',
         isExpanded: true,
         style: createDefaultStyle({
-          display: 'block',
-          padding: defaultSpacing('12px'),
-          backgroundColor: 'rgba(30, 41, 59, 0.5)',
-          borderColor: '#475569',
-          minHeight: '60px',
+          display: 'flex',
+          flexDirection: 'column',
+          position: isCanvas ? 'relative' : 'relative',
+          padding: defaultSpacing(isCanvas ? '16px' : '12px'),
+          backgroundColor: isCanvas ? 'rgba(30, 41, 59, 0.45)' : 'rgba(30, 41, 59, 0.5)',
+          borderColor: isCanvas ? '#64748b' : '#475569',
+          minHeight: isCanvas ? '180px' : '60px',
         }),
         children: [],
       };
+    }
 
     case 'text':
       return {
@@ -218,7 +224,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         type: 'text',
         textContent: 'Sample Text Item',
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
           width: 'auto',
           height: 'auto',
           padding: { top: '4px', right: '8px', bottom: '4px', left: '8px' },
@@ -238,7 +244,9 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         type: 'button',
         textContent: 'Click Me',
         style: createDefaultStyle({
-          display: 'inline-block',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
           width: 'auto',
           height: 'auto',
           padding: { top: '8px', right: '16px', bottom: '8px', left: '16px' },
@@ -260,7 +268,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         name: customName || 'Image Box',
         type: 'image',
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
           width: '120px',
           height: '80px',
           backgroundColor: 'rgba(217, 119, 6, 0.25)',
@@ -277,7 +285,8 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         type: 'card',
         isExpanded: true,
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
+          flexDirection: 'column',
           padding: defaultSpacing('16px'),
           backgroundColor: '#1f1f26',
           borderColor: '#2e2e38',
@@ -295,7 +304,8 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         type: 'scroll',
         isExpanded: true,
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
+          flexDirection: 'column',
           overflowY: 'auto',
           overflowX: 'hidden',
           padding: defaultSpacing('12px'),
@@ -314,7 +324,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         type: 'heading',
         textContent: 'Heading Title',
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
           width: 'auto',
           height: 'auto',
           padding: defaultSpacing('0px'),
@@ -337,7 +347,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         placeholder: 'Enter text here...',
         textContent: '',
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
           width: '100%',
           maxWidth: '320px',
           height: 'auto',
@@ -360,7 +370,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         type: 'badge',
         textContent: 'NEW',
         style: createDefaultStyle({
-          display: 'inline-flex',
+          display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           width: 'auto',
@@ -383,7 +393,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         name: customName || 'Horizontal Divider',
         type: 'divider',
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
           width: '100%',
           height: '1px',
           padding: defaultSpacing('0px'),
@@ -401,7 +411,7 @@ export const createWidgetPreset = (type: LayoutNodeType, customName?: string): L
         name: customName || 'Spacer',
         type: 'spacer',
         style: createDefaultStyle({
-          display: 'block',
+          display: 'flex',
           width: '40px',
           height: '40px',
           backgroundColor: 'rgba(100, 116, 139, 0.2)',

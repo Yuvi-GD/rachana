@@ -99,8 +99,14 @@ export const nodeStyleToCss = (style: LayoutNodeStyle): React.CSSProperties => {
   } else if (style.flow === 'COLUMN') {
     display = 'flex';
     flexDirection = 'column';
-  } else if (style.flow === 'NONE') {
-    display = 'block';
+  }
+
+  // Modern UI layout normalization: legacy block and inline modes become flex
+  if (display === 'block' || display === 'inline-block' || display === 'inline' || display === 'inline-flex') {
+    display = 'flex';
+    if (!flexDirection) flexDirection = 'column';
+  } else if (display === 'inline-grid') {
+    display = 'grid';
   }
 
   // Translate contentAlign
@@ -220,7 +226,9 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
 
     const styleLines: string[] = [];
     const s = node.style;
-    styleLines.push(`  display: ${s.display};`);
+    const isGrid = s.display?.includes('grid') || node.type === 'grid';
+    const displayVal = isGrid ? 'grid' : 'flex';
+    styleLines.push(`  display: ${displayVal};`);
     if (s.position !== 'static') styleLines.push(`  position: ${s.position};`);
     if (s.boxSizing !== 'border-box') styleLines.push(`  box-sizing: ${s.boxSizing};`);
     if (s.overflow !== 'visible') styleLines.push(`  overflow: ${s.overflow};`);
@@ -248,14 +256,15 @@ export const exportToHtmlCss = (rootNode: LayoutNode): { html: string; css: stri
       styleLines.push(`  gap: ${s.gap};`);
     }
 
-    if (s.display.includes('flex') || s.flow === 'ROW' || s.flow === 'COLUMN') {
-      styleLines.push(`  flex-direction: ${s.flow === 'ROW' ? 'row' : s.flow === 'COLUMN' ? 'column' : s.flexDirection};`);
-      if (s.flexWrap !== 'nowrap') styleLines.push(`  flex-wrap: ${s.flexWrap};`);
-      if (s.justifyContent !== 'flex-start') styleLines.push(`  justify-content: ${s.justifyContent};`);
-      if (s.alignItems !== 'stretch') styleLines.push(`  align-items: ${s.alignItems};`);
+    if (!isGrid) {
+      const dir = (s.flexDirection === 'row' || s.flow === 'ROW') ? 'row' : 'column';
+      styleLines.push(`  flex-direction: ${dir};`);
+      if (s.flexWrap && s.flexWrap !== 'nowrap') styleLines.push(`  flex-wrap: ${s.flexWrap};`);
+      if (s.justifyContent && s.justifyContent !== 'flex-start') styleLines.push(`  justify-content: ${s.justifyContent};`);
+      if (s.alignItems && s.alignItems !== 'stretch') styleLines.push(`  align-items: ${s.alignItems};`);
     }
 
-    if (s.display.includes('grid')) {
+    if (isGrid) {
       styleLines.push(`  grid-template-columns: ${s.gridTemplateColumns};`);
       if (s.gridTemplateRows !== 'auto') styleLines.push(`  grid-template-rows: ${s.gridTemplateRows};`);
     }
@@ -437,8 +446,10 @@ export const buildHierarchicalSnapshot = (
     };
   }
 
+  const isGrid = s.display?.includes('grid') || node.type === 'grid';
+  const displayVal = isGrid ? 'grid' : 'flex';
   const declaredStyle: HierarchicalLayoutNodeSnapshot['declaredStyle'] = {
-    display: s.display,
+    display: displayVal,
     position: s.position,
     boxSizing: s.boxSizing,
     overflow: s.overflow,
@@ -607,11 +618,14 @@ export const exportLayoutEngineYaml = (
     }
 
     // Layout Flow & Display
-    const flow = s.flow || (s.flexDirection === 'row' ? 'ROW' : (s.flexDirection === 'column' ? 'COLUMN' : 'NONE'));
+    const isGrid = s.display?.includes('grid') || node.type === 'grid';
+    const displayVal = isGrid ? 'grid' : 'flex';
+    const dir = (s.flexDirection === 'row' || s.flow === 'ROW') ? 'row' : 'column';
+    const flow = dir === 'row' ? 'ROW' : 'COLUMN';
     lines.push(`${bsp}flow: ${flow}`);
-    lines.push(`${bsp}display: ${s.display}`);
-    if (s.display.includes('flex') || flow === 'ROW' || flow === 'COLUMN') {
-      lines.push(`${bsp}flex_direction: ${s.flexDirection || (flow === 'ROW' ? 'row' : 'column')}`);
+    lines.push(`${bsp}display: ${displayVal}`);
+    if (!isGrid) {
+      lines.push(`${bsp}flex_direction: ${dir}`);
       if (s.justifyContent && s.justifyContent !== 'flex-start') {
         lines.push(`${bsp}justify_content: ${s.justifyContent}`);
       }
@@ -1463,10 +1477,8 @@ export const exportToXml = (rootNode: LayoutNode): string => {
     }
 
     let tag = node.type || 'container';
-    if (tag === 'container' && s.display === 'flex') {
-      tag = 'flex';
-    } else if (tag === 'container' && s.display === 'grid') {
-      tag = 'grid';
+    if (tag === 'container') {
+      tag = s.display?.includes('grid') ? 'grid' : 'flex';
     }
 
     if (s.flow && s.flow !== 'NONE') attrs.push(`flow="${s.flow}"`);

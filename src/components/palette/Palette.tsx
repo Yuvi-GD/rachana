@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { 
   Columns, 
+  Rows,
   Grid3X3, 
   Box, 
   Type, 
@@ -26,28 +27,36 @@ interface PaletteItem {
 
 const PALETTE_ITEMS: PaletteItem[] = [
   {
-    type: 'container',
-    label: 'Container',
-    icon: <Box className="w-4 h-4 text-slate-400" />,
+    type: 'flex',
+    label: 'Flex Row',
+    icon: <Columns className="w-4 h-4 text-blue-400" />,
     category: 'Containers',
-    description: 'Base HTML <div> container. Configure Block, Flex, Grid, or Scrollable overflow in Details.',
-    cssSnippet: 'display: block;\nwidth: 100%;\npadding: 16px;',
+    description: '1D horizontal flexbox container. Arranges child items in a row with gap and alignment controls.',
+    cssSnippet: 'display: flex;\nflex-direction: row;\ngap: 12px;',
   },
   {
     type: 'flex',
-    label: 'Flex Container',
-    icon: <Columns className="w-4 h-4 text-blue-400" />,
+    label: 'Flex Column',
+    icon: <Rows className="w-4 h-4 text-cyan-400" />,
     category: 'Containers',
-    description: 'Flexbox container. Arranges children along main/cross axes with gap and alignment distribution.',
-    cssSnippet: 'display: flex;\nflex-direction: row;\ngap: 12px;',
+    description: '1D vertical flexbox container. Stacks child items vertically with gap and stretch controls.',
+    cssSnippet: 'display: flex;\nflex-direction: column;\ngap: 12px;',
   },
   {
     type: 'grid',
     label: 'Grid Container',
     icon: <Grid3X3 className="w-4 h-4 text-purple-400" />,
     category: 'Containers',
-    description: '2D CSS grid container. Aligns child items into customizable column and row tracks.',
+    description: '2D matrix CSS grid container. Aligns children into customizable column and row tracks.',
     cssSnippet: 'display: grid;\ngrid-template-columns: 1fr 1fr;\ngap: 12px;',
+  },
+  {
+    type: 'container',
+    label: 'Freeform Canvas',
+    icon: <Box className="w-4 h-4 text-amber-400" />,
+    category: 'Containers',
+    description: 'Coordinate-based positioning container (position: relative). Child items can be freely pinned or absolutely positioned.',
+    cssSnippet: 'position: relative;\ndisplay: block;\nmin-height: 180px;',
   },
   {
     type: 'text',

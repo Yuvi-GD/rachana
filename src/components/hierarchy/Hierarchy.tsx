@@ -18,7 +18,9 @@ import {
   ArrowDown,
   Eye,
   EyeOff,
-  Layers
+  Layers,
+  Copy,
+  Trash2
 } from 'lucide-react';
 import { useEditorStore } from '../../store/editorStore';
 import { LayoutNode, LayoutNodeType, isContainerNodeType } from '../../types/layout';
@@ -79,9 +81,9 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({
   activeDrop, 
   setActiveDrop 
 }) => {
-  const { rootNode, selectedNodeId, hoveredNodeId, actions } = useEditorStore();
+  const { rootNode, selectedNodeId, selectedNodeIds, hoveredNodeId, actions } = useEditorStore();
 
-  const isSelected = selectedNodeId === node.id;
+  const isSelected = (selectedNodeIds && selectedNodeIds.includes(node.id)) || selectedNodeId === node.id;
   const isHovered = hoveredNodeId === node.id;
   const hasChildren = node.children && node.children.length > 0;
   const isExpanded = node.isExpanded !== false;
@@ -98,7 +100,13 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({
 
   const handleSelect = (e: React.MouseEvent) => {
     e.stopPropagation();
-    actions.selectNode(node.id);
+    if (e.ctrlKey || e.metaKey) {
+      actions.toggleSelectNode(node.id);
+    } else if (e.shiftKey) {
+      actions.selectNodeRange(node.id);
+    } else {
+      actions.selectNode(node.id);
+    }
   };
 
   const handleMoveUp = (e: React.MouseEvent) => {
@@ -350,7 +358,7 @@ const TreeNodeItem: React.FC<TreeNodeItemProps> = ({
 };
 
 export const Hierarchy: React.FC = () => {
-  const { rootNode, actions } = useEditorStore();
+  const { rootNode, selectedNodeIds, actions } = useEditorStore();
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; node: LayoutNode } | null>(null);
   const [activeDrop, setActiveDrop] = useState<{ id: string; pos: 'inside' | 'before' | 'after' } | null>(null);
 
@@ -417,7 +425,29 @@ export const Hierarchy: React.FC = () => {
         <span className="font-semibold text-zinc-200 text-[11px] uppercase tracking-wider">
           Hierarchy
         </span>
-        <span className="text-[10px] text-zinc-500 font-mono">Tree View</span>
+        {selectedNodeIds && selectedNodeIds.length > 1 ? (
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-blue-400 font-mono font-semibold bg-blue-500/15 px-1.5 py-0.2 rounded border border-blue-500/30">
+              {selectedNodeIds.length} Selected
+            </span>
+            <button
+              onClick={() => actions.duplicateSelectedNodes()}
+              title="Duplicate Selected (Ctrl+D)"
+              className="p-1 text-zinc-400 hover:text-white hover:bg-[#252530] rounded cursor-pointer transition-colors"
+            >
+              <Copy className="w-3 h-3 text-cyan-400" />
+            </button>
+            <button
+              onClick={() => actions.deleteSelectedNodes()}
+              title="Delete Selected (Del)"
+              className="p-1 text-zinc-400 hover:text-rose-300 hover:bg-rose-500/20 rounded cursor-pointer transition-colors"
+            >
+              <Trash2 className="w-3 h-3 text-rose-400" />
+            </button>
+          </div>
+        ) : (
+          <span className="text-[10px] text-zinc-500 font-mono">Tree View</span>
+        )}
       </div>
 
       {/* Tree Content with drop-to-root support on empty space */}

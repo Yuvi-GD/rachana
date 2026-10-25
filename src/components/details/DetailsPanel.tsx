@@ -21,7 +21,11 @@ import {
   AlignRight,
   AlignJustify,
   Copy,
-  Check
+  Check,
+  Columns,
+  Rows,
+  Grid3X3,
+  Box
 } from 'lucide-react';
 
 interface UnrealSectionHeaderProps {
@@ -434,9 +438,23 @@ export const DetailsPanel: React.FC = () => {
                 </div>
 
                 <div {...getPropHandlers('zIndex', style.zIndex)}>
-                  <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
-                    Z-Index
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-[9px] uppercase font-semibold text-zinc-400">
+                      Z-Index
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => handleStyleChange({ zIndex: 'auto' })}
+                      className={`text-[9px] px-1.5 py-0.5 rounded border transition-colors ${
+                        style.zIndex === 'auto' || !style.zIndex
+                          ? 'bg-blue-600/30 text-blue-300 border-blue-500/50 font-bold'
+                          : 'bg-[#1c1c20] text-zinc-400 border-[#34343d] hover:text-white'
+                      }`}
+                      title="Set z-index to auto"
+                    >
+                      Auto
+                    </button>
+                  </div>
                   <input
                     type="text"
                     value={style.zIndex}
@@ -477,27 +495,91 @@ export const DetailsPanel: React.FC = () => {
               onToggle={() => toggleSection('layoutFlow')}
             />
             {isSectionOpen('layoutFlow') && (
-              <div className="p-2.5 space-y-2.5 bg-[#17171b]/40">
-                <div className="grid grid-cols-2 gap-2">
-                  <div {...getPropHandlers('display', style.display)}>
-                    <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
-                      Display
+              <div className="p-2.5 space-y-3 bg-[#17171b]/40">
+                {/* Modern Container Architecture Selector */}
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-[10px] uppercase font-bold text-sky-400 tracking-wider">
+                      Container Layout Mode
                     </label>
-                    <select
-                      value={style.display}
-                      onChange={(e) => handleStyleChange({ display: e.target.value as any })}
-                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-zinc-200 outline-none cursor-pointer font-medium"
-                    >
-                      <option value="block">block</option>
-                      <option value="flex">flex</option>
-                      <option value="inline-flex">inline-flex</option>
-                      <option value="grid">grid</option>
-                      <option value="inline-grid">inline-grid</option>
-                      <option value="inline-block">inline-block</option>
-                      <option value="inline">inline</option>
-                    </select>
+                    <span className="text-[9px] font-mono text-zinc-500">
+                      {isFlex ? (style.flexDirection?.includes('column') ? 'Flex Column' : 'Flex Row') : isGrid ? 'CSS Grid' : 'Freeform Canvas'}
+                    </span>
                   </div>
 
+                  <div className="grid grid-cols-2 gap-1.5">
+                    {/* Flex Row */}
+                    <button
+                      type="button"
+                      onClick={() => handleStyleChange({ display: 'flex', flexDirection: 'row', flow: 'ROW' })}
+                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
+                        isFlex && (!style.flexDirection || style.flexDirection.includes('row'))
+                          ? 'bg-blue-600/25 border-blue-500 text-blue-200 shadow-sm ring-1 ring-blue-500/30'
+                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
+                      }`}
+                    >
+                      <Columns className="w-4 h-4 text-blue-400 flex-shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-semibold leading-tight">Flex Row</div>
+                        <div className="text-[9px] text-zinc-500 leading-tight">1D Horizontal Flow</div>
+                      </div>
+                    </button>
+
+                    {/* Flex Column */}
+                    <button
+                      type="button"
+                      onClick={() => handleStyleChange({ display: 'flex', flexDirection: 'column', flow: 'COLUMN' })}
+                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
+                        isFlex && style.flexDirection?.includes('column')
+                          ? 'bg-cyan-600/25 border-cyan-500 text-cyan-200 shadow-sm ring-1 ring-cyan-500/30'
+                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
+                      }`}
+                    >
+                      <Rows className="w-4 h-4 text-cyan-400 flex-shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-semibold leading-tight">Flex Column</div>
+                        <div className="text-[9px] text-zinc-500 leading-tight">1D Vertical Stack</div>
+                      </div>
+                    </button>
+
+                    {/* CSS Grid */}
+                    <button
+                      type="button"
+                      onClick={() => handleStyleChange({ display: 'grid', flow: 'NONE' })}
+                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
+                        isGrid
+                          ? 'bg-purple-600/25 border-purple-500 text-purple-200 shadow-sm ring-1 ring-purple-500/30'
+                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
+                      }`}
+                    >
+                      <Grid3X3 className="w-4 h-4 text-purple-400 flex-shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-semibold leading-tight">CSS Grid</div>
+                        <div className="text-[9px] text-zinc-500 leading-tight">2D Matrix Tracks</div>
+                      </div>
+                    </button>
+
+                    {/* Freeform Canvas */}
+                    <button
+                      type="button"
+                      onClick={() => handleStyleChange({ display: 'block', position: 'relative', flow: 'NONE' })}
+                      className={`flex items-center gap-2 p-2 rounded border text-left transition-all ${
+                        !isFlex && !isGrid
+                          ? 'bg-amber-600/25 border-amber-500 text-amber-200 shadow-sm ring-1 ring-amber-500/30'
+                          : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#232328]'
+                      }`}
+                    >
+                      <Box className="w-4 h-4 text-amber-400 flex-shrink-0" />
+                      <div>
+                        <div className="text-[11px] font-semibold leading-tight">Freeform Canvas</div>
+                        <div className="text-[9px] text-zinc-500 leading-tight">Absolute Positioning</div>
+                      </div>
+                    </button>
+                  </div>
+                </div>
+
+                {/* Box-Sizing */}
+                <div className="pt-2 border-t border-[#292930]">
                   <div {...getPropHandlers('boxSizing', style.boxSizing)}>
                     <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
                       Box-Sizing
@@ -513,84 +595,56 @@ export const DetailsPanel: React.FC = () => {
                   </div>
                 </div>
 
-                {/* Flow Direction Buttons */}
+                {/* Child Slot Stretch & Fill (Tether UI & Flex item fill) */}
                 <div className="pt-2 border-t border-[#292930] space-y-2">
                   <div className="flex items-center justify-between">
-                    <span className="text-[10px] uppercase font-bold text-sky-400 tracking-wider">
-                      Flow Direction
+                    <span className="text-[10px] uppercase font-bold text-zinc-400 tracking-wider">
+                      Child Alignment & Fill
                     </span>
                     <span className="text-[9px] font-mono text-zinc-500">
-                      flow: {style.flow || 'COLUMN'}
+                      flow: {style.flow || (isFlex ? (style.flexDirection === 'row' ? 'ROW' : 'COLUMN') : 'NONE')}
                     </span>
                   </div>
 
-                  <div className="grid grid-cols-3 gap-1">
-                    {(['ROW', 'COLUMN', 'NONE'] as const).map((f) => {
-                      const isActive = (style.flow || (style.flexDirection === 'row' ? 'ROW' : 'COLUMN')) === f;
-                      return (
-                        <button
-                          type="button"
-                          key={f}
-                          onClick={() => {
-                            if (f === 'ROW') {
-                              handleStyleChange({ flow: 'ROW', display: 'flex', flexDirection: 'row' });
-                            } else if (f === 'COLUMN') {
-                              handleStyleChange({ flow: 'COLUMN', display: 'flex', flexDirection: 'column' });
-                            } else {
-                              handleStyleChange({ flow: 'NONE', display: 'block' });
-                            }
-                          }}
-                          className={`py-1 rounded border text-[10px] font-bold transition-colors text-center ${
-                            isActive
-                              ? 'bg-sky-600/40 border-sky-500 text-sky-200 shadow-sm'
-                              : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
-                          }`}
-                        >
-                          {f}
-                        </button>
-                      );
-                    })}
-                  </div>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div {...getPropHandlers('fillRatio', style.fillRatio || style.flexGrow || '0')}>
+                      <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
+                        Fill Ratio (flex-grow)
+                      </label>
+                      <input
+                        type="number"
+                        step="0.1"
+                        min="0"
+                        value={style.fillRatio || style.flexGrow || '0'}
+                        onChange={(e) => handleStyleChange({ fillRatio: e.target.value, flexGrow: e.target.value })}
+                        placeholder="0"
+                        className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-sky-300 outline-none font-mono"
+                      />
+                    </div>
 
-                  {/* Fill Ratio */}
-                  <div className="pt-1" {...getPropHandlers('fillRatio', style.fillRatio || style.flexGrow || '1.0')}>
-                    <label className="text-[10px] text-zinc-300 font-semibold block mb-1">
-                      Fill Ratio (fill_ratio / flex-grow)
-                    </label>
-                    <input
-                      type="number"
-                      step="0.05"
-                      min="0"
-                      value={style.fillRatio || style.flexGrow || '1.0'}
-                      onChange={(e) => handleStyleChange({ fillRatio: e.target.value, flexGrow: e.target.value })}
-                      placeholder="1.0"
-                      className="w-full bg-[#1c1c20] hover:bg-[#23232a] border border-[#34343d] rounded px-2 py-1 text-xs text-sky-300 outline-none font-mono"
-                    />
-                  </div>
-
-                  {/* Content Alignment */}
-                  <div className="pt-1">
-                    <label className="text-[10px] text-zinc-400 block mb-1">
-                      Content Align
-                    </label>
-                    <div className="grid grid-cols-3 gap-1">
-                      {(['START', 'CENTER', 'END'] as const).map((align) => {
-                        const isActive = (style.contentAlign || 'START') === align;
-                        return (
-                          <button
-                            type="button"
-                            key={align}
-                            onClick={() => handleStyleChange({ contentAlign: align })}
-                            className={`py-0.5 rounded border text-[9px] font-semibold transition-colors text-center ${
-                              isActive
-                                ? 'bg-sky-600/40 border-sky-500 text-sky-200'
-                                : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
-                            }`}
-                          >
-                            {align}
-                          </button>
-                        );
-                      })}
+                    <div>
+                      <label className="text-[9px] text-zinc-400 uppercase font-semibold block mb-1">
+                        Content Align
+                      </label>
+                      <div className="grid grid-cols-3 gap-1">
+                        {(['START', 'CENTER', 'END'] as const).map((align) => {
+                          const isActive = (style.contentAlign || 'START') === align;
+                          return (
+                            <button
+                              type="button"
+                              key={align}
+                              onClick={() => handleStyleChange({ contentAlign: align })}
+                              className={`py-1 rounded border text-[9px] font-semibold transition-colors text-center ${
+                                isActive
+                                  ? 'bg-sky-600/40 border-sky-500 text-sky-200'
+                                  : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
+                              }`}
+                            >
+                              {align}
+                            </button>
+                          );
+                        })}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -997,6 +1051,40 @@ export const DetailsPanel: React.FC = () => {
             />
             {isSectionOpen('overflow') && (
               <div className="p-2.5 space-y-3 bg-[#17171b]/40">
+                {/* Quick Scroll Presets */}
+                <div>
+                  <label className="text-[9px] uppercase font-semibold text-zinc-400 block mb-1">
+                    Quick Scroll Presets
+                  </label>
+                  <div className="grid grid-cols-4 gap-1">
+                    {[
+                      { label: 'None', ox: 'visible', oy: 'visible', title: 'Default (no scrollbar)' },
+                      { label: 'Scroll Y', ox: 'hidden', oy: 'auto', title: 'Vertical scrolling list' },
+                      { label: 'Scroll X', ox: 'auto', oy: 'hidden', title: 'Horizontal carousel/row' },
+                      { label: 'Both', ox: 'auto', oy: 'auto', title: '2D scrollable viewport' },
+                    ].map((preset) => {
+                      const currentOx = style.overflowX || style.overflow || 'visible';
+                      const currentOy = style.overflowY || style.overflow || 'visible';
+                      const isActive = currentOx === preset.ox && currentOy === preset.oy;
+                      return (
+                        <button
+                          key={preset.label}
+                          type="button"
+                          onClick={() => handleStyleChange({ overflow: 'visible', overflowX: preset.ox as any, overflowY: preset.oy as any })}
+                          title={preset.title}
+                          className={`py-1 rounded border text-[10px] font-medium transition-colors text-center ${
+                            isActive
+                              ? 'bg-blue-600/40 border-blue-500 text-blue-200 font-bold shadow-sm'
+                              : 'bg-[#1c1c20] border-[#34343d] text-zinc-400 hover:text-white'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
                 <div {...getPropHandlers('overflowX', style.overflowX || style.overflow)}>
                   <label className="text-[10px] uppercase font-bold text-purple-400 tracking-wider block mb-1">
                     Overflow X

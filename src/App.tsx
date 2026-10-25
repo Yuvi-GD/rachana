@@ -9,10 +9,11 @@ import { ExportModal } from './components/modals/ExportModal';
 import { ImportModal } from './components/modals/ImportModal';
 import { SettingsModal } from './components/modals/SettingsModal';
 import { ShortcutsModal } from './components/modals/ShortcutsModal';
+import { LayoutGuideModal } from './components/modals/LayoutGuideModal';
 import { Splitter } from './components/common/Splitter';
 import { useEditorStore } from './store/editorStore';
 import { LayoutNode } from './types/layout';
-import { Settings, Keyboard } from 'lucide-react';
+import { Settings, Keyboard, BookOpen } from 'lucide-react';
 import { applyThemeToDom } from './core/themeEngine';
 
 export const App: React.FC = () => {
@@ -20,6 +21,7 @@ export const App: React.FC = () => {
   const [isImportOpen, setIsImportOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isShortcutsOpen, setIsShortcutsOpen] = useState(false);
+  const [isGuideOpen, setIsGuideOpen] = useState(false);
   const { 
     rootNode,
     selectedNodeId, 
@@ -82,6 +84,13 @@ export const App: React.FC = () => {
         return;
       }
 
+      // Layout Guide: F1
+      if (e.key === 'F1') {
+        e.preventDefault();
+        setIsGuideOpen((prev) => !prev);
+        return;
+      }
+
       // Toggle Simulation: F5
       if (e.key === 'F5') {
         e.preventDefault();
@@ -103,12 +112,12 @@ export const App: React.FC = () => {
       // Duplicate: Ctrl+D
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'd') {
         e.preventDefault();
-        if (selectedNodeId) actions.duplicateNode(selectedNodeId);
+        actions.duplicateSelectedNodes();
       }
       // Delete: Delete or Backspace key
       else if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
-        if (selectedNodeId) actions.deleteNode(selectedNodeId);
+        actions.deleteSelectedNodes();
       }
       // Escape: Stop simulation if running, or deselect
       else if (e.key === 'Escape') {
@@ -295,6 +304,17 @@ export const App: React.FC = () => {
           <div className="h-3 w-[1px] bg-[#22222a]" />
 
           <button
+            onClick={() => setIsGuideOpen(true)}
+            className="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 cursor-pointer"
+            title="Layout & Architecture Guide (F1)"
+          >
+            <BookOpen className="w-3 h-3 text-zinc-500" />
+            <span>Guide</span>
+          </button>
+
+          <div className="h-3 w-[1px] bg-[#22222a]" />
+
+          <button
             onClick={() => setIsShortcutsOpen(true)}
             className="flex items-center gap-1 text-zinc-400 hover:text-zinc-200 cursor-pointer"
             title="Keyboard Shortcuts Cheatsheet (?)"
@@ -346,6 +366,12 @@ export const App: React.FC = () => {
       <ShortcutsModal
         isOpen={isShortcutsOpen}
         onClose={() => setIsShortcutsOpen(false)}
+      />
+
+      {/* Dedicated Layout & Architecture Guide Modal */}
+      <LayoutGuideModal
+        isOpen={isGuideOpen}
+        onClose={() => setIsGuideOpen(false)}
       />
     </div>
   );

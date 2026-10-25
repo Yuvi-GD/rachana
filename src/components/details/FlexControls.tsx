@@ -115,23 +115,40 @@ export const FlexControls: React.FC<FlexControlsProps> = ({ style, onChange }) =
 
       {/* Flex Wrap */}
       <div>
-        <label className="text-[10px] uppercase font-semibold text-zinc-400 block mb-1">
-          Flex Wrap
-        </label>
-        <select
-          value={style.flexWrap}
-          onChange={(e) => onChange({ flexWrap: e.target.value as any })}
-          className="w-full bg-[#1c1c20] hover:bg-[#222227] border border-[#34343d] rounded px-2.5 py-1 text-xs text-zinc-200 outline-none cursor-pointer font-medium"
-        >
-          <option value="nowrap">nowrap (Single Line)</option>
-          <option value="wrap">wrap (Multi-Line)</option>
-          <option value="wrap-reverse">wrap-reverse (Multi-Line Inverted)</option>
-        </select>
+        <div className="flex items-center justify-between mb-1">
+          <label className="text-[10px] uppercase font-semibold text-zinc-400">
+            Flex Wrap
+          </label>
+          <span className="text-[10px] font-mono text-zinc-500">{style.flexWrap || 'nowrap'}</span>
+        </div>
+        <div className="grid grid-cols-3 gap-1">
+          {[
+            { val: 'nowrap', label: 'No Wrap' },
+            { val: 'wrap', label: 'Wrap' },
+            { val: 'wrap-reverse', label: 'Reverse' },
+          ].map((item) => {
+            const isActive = (style.flexWrap || 'nowrap') === item.val;
+            return (
+              <button
+                key={item.val}
+                type="button"
+                onClick={() => onChange({ flexWrap: item.val as any })}
+                className={`py-1 rounded border text-[10px] font-medium transition-colors text-center ${
+                  isActive
+                    ? 'bg-blue-600/30 border-blue-500 text-blue-300 font-semibold shadow-sm'
+                    : 'bg-[#242429] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#2b2b32]'
+                }`}
+              >
+                {item.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Flex Item Properties (Grow / Shrink / Basis / AlignSelf) */}
-      <div className="pt-2 border-t border-[#2e2e36] space-y-2">
-        <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-400">
+      {/* Flex Item Properties (Grow / Shrink / Basis / AlignSelf / Order) */}
+      <div className="pt-2 border-t border-[#2e2e36] space-y-2.5">
+        <span className="text-[10px] uppercase tracking-wider font-semibold text-blue-400 block">
           Flex Item (Child Layout)
         </span>
         
@@ -168,33 +185,52 @@ export const FlexControls: React.FC<FlexControlsProps> = ({ style, onChange }) =
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] text-zinc-400 block mb-0.5">Align Self</label>
-            <select
-              value={style.alignSelf}
-              onChange={(e) => onChange({ alignSelf: e.target.value as any })}
-              className="w-full bg-[#242429] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none"
-            >
-              <option value="auto">Auto</option>
-              <option value="stretch">Stretch</option>
-              <option value="flex-start">Start</option>
-              <option value="center">Center</option>
-              <option value="flex-end">End</option>
-              <option value="baseline">Baseline</option>
-            </select>
+        {/* Align Self as Buttons */}
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <label className="text-[10px] uppercase font-semibold text-zinc-400">
+              Align Self
+            </label>
+            <span className="text-[9px] font-mono text-zinc-500">{style.alignSelf || 'auto'}</span>
           </div>
+          <div className="grid grid-cols-5 gap-1">
+            {[
+              { val: 'auto', label: 'Auto' },
+              { val: 'flex-start', label: 'Start' },
+              { val: 'center', label: 'Center' },
+              { val: 'flex-end', label: 'End' },
+              { val: 'stretch', label: 'Stretch' },
+            ].map((item) => {
+              const isActive = (style.alignSelf || 'auto') === item.val;
+              return (
+                <button
+                  key={item.val}
+                  type="button"
+                  onClick={() => onChange({ alignSelf: item.val as any })}
+                  title={`align-self: ${item.val}`}
+                  className={`py-1 rounded border text-[10px] font-medium transition-colors text-center ${
+                    isActive
+                      ? 'bg-blue-600/30 border-blue-500 text-blue-300 font-semibold shadow-sm'
+                      : 'bg-[#242429] border-[#34343d] text-zinc-400 hover:text-zinc-200 hover:bg-[#2b2b32]'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
 
-          <div>
-            <label className="text-[10px] text-zinc-400 block mb-0.5">Order</label>
-            <input
-              type="text"
-              value={style.order}
-              onChange={(e) => onChange({ order: e.target.value })}
-              placeholder="0"
-              className="w-full bg-[#242429] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none font-mono"
-            />
-          </div>
+        {/* Order */}
+        <div>
+          <label className="text-[10px] text-zinc-400 block mb-0.5">Order</label>
+          <input
+            type="text"
+            value={style.order}
+            onChange={(e) => onChange({ order: e.target.value })}
+            placeholder="0"
+            className="w-full bg-[#242429] border border-[#34343d] rounded px-2 py-0.5 text-xs text-zinc-200 outline-none font-mono"
+          />
         </div>
       </div>
     </div>
